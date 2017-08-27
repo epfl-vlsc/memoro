@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+    div.tooltip {
+        position: absolute;
+        text-align: center;
+        padding: 2px;
+        width:auto;
+        font: 12px sans-serif;
+        background: lightsteelblue;
+        border: 0px;
+        border-radius: 8px;
+        pointer-events: none;
+    }
+    .chart rect.data {
+        fill: steelblue;
+    }
+
+    .chart rect.background1 {
+        fill: #FFFFFF;
+    }
+
+    .chart rect.background2 {
+        fill: #E0E0E0;
+    }
+
+    .chart text {
+        fill: orange;
+        font: 10px sans-serif;
+        text-anchor: end;
+    }
+    .axis path,
+    .axis line {
+        fill: none;
+        stroke: black;
+        shape-rendering: crispEdges;
+    }
+
+    .axis text {
+        font-family: sans-serif;
+        font-size: 11px;
+    }
+
+</style>
+<svg class="chart"></svg>
+<script src="//d3js.org/d3.v3.min.js"></script>
+<script>
+
+    var width = 1000,
+        barHeight = 5;
+
+    var x = d3.scale.linear()
+        .range([0, width]);
+
+    var chart = d3.select(".chart")
+        .attr("width", width);
+
+    var xAxis = d3.svg.axis()
+        .scale(x)
+        .orient("bottom");
+
+    var div = d3.select("body").append("div")
+        .attr("class", "tooltip")
+        .style("opacity", 0);
+
+    d3.json("hplgst.json", function(error, data) {
+/*        data.forEach(function(d, i) {
+            if ("trace" in d) {
+                console.log(d["trace"]);
+                d["chunks"].forEach(function(chunk, i) {
+                    if ("ts_start" in chunk)
+                        console.log(chunk["ts_start"])
+                })
+            }
+        });*/
+
+        x.domain([0, d3.max(data, function(d) {
+            if ("trace" in d) {
+                return d3.max(d["chunks"], function(chunk, i) {
+                    if ("ts_start" in chunk)
+                        return chunk["ts_end"]
+                })
+            } else
+                return 0
+        })]);
+
+        var total_chunks = 0;
+        data.forEach(function(d) {
+            if ("trace" in d) {
+                if ("chunks" in d)
+                    total_chunks += d["chunks"].length - 1
+            }
+        });
+        console.log("total chunk " + total_chunks);
+
+        chart.attr("height", barHeight * total_chunks + 50)  ;
+        var height = barHeight * total_chunks;
+
+
+        var cur_height = 0;
+        var next_block = 0;
+        var cur_background_class = 0;
+        chart.selectAll("g.back")
+            .data(data)
+            .enter().append("g")
+            .append("rect")
+            .attr("transform", function (alloc_point, i) {
+                console.log("working");
+                var ret =  "translate(0," + next_block +")";
+                next_block += (alloc_point["chunks"].length-1) * barHeight;
+                return ret;
+            })
+            .attr("width", function (d) {
+                return width;
+            })
+            .attr("height", function(alloc_point) {
+                return (alloc_point["chunks"].length-1) * barHeight;
+            })
+            .attr("class", function(alloc_point) {
+                if (cur_background_class == 0) {
+                    cur_background_class = 1;
+                    return "rect background1";
+                } else {
+                    cur_background_class = 0;
+                    return "rect background2";
+                }
+
+            })
+            .on("mouseover", function(d) {
+                div.transition()
+                    .duration(200)
+                    .style("opacity", .9);
+                div .html(d["trace"].replace(/\|/g, "</br>"))
+                    .style("left", (d3.event.pageX) + "px")
+                    .style("top", (d3.event.pageY - 28) + "px");
+                //div.attr("width", width);
+            })
+            .on("mouseout", function(d) {
+                div.transition()
+                    .duration(500)
+                    .style("opacity", 0);
+            });
+
+       chart.selectAll("g.data")
+            .data(data)
+            .enter().append("g")
+            .selectAll("rect")
+            .data(function(d, i) {
+                return d["chunks"];
+            })
+            .enter()
+            .append("rect")
+            .attr("transform", function (chunk, i) {
+                if ("ts_start" in chunk) {
+                    console.log("process chunk " + chunk["ts_start"]);
+                    var ret = "translate("+ x(chunk["ts_start"])  +"," + cur_height * barHeight + ")";
+                    cur_height++;
+                    return ret;
+                }
+                else {
+                    console.log("empty chunk");
+                    return "translate(0, 0)";
+                }
+            })
+            .attr("width", function (d) {
+                if ("ts_end" in d)
+                    return x(d["ts_end"] - d["ts_start"]);
+                else return x(0)
+            })
+            .attr("height", function(d) {
+                if ("ts_end" in d)
+                    return barHeight - 1;
+                else return 0
+            })
+            .attr("class", "rect data");
+
+
+        chart.append("g")
+            .attr("class", "axis")
+            .attr("transform", "translate(0," + (height) + ")")
+            .call(xAxis);
+
+    });
+
+    function type(d) {
+        d.value = +d.value; // coerce to number
+        return d;
+    }
+
+</script>

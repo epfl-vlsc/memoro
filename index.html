@@ -35,6 +35,11 @@
         stroke: black;
         shape-rendering: crispEdges;
     }
+    .chart line {
+        fill: none;
+        stroke: black;
+        shape-rendering: crispEdges;
+    }
 
     .axis text {
         font-family: sans-serif;
@@ -64,15 +69,15 @@
         .style("opacity", 0);
 
     d3.json("hplgst.json", function(error, data) {
-/*        data.forEach(function(d, i) {
-            if ("trace" in d) {
-                console.log(d["trace"]);
-                d["chunks"].forEach(function(chunk, i) {
-                    if ("ts_start" in chunk)
-                        console.log(chunk["ts_start"])
-                })
-            }
-        });*/
+        /*        data.forEach(function(d, i) {
+                    if ("trace" in d) {
+                        console.log(d["trace"]);
+                        d["chunks"].forEach(function(chunk, i) {
+                            if ("ts_start" in chunk)
+                                console.log(chunk["ts_start"])
+                        })
+                    }
+                });*/
 
         x.domain([0, d3.max(data, function(d) {
             if ("trace" in d) {
@@ -141,15 +146,16 @@
                     .style("opacity", 0);
             });
 
-       chart.selectAll("g.data")
+        var g = chart.selectAll("g.data")
             .data(data)
             .enter().append("g")
             .selectAll("rect")
             .data(function(d, i) {
                 return d["chunks"];
             })
-            .enter()
-            .append("rect")
+            .enter();
+
+        g.append("rect")
             .attr("transform", function (chunk, i) {
                 if ("ts_start" in chunk) {
                     console.log("process chunk " + chunk["ts_start"]);
@@ -174,6 +180,35 @@
             })
             .attr("class", "rect data");
 
+        cur_height = 0;
+        g.append("line")
+            .each(function(d) {
+                d3.select(this).attr({
+                    y1: cur_height*barHeight,
+                    y2: cur_height * barHeight + barHeight - 1,
+                    x1: "ts_first" in d ? x(d["ts_first"]) : 0,
+                    x2: "ts_first" in d ? x(d["ts_first"]) : 0,
+                    // don't display if its 0 (unknown) or is the empty chunk
+                    display: !("ts_first" in d) || d["ts_first"] === 0 ? "none" : null
+                });
+                if ("ts_first" in d)
+                    cur_height++;
+            });
+
+        cur_height = 0;
+        g.append("line")
+            .each(function(d) {
+                d3.select(this).attr({
+                    y1: cur_height*barHeight,
+                    y2: cur_height * barHeight + barHeight - 1,
+                    x1: "ts_last" in d ? x(d["ts_last"]) : 0,
+                    x2: "ts_last" in d ? x(d["ts_last"]) : 0,
+                    // don't display if its 0 (unknown) or is the empty chunk
+                    display: !("ts_last" in d) || d["ts_last"] === 0 ? "none" : null
+                });
+                if ("ts_last" in d)
+                    cur_height++;
+            });
 
         chart.append("g")
             .attr("class", "axis")

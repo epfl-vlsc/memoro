@@ -12,16 +12,24 @@
         border-radius: 8px;
         pointer-events: none;
     }
-    .chart rect.data {
+
+    .data_bars {
         fill: steelblue;
     }
 
-    .chart rect.background1 {
-        fill: #FFFFFF;
+    .background1 {
+        fill: #F0F0F0;
     }
 
-    .chart rect.background2 {
+    .background2 {
         fill: #E0E0E0;
+    }
+
+    .svg_spacing {
+        display:block;
+        padding:0px;
+        margin:0px;
+        border:0px;
     }
 
     .chart text {
@@ -47,12 +55,13 @@
     }
 
 </style>
-<svg class="chart"></svg>
+<div id="tooltip"></div>
 <script src="//d3js.org/d3.v3.min.js"></script>
 <script>
 
     var width = 500,
-        barHeight = 5;
+        barHeight = 5,
+        graphHeight = 50;
 
     var x = d3.scale.linear()
         .range([0, width]);
@@ -64,8 +73,8 @@
         .scale(x)
         .orient("bottom");
 
-    var div = d3.select("body").append("div")
-        .attr("class", "tooltip")
+    var div = d3.select("#tooltip")
+        .classed("tooltip", true)
         .style("opacity", 0);
 
     d3.json("hplgst.json", function(error, data) {
@@ -95,13 +104,145 @@
 
 
         var cur_height = 0;
-        var next_block = 0;
         var cur_background_class = 0;
-        var gg = chart.selectAll("g.back")
-            .data(data)
-            .enter().append("g");
+        data.forEach(function (d) {
+            //console.log("adding svg");
 
-        gg.append("rect")
+            var rectHeight = (d["chunks"].length-1) * barHeight;
+            var rectHeightMin = 60;
+            cur_height = 0;
+            var new_svg_g = d3.select("body")
+                .append("svg")
+                .attr("width", width)
+                .attr("height", rectHeight)
+                .classed("svg_spacing", true)
+                .on("mouseover", function(x) {
+                    d3.select(this)
+                        .transition()
+                        .duration(500)
+                        .attr("height", Math.max(rectHeight*2, rectHeightMin));
+                })
+                .on("mouseout", function(x) {
+                    d3.select(this)
+                        .transition()
+                        .duration(500)
+                        .attr("height", rectHeight);
+                })
+                .append("g");
+
+            new_svg_g.append("rect")
+                .attr("transform", "translate(0, 0)")
+                .attr("width", width)
+                .attr("height", Math.max(rectHeight*2, rectHeightMin))
+                .attr("class", function(x) {
+                    if (cur_background_class == 0) {
+                        cur_background_class = 1;
+                        return "background1";
+                    } else {
+                        cur_background_class = 0;
+                        return "background2";
+                    }
+
+                })
+                .on("mouseover", function(x) {
+                    div.transition()
+                        .duration(200)
+                        .style("opacity", .9);
+                    div.html(d["trace"].replace(/\|/g, "</br>"))
+                        .style("left", (d3.event.pageX) + "px")
+                        .style("top", (d3.event.pageY - 28) + "px");
+                    div.attr("width", width);
+                })
+                .on("mouseout", function(x) {
+                    div.transition()
+                        .duration(500)
+                        .style("opacity", 0);
+                });
+
+            //console.log(d["chunks"].toString());
+            var g = new_svg_g.selectAll("rect.data")
+                .data(d["chunks"])
+                .enter();
+
+            g.append("rect")
+                .attr("transform", function (chunk, i) {
+                    if ("ts_start" in chunk) {
+                        //console.log("process chunk " + chunk["ts_start"]);
+                        var ret = "translate("+ x(chunk["ts_start"])  +"," + cur_height * barHeight + ")";
+                        cur_height++;
+                        return ret;
+                    }
+                    else {
+                        //console.log("empty chunk");
+                        return "translate(0, 0)";
+                    }
+                })
+                .attr("width", function (chunk) {
+                    if ("ts_end" in chunk)
+                        return x(chunk["ts_end"] - chunk["ts_start"]);
+                    else return x(0)
+                })
+                .attr("height", function(chunk) {
+                    if ("ts_end" in chunk)
+                        return barHeight - 1;
+                    else return 0
+                })
+                .attr("class", "data_bars")
+                .on("mouseover", function(d) {
+                    div.transition()
+                        .duration(200)
+                        .style("opacity", .9);
+                    div .html("Bytes " + d["size"])
+                        .style("left", (d3.event.pageX) + "px")
+                        .style("top", (d3.event.pageY - 28) + "px");
+                    //div.attr("width", width);
+                })
+                .on("mouseout", function(d) {
+                    div.transition()
+                        .duration(500)
+                        .style("opacity", 0);
+                });
+
+            var y = d3.scale.linear()
+                .range([Math.max(rectHeight, rectHeightMin)-10, 0]);
+
+            var starts = [];
+            d["chunks"].forEach(function(chunk) {
+                if ("ts_start" in chunk) {
+                    starts.push({"ts":chunk["ts_start"], "value":chunk["size"]});
+                    starts.push({"ts":chunk["ts_end"], "value":-chunk["size"]});
+                }
+            });
+            starts.sort(function(a, b) { return a["ts"] - b["ts"]});
+            var running = 0;
+            var steps = [];
+            starts.forEach(function (v) {
+                running += v["value"];
+                steps.push({"ts":v["ts"], "value":running})
+            });
+
+            y.domain(d3.extent(steps, function(v) { return v["value"]; }));
+
+            console.log(JSON.stringify(steps));
+            var line = d3.svg.line()
+                .x(function(v) { return x(v["ts"]); })
+                .y(function(v) { return y(v["value"]); })
+                .interpolate('step-before');
+
+            new_svg_g.append("path")
+                .datum(steps)
+                .attr("fill", "none")
+                .attr("stroke", "black")
+                .attr("stroke-linejoin", "round")
+                .attr("stroke-linecap", "round")
+                .attr("stroke-width", 1.5)
+                .attr("transform", "translate(0, " + (rectHeight+5) + ")")
+                .attr("d", line);
+
+        });
+
+
+/*        new_svg_g.append("rect")
             .attr("transform", function (alloc_point, i) {
                 console.log("working");
                 var ret =  "translate(0," + next_block +")";
@@ -222,7 +363,7 @@
         chart.append("g")
             .attr("class", "axis")
             .attr("transform", "translate(0," + (height) + ")")
-            .call(xAxis);
+            .call(xAxis);*/
 
     });
 

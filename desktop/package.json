@@ -1,0 +1,20 @@
+{
+  "name": "autopsy",
+  "version": "1.0.0",
+  "description": "A visualizer for Heapologist traces",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "keywords": [
+    "heapologist",
+    "autopsy"
+  ],
+  "devDependencies": {
+    "electron": "^1.6.12"
+  },
+  "dependencies": {
+    "d3": "3.5.17",
+    "remote": "^0.2.6"
+  }
+}

@@ -1,0 +1,76 @@
+div.tooltip {
+    position: absolute;
+    text-align: center;
+    padding: 2px;
+    width:auto;
+    font: 12px sans-serif;
+    background: lightsteelblue;
+    border: 0px;
+    border-radius: 8px;
+    pointer-events: none;
+}
+div.trace {
+    position: absolute;
+    text-align: left;
+    padding: 2px;
+    width:500px;
+    height:300px;
+    font: 12px sans-serif;
+    background: lightsteelblue;
+    border: 0px;
+    border-radius: 8px;
+    overflow:auto;
+}
+
+#chunks {
+    overflow: auto;
+    padding-right: 20px;
+}
+
+#chunks-container {
+    overflow: hidden;
+}
+
+.line {
+    stroke: black;
+}
+.data_bars {
+    fill: steelblue;
+}
+
+.background1 {
+    fill: #F0F0F0;
+}
+
+.background2 {
+    fill: #E0E0E0;
+}
+
+.svg_spacing {
+    display:block;
+    padding:0px;
+    margin:0px;
+    border:0px;
+}
+
+.chart text {
+    fill: orange;
+    font: 10px sans-serif;
+    text-anchor: end;
+}
+.axis path,
+.axis line {
+    fill: none;
+    stroke: black;
+    shape-rendering: crispEdges;
+}
+.chart line {
+    fill: none;
+    stroke: black;
+    shape-rendering: crispEdges;
+}
+
+.axis text {
+    font-family: sans-serif;
+    font-size: 11px;
+}

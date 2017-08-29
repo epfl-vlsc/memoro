@@ -80,7 +80,7 @@
     d3.json("hplgst.json", function(error, data) {
 
         // find the max TS value
-        x.domain([0, d3.max(data, function(d) {
+        var x_max = d3.max(data, function(d) {
             if ("trace" in d) {
                 return d3.max(d["chunks"], function(chunk, i) {
                     if ("ts_start" in chunk)
@@ -88,7 +88,9 @@
                 })
             } else
                 return 0
-        })]);
+        });
+
+        x.domain([0, x_max]);
 
         var total_chunks = 0;
         data.forEach(function(d) {
@@ -113,7 +115,7 @@
             cur_height = 0;
             var new_svg_g = d3.select("body")
                 .append("svg")
-                .attr("width", width)
+                .attr("width", width+100)
                 .attr("height", rectHeight)
                 .classed("svg_spacing", true)
                 .on("mouseover", function(x) {
@@ -215,7 +217,7 @@
             });
             starts.sort(function(a, b) { return a["ts"] - b["ts"]});
             var running = 0;
-            var steps = [];
+            var steps = [{"ts":0, "value":0}];
             starts.forEach(function (v) {
                 running += v["value"];
                 steps.push({"ts":v["ts"], "value":running})
@@ -223,11 +225,14 @@
 
             y.domain(d3.extent(steps, function(v) { return v["value"]; }));
 
+            var yAxisRight = d3.svg.axis().scale(y)
+                .orient("right").ticks(5);
+
             console.log(JSON.stringify(steps));
             var line = d3.svg.line()
                 .x(function(v) { return x(v["ts"]); })
                 .y(function(v) { return y(v["value"]); })
-                .interpolate('step-before');
+                .interpolate('step-after');
 
             new_svg_g.append("path")
                 .datum(steps)
@@ -238,7 +243,11 @@
                 .attr("stroke-width", 1.5)
                 .attr("transform", "translate(0, " + (rectHeight+5) + ")")
                 .attr("d", line);
-
+            new_svg_g.append("g")
+                .attr("class", "y axis")
+                .attr("transform", "translate(" + width + "," + (rectHeight+5) + ")")
+                .style("fill", "red")
+                .call(yAxisRight);
         });
 
 

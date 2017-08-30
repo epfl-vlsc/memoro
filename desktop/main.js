@@ -14,10 +14,11 @@ var mainWindow;
 function createWindow () {
     // Create the browser window.
     var mainScreen = electron.screen.getPrimaryDisplay();
-    console.log(mainScreen.size.width, mainScreen.size.height);
-    mainWindow = new BrowserWindow({width: mainScreen.size.width, height: mainScreen.size.height})
+    mainWindow = new BrowserWindow({width: mainScreen.size.width, height: mainScreen.size.height,
+        titleBarStyle: 'hidden',
+        backgroundColor: '#424242'
+    })
 
-    console.log("starting up");
     // and load the index.html of the app.
     mainWindow.loadURL(url.format({
         pathname: path.join(__dirname, 'index.html'),
@@ -35,6 +36,7 @@ function createWindow () {
         // when you should delete the corresponding element.
         mainWindow = null
     })
+    require('./js/menu/mainmenu');
     mainWindow.openDevTools()
 }
 

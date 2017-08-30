@@ -4,10 +4,11 @@ div.tooltip {
     padding: 2px;
     width:auto;
     font: 12px sans-serif;
-    background: lightsteelblue;
+    background: #6d6d6d;
     border: 0px;
     border-radius: 8px;
     pointer-events: none;
+    opacity: 0;
 }
 div.trace {
     position: absolute;
@@ -15,11 +16,13 @@ div.trace {
     padding: 2px;
     width:500px;
     height:300px;
-    font: 12px sans-serif;
-    background: lightsteelblue;
+    font: 12px monospace;
+    color: #eeeeee;
+    background: #6d6d6d;
     border: 0px;
     border-radius: 8px;
-    overflow:auto;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
 #chunks {
@@ -29,6 +32,10 @@ div.trace {
 
 #chunks-container {
     overflow: hidden;
+}
+
+.selected-marker {
+    fill: darkgrey;
 }
 
 .line {
@@ -61,7 +68,7 @@ div.trace {
 .axis path,
 .axis line {
     fill: none;
-    stroke: black;
+    stroke: #eeeeee;
     shape-rendering: crispEdges;
 }
 .chart line {
@@ -73,4 +80,6 @@ div.trace {
 .axis text {
     font-family: sans-serif;
     font-size: 11px;
+    fill: #eeeeee;
+    color: #eeeeee;
 }

@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "d3": "3.5.17",
+    "d3-dragrect": "0.0.2",
     "dialog": "^0.3.1",
     "ipc": "0.0.1",
     "remote": "^0.2.6"

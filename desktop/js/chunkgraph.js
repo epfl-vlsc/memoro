@@ -1,6 +1,7 @@
 var d3 = require("d3");
 var remote = require("electron").remote;
 var fs = require('fs');
+var d3dragrect = require('d3-dragrect');
 
 var bytesToString = function (bytes) {
     // One way to write it, not the prettiest way to write it.
@@ -31,6 +32,9 @@ var chunk_graph_width;
 var chunk_graph_height;
 var chunk_y_axis_space;
 var top_spacing = 30;
+var x;  // the x range
+
+var filters = [];
 
 // file open callback function
 function updateData(datafile) {
@@ -43,7 +47,24 @@ function updateData(datafile) {
 
     drawEverything();
 }
+ 
+function filterChunk(chunk) {
+    if (!("ts_start" in chunk))
+        return false;
+    for (var f in filters) {
+        if (!filters[f](chunk)) return false;
+    }
+    return true;
+}
 
+function filteredChunkLength(chunks) {
+    var count = 0;
+    for (var c in chunks) {
+        if (filterChunk(chunks[c]))
+            count++;
+    }
+    return count;
+}
 function drawChunks() {
 
     var div = d3.select("#tooltip")
@@ -61,15 +82,7 @@ function drawChunks() {
 
 
     // find the max TS value
-    var x_max = d3.max(filtered_data, function(d) {
-        if ("trace" in d) {
-            return d3.max(d["chunks"], function(chunk, i) {
-                if ("ts_start" in chunk)
-                    return chunk["ts_end"]
-            })
-        } else
-            return 0
-    });
+    var x_max = xMax();
 
     x.domain([0, x_max]);
     chunk_div.append("svg")
@@ -82,7 +95,8 @@ function drawChunks() {
     filtered_data.forEach(function (d, i) {
         //console.log("adding svg");
 
-        var rectHeight = (d["chunks"].length-1) * barHeight;
+        console.log("length is " + d["chunks"].length);
+        var rectHeight = filteredChunkLength(d["chunks"]) * barHeight;
         var rectHeightMin = 60;
         cur_height = 0;
         var new_svg_g = chunk_div
@@ -130,7 +144,7 @@ function drawChunks() {
 
             })
             .on("mouseover", function(x) {
-                trace.html(d["trace"].replace(/\|/g, "</br>"))
+                trace.html(d["trace"].replace(/\|/g, "</br><hr>"))
                 //div.attr("width", width);
             });
 
@@ -140,6 +154,9 @@ function drawChunks() {
             .enter();
 
         g.append("rect")
+            .filter(function(chunk) {
+                return filterChunk(chunk);
+            })
             .attr("transform", function (chunk, i) {
                 if ("ts_start" in chunk) {
                     console.log("process chunk " + chunk["ts_start"] + " x: " + x(chunk["ts_start"]) );
@@ -180,6 +197,9 @@ function drawChunks() {
 
         cur_height = 0;
         g.append("line")
+            .filter(function(chunk) {
+                return filterChunk(chunk);
+            })
             .each(function(d) {
                 d3.select(this).attr({
                     y1: cur_height*barHeight,
@@ -195,6 +215,9 @@ function drawChunks() {
 
         cur_height = 0;
         g.append("line")
+            .filter(function(chunk) {
+                return filterChunk(chunk);
+            })
             .each(function(d) {
                 d3.select(this).attr({
                     y1: cur_height*barHeight,
@@ -214,6 +237,7 @@ function drawChunks() {
         var starts = [];
         d["chunks"].forEach(function(chunk) {
             if ("ts_start" in chunk) {
+                if (!filterChunk(chunk)) return;
                 starts.push({"ts":chunk["ts_start"], "value":chunk["size"]});
                 starts.push({"ts":chunk["ts_end"], "value":-chunk["size"]});
             }
@@ -257,6 +281,115 @@ function drawChunks() {
     });
 }
 
+function xMax() {
+    // find the max TS value
+    return d3.max(filtered_data, function(d) {
+        if ("trace" in d) {
+            return d3.max(d["chunks"], function(chunk, i) {
+                if ("ts_start" in chunk) {
+                    for (var f in filters) {
+                        if (!filters[f](chunk)) return 0;
+                    }
+                    return chunk["ts_end"]
+                }
+            })
+        } else
+            return 0
+    });
+}
+
+function drawChunkXAxis() {
+    x = d3.scale.linear()
+        .range([0, chunk_graph_width - chunk_y_axis_space]);
+
+
+    var xAxis = d3.svg.axis()
+        .scale(x)
+        .orient("bottom");
+
+    var x_max = xMax();
+
+    x.domain([0, x_max]);
+
+    d3.select("#chunk-x-axis").remove();
+
+    d3.select("#chunk-axis")
+        .append("svg")
+        .attr("id", "chunk-x-axis")
+        .attr("width", chunk_graph_width-chunk_y_axis_space)
+        .attr("height", 30)
+        .append("g")
+        .attr("class", "axis")
+        .call(xAxis);
+}
+
+function aggregateData() {
+    var starts = [];
+    var x_max = xMax();
+    filtered_data.forEach(function(trace) {
+        trace["chunks"].forEach(function(chunk) {
+            if ("ts_start" in chunk) {
+                for (var f in filters) {
+                    if (!filters[f](chunk)) return;
+                }
+                starts.push({"ts":chunk["ts_start"], "value":chunk["size"]});
+                starts.push({"ts":chunk["ts_end"], "value":-chunk["size"]});
+            }
+        })
+    });
+    starts.sort(function(a, b) { return a["ts"] - b["ts"]});
+    var running = 0;
+    var steps = [{"ts":0, "value":0}];
+    starts.forEach(function (v) {
+        running += v["value"];
+        steps.push({"ts":v["ts"], "value":running})
+    });
+    steps.push({"ts":x_max, "value":steps[steps.length-1]["value"]});
+
+    return steps;
+}
+
+function drawAggregatePath() {
+
+    var y = d3.scale.linear()
+        .range([100, 0]);
+
+    var aggregate_data = aggregateData();
+
+    y.domain(d3.extent(aggregate_data, function(v) { return v["value"]; }));
+
+    var yAxisRight = d3.svg.axis().scale(y)
+        .orient("right").ticks(5)
+        .tickFormat(bytesToString);
+
+    var line = d3.svg.line()
+        .x(function(v) { return x(v["ts"]); })
+        .y(function(v) { return y(v["value"]); })
+        .interpolate('step-after');
+
+    d3.select("#aggregate-path").remove();
+    d3.select("#aggregate-y-axis").remove();
+
+    console.log(d3.select("#aggregate-group"));
+    d3.select("#aggregate-group").append("path")
+        .datum(aggregate_data)
+        .attr("fill", "none")
+        .attr("stroke", "lightgrey")
+        .attr("stroke-linejoin", "round")
+        .attr("stroke-linecap", "round")
+        .attr("stroke-width", 1.5)
+        .attr("transform", "translate(0, 5)")
+        .attr("id", "aggregate-path")
+        .attr("d", line);
+    d3.select("#aggregate-group").append("g")
+        .attr("class", "y axis")
+        .attr("transform", "translate(" + (chunk_graph_width - chunk_y_axis_space + 3) + ", 5)")
+        .attr("height", 110)
+        .attr("id", "aggregate-y-axis")
+        .style("fill", "white")
+        .call(yAxisRight);
+}
+
 function drawEverything() {
 
     d3.selectAll("g > *").remove();
@@ -286,7 +419,7 @@ function drawEverything() {
         .style("top", "40px");
 
     d3.select("#chunks-container")
-        .style("height", "" + win_size[1] + "px")
+        .style("height", "" + (win_size[1]-100)+ "px")
         .style("width", "" + (chunk_graph_width) + "px");
 
     var chunk_div = d3.select("#chunks")
@@ -299,98 +432,97 @@ function drawEverything() {
     drawChunks();
 
     // find the max TS value
-    var x_max = d3.max(filtered_data, function(d) {
-        if ("trace" in d) {
-            return d3.max(d["chunks"], function(chunk, i) {
-                if ("ts_start" in chunk)
-                    return chunk["ts_end"]
-            })
-        } else
-            return 0
-    });
+    var x_max = xMax();
 
     x.domain([0, x_max]);
 
-    var total_chunks = 0;
-    filtered_data.forEach(function(d) {
-        if ("trace" in d) {
-            if ("chunks" in d)
-                total_chunks += d["chunks"].length - 1
-        }
-    });
-    console.log("total chunk " + total_chunks);
-
-    //var cur_background_class = 0;
-
-
-    d3.select("#chunk-axis")
-        .append("svg")
-        .attr("width", chunk_graph_width-chunk_y_axis_space)
-        .attr("height", 30)
-        .append("g")
-        .attr("class", "axis")
-        .call(xAxis);
-
-    var y = d3.scale.linear()
-        .range([100, 0]);
-
-    var starts = [];
-    filtered_data.forEach(function(trace) {
-        trace["chunks"].forEach(function(chunk) {
-            if ("ts_start" in chunk) {
-                starts.push({"ts":chunk["ts_start"], "value":chunk["size"]});
-                starts.push({"ts":chunk["ts_end"], "value":-chunk["size"]});
-            }
-        })
-    });
-    starts.sort(function(a, b) { return a["ts"] - b["ts"]});
-    var running = 0;
-    var steps = [{"ts":0, "value":0}];
-    starts.forEach(function (v) {
-        running += v["value"];
-        steps.push({"ts":v["ts"], "value":running})
-    });
-    steps.push({"ts":x_max, "value":steps[steps.length-1]["value"]});
-
-    console.log(JSON.stringify(steps));
-    y.domain(d3.extent(steps, function(v) { return v["value"]; }));
-
-    var yAxisRight = d3.svg.axis().scale(y)
-        .orient("right").ticks(5)
-        .tickFormat(bytesToString);
-
-    var line = d3.svg.line()
-        .x(function(v) { return x(v["ts"]); })
-        .y(function(v) { return y(v["value"]); })
-        .interpolate('step-after');
+    drawChunkXAxis();
 
     var aggregate_graph = d3.select("#aggregate-graph")
         .append("svg")
         .attr("width", chunk_graph_width)
-        .attr("height", 120)
-        .append("g");
+        .attr("height", 120);
 
-    aggregate_graph.append("rect")
+
+    aggregate_graph.on("mousedown", function() {
+
+        var p = d3.mouse( this);
+
+        var y = d3.select(this).attr("height");
+        aggregate_graph.append( "rect")
+            .attr({
+                rx      : 6,
+                ry      : 6,
+                class   : "selection",
+                x       : p[0],
+                y       : 0,
+                width   : 0,
+                height  : y
+            })
+    })
+    .on( "mousemove", function() {
+        var s = aggregate_graph.select( "rect.selection");
+
+        var y = d3.select(this).attr("height");
+        if( !s.empty()) {
+            var p = d3.mouse( this),
+                d = {
+                    x       : parseInt( s.attr( "x"), 0),
+                    y       : parseInt( s.attr( "y"), 0),
+                    width   : parseInt( s.attr( "width"), 10),
+                    height  : y
+                },
+                move = {
+                    x : p[0] - d.x,
+                    y : p[1] - d.y
+                }
+            ;
+
+            if( move.x < 1 || (move.x*2<d.width)) {
+                d.x = p[0];
+                d.width -= move.x;
+            } else {
+                d.width = move.x;
+            }
+
+            s.attr( d);
+
+        }
+    })
+    .on( "mouseup", function() {
+        // remove selection frame
+        var selection = aggregate_graph.selectAll( "rect.selection");
+        var x1 = parseInt(selection.attr("x"));
+        var x2 = x1 + parseInt(selection.attr("width"));
+        var t1 = x.invert(x1);
+        var t2 = x.invert(x2);
+        selection.remove();
+        // set a new filter
+        filters["ts_filter"] = function(chunk) {
+            if (!("ts_start" in chunk)) return false;
+            var tc1 = parseInt(chunk["ts_start"]);
+            var tc2 = parseInt(chunk["ts_end"]);
+            return t1 <= tc2 && tc1 <= t2;
+        };
+        // redraw
+        drawChunks();
+
+        drawAggregatePath();
+
+        drawChunkXAxis();
+
+    })
+
+    var aggregate_graph_g = aggregate_graph.append("g");
+    aggregate_graph_g.attr("id", "aggregate-group");
+
+    aggregate_graph_g.append("rect")
         .attr("width", chunk_graph_width-chunk_y_axis_space + 2)
         .attr("height", 120)
-        .style("fill", "#6d6d6d")
+        .style("fill", "#6d6d6d");
 
-    aggregate_graph.append("path")
-        .datum(steps)
-        .attr("fill", "none")
-        .attr("stroke", "lightgrey")
-        .attr("stroke-linejoin", "round")
-        .attr("stroke-linecap", "round")
-        .attr("stroke-width", 1.5)
-        .attr("transform", "translate(0, 5)")
-        .attr("d", line);
-    aggregate_graph.append("g")
-        .attr("class", "y axis")
-        .attr("transform", "translate(" + (chunk_graph_width - chunk_y_axis_space + 3) + ", 5)")
-        .attr("height", 110)
-        .style("fill", "white")
-        .call(yAxisRight);
 
+    drawAggregatePath();
 
     function type(d) {
         d.value = +d.value; // coerce to number

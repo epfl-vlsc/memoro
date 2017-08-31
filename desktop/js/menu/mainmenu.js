@@ -65,14 +65,14 @@ const template = [
             {
                 label: 'Reload',
                 accelerator: 'CmdOrCtrl+R',
-                click (item, focusedWindow) {
+                click: function (item, focusedWindow) {
                     if (focusedWindow) focusedWindow.reload()
                 }
             },
             {
                 label: 'Toggle Developer Tools',
                 accelerator: process.platform === 'darwin' ? 'Alt+Command+I' : 'Ctrl+Shift+I',
-                click (item, focusedWindow) {
+                click: function (item, focusedWindow) {
                     if (focusedWindow) focusedWindow.webContents.toggleDevTools()
                 }
             },
@@ -112,7 +112,7 @@ const template = [
         submenu: [
             {
                 label: 'Learn More',
-                click () { require('electron').shell.openExternal('http://electron.atom.io') }
+                click: function() { require('electron').shell.openExternal('http://electron.atom.io') }
             }
         ]
     }
@@ -120,6 +120,7 @@ const template = [
 
 if (process.platform === 'darwin') {
     const name = app.getName()
+    console.log("name is " + name)
     template.unshift({
         label: name,
         submenu: [
@@ -154,7 +155,7 @@ if (process.platform === 'darwin') {
         ]
     })
     // Window menu.
-    template[3].submenu = [
+    template[4].submenu = [
         {
             label: 'Close',
             accelerator: 'CmdOrCtrl+W',
@@ -181,3 +182,4 @@ if (process.platform === 'darwin') {
 
 const menu = Menu.buildFromTemplate(template)
 Menu.setApplicationMenu(menu)
+console.log("set menu OK")

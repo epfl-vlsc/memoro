@@ -1,5 +1,6 @@
 {
   "name": "autopsy",
+  "productName": "Autopsy",
   "version": "1.0.0",
   "description": "A visualizer for Heapologist traces",
   "main": "main.js",
@@ -14,10 +15,11 @@
     "electron": "^1.6.12"
   },
   "dependencies": {
+    "bootstrap": "^3.3.7",
     "d3": "3.5.17",
-    "d3-dragrect": "0.0.2",
     "dialog": "^0.3.1",
     "ipc": "0.0.1",
+    "jquery": "^3.2.1",
     "remote": "^0.2.6"
   }
 }

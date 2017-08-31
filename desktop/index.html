@@ -3,28 +3,60 @@
   <head>
     <meta charset="UTF-8">
     <title>Heapologist Autopsy</title>
+    <link href="css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" type="text/css" href="css/chunk_graph.css">
     <script src="index.js">
     </script>
   </head>
-  <body onload="initApp()">
+  <body onload="initApp()" >
 
-  <div id="chunks-container">
-    <div id="chunks">
+  <div class="container-fluid">
+    <div class="row" style="height: 5vh;-webkit-app-region: drag; width: 100%;">
     </div>
-    <div id="chunk-axis">
-    </div>
-    <div id="aggregate-graph">
+    <div class="row">
+      <div class="col-md-6 " id="chunks-container">
+        <p>Heap Allocations</p>
+        <div id="chunks">
+        </div>
+        <div id="chunk-axis">
+        </div>
+        <p>Aggregate Memory Usage</p>
+        <div class="h-25" id="aggregate-graph">
+        </div>
+      </div>
+
+      <div class="col-md-4 ">
+        <div class="panel panel-default h-50">
+          <div class="panel-heading">Allocation Point Stacktrace</div>
+          <div id="trace" class="panel-body">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="control-label" for="filter-form">Filter Trace</label>
+          <input class="form-control input-sm" type="text" id="filter-form">
+        </div>
+        <a href="#" class="btn btn-default" onclick="stackFilterClick()">Filter</a>
+        <a href="#" class="btn btn-default" onclick="stackFilterResetClick()">Reset</a>
+        <a href="#" class="btn btn-default">Help</a>
+
+      </div>
+      <div class="col-md-2 ">
+        <div class="panel panel-default">
+          <div class="panel-heading">Global</div>
+          <div id="info" class="panel-body">
+          </div>
+        </div>
+      </div>
     </div>
 
+
+    <div class="footer row">
+    </div>
+
+    <div id="tooltip"></div>
   </div>
-  <div id="tooltip"></div>
-  <div id="trace"></div>
-  <div id="filtering">
-
-    <input id="filter-input">
-    <button id='filter-button'>Filter</button>
-  </div>
+  <script>window.$ = window.jQuery = require('./node_modules/jquery/dist/jquery.min');</script>
+  <script src="./node_modules/bootstrap/dist/js/bootstrap.min.js"></script>
   </body>
 
 </html>

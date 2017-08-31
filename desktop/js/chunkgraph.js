@@ -1,7 +1,6 @@
 var d3 = require("d3");
 var remote = require("electron").remote;
 var fs = require('fs');
-var d3dragrect = require('d3-dragrect');
 
 var bytesToString = function (bytes) {
     // One way to write it, not the prettiest way to write it.
@@ -23,10 +22,7 @@ var display_data;
 var filtered_data;
 var binary_path = "";
 
-var win_size;
-
-var width,
-    barHeight;
+var barHeight;
 
 var chunk_graph_width;
 var chunk_graph_height;
@@ -35,6 +31,7 @@ var top_spacing = 30;
 var x;  // the x range
 
 var filters = [];
+var traceFilters = [];
 
 // file open callback function
 function updateData(datafile) {
@@ -57,6 +54,15 @@ function filterChunk(chunk) {
     return true;
 }
 
+function filterStackTrace(trace) {
+    console.log("filtering traces with " + Object.keys(traceFilters).length)
+    if (Object.keys(traceFilters).length === 0) return true;
+    for (var f in traceFilters) {
+        if (traceFilters[f](trace)) return true;
+    }
+    return false;
+}
+
 function filteredChunkLength(chunks) {
     var count = 0;
     for (var c in chunks) {
@@ -65,37 +71,36 @@ function filteredChunkLength(chunks) {
     }
     return count;
 }
+
 function drawChunks() {
 
     var div = d3.select("#tooltip")
     var trace = d3.select("#trace")
     var chunk_div = d3.select("#chunks")
-        .style("height", "" + chunk_graph_height + "px")
+        /*.style("height", "" + chunk_graph_height + "px")
         .style("width", "" + (chunk_graph_width) + "px")
         .style("overflow", "auto")
-        .style("padding-right", "17px");
+        .style("padding-right", "17px");*/
 
     chunk_div.selectAll("svg").remove();
 
-    var x = d3.scale.linear()
-        .range([0, chunk_graph_width - chunk_y_axis_space]);
+/*    var x = d3.scale.linear()
+        .range([0, chunk_graph_width - chunk_y_axis_space]);*/
 
 
     // find the max TS value
     var x_max = xMax();
 
     x.domain([0, x_max]);
-    chunk_div.append("svg")
-            .attr("width", chunk_graph_width)
-            .attr("height", top_spacing)
-            .classed("svg_spacing", true);
 
     var cur_height = 0;
+    var cur_background_class = 0;
 
     filtered_data.forEach(function (d, i) {
         //console.log("adding svg");
+        if (!filterStackTrace(d["trace"])) return;
 
-        console.log("length is " + d["chunks"].length);
+        //console.log("length is " + d["chunks"].length);
         var rectHeight = filteredChunkLength(d["chunks"]) * barHeight;
         var rectHeightMin = 60;
         cur_height = 0;
@@ -133,14 +138,13 @@ function drawChunks() {
             .attr("width", chunk_graph_width - chunk_y_axis_space)
             .attr("height", Math.max(rectHeight*2, rectHeightMin + rectHeight))
             .attr("class", function(x) {
-                return "background" + ((i % 2)+1);
-                /*                    if (cur_background_class == 0) {
-                                        cur_background_class = 1;
-                                        return "background1";
-                                    } else {
-                                        cur_background_class = 0;
-                                        return "background2";
-                                    }*/
+                if (cur_background_class == 0) {
+                    cur_background_class = 1;
+                    return "background1";
+                } else {
+                    cur_background_class = 0;
+                    return "background2";
+                }
 
             })
             .on("mouseover", function(x) {
@@ -159,7 +163,7 @@ function drawChunks() {
             })
             .attr("transform", function (chunk, i) {
                 if ("ts_start" in chunk) {
-                    console.log("process chunk " + chunk["ts_start"] + " x: " + x(chunk["ts_start"]) );
+                    //console.log("process chunk " + chunk["ts_start"] + " x: " + x(chunk["ts_start"]) );
                     var ret = "translate("+ x(chunk["ts_start"])  +"," + cur_height * barHeight + ")";
                     cur_height++;
                     return ret;
@@ -258,7 +262,7 @@ function drawChunks() {
             .tickFormat(bytesToString)
             .ticks(4);
 
-        console.log(JSON.stringify(steps));
+        //console.log(JSON.stringify(steps));
         var line = d3.svg.line()
             .x(function(v) { return x(v["ts"]); })
             .y(function(v) { return y(v["value"]); })
@@ -285,6 +289,7 @@ function xMax() {
     // find the max TS value
     return d3.max(filtered_data, function(d) {
         if ("trace" in d) {
+            if (!filterStackTrace(d["trace"])) return 0;
             return d3.max(d["chunks"], function(chunk, i) {
                 if ("ts_start" in chunk) {
                     for (var f in filters) {
@@ -299,8 +304,8 @@ function xMax() {
 }
 
 function drawChunkXAxis() {
-    x = d3.scale.linear()
-        .range([0, chunk_graph_width - chunk_y_axis_space]);
+    /*x = d3.scale.linear()
+        .range([0, chunk_graph_width - chunk_y_axis_space]);*/
 
 
     var xAxis = d3.svg.axis()
@@ -327,6 +332,7 @@ function aggregateData() {
     var starts = [];
     var x_max = xMax();
     filtered_data.forEach(function(trace) {
+        if (!filterStackTrace(trace["trace"])) return;
         trace["chunks"].forEach(function(chunk) {
             if ("ts_start" in chunk) {
                 for (var f in filters) {
@@ -395,15 +401,14 @@ function drawEverything() {
     d3.selectAll("g > *").remove();
     d3.selectAll("svg").remove();
 
-    win_size = remote.getCurrentWindow().getSize();
 
-    width = win_size[0];
     barHeight = 5;
-    chunk_graph_width = width/3 + 100;
-    chunk_graph_height = win_size[1]*0.66;
-    chunk_y_axis_space = 50;
+    chunk_graph_width = d3.select("#chunks-container").node().getBoundingClientRect().width;
+    chunk_graph_height = d3.select("#chunks-container").node().getBoundingClientRect().height;
+    console.log("width: " + chunk_graph_width);
+    chunk_y_axis_space = chunk_graph_width*0.12;  // ten percent should be enough
 
-    var x = d3.scale.linear()
+    x = d3.scale.linear()
         .range([0, chunk_graph_width - chunk_y_axis_space]);
 
 
@@ -413,21 +418,21 @@ function drawEverything() {
 
     var div = d3.select("#tooltip")
         .classed("tooltip", true);
-    var trace = d3.select("#trace")
+    /*var trace = d3.select("#trace")
         .classed("trace", true)
         .style("left", "" + (chunk_graph_width + 5) + "px")
-        .style("top", "40px");
+        .style("top", "40px");*/
 
-    d3.select("#chunks-container")
+/*    d3.select("#chunks-container")
         .style("height", "" + (win_size[1]-100)+ "px")
-        .style("width", "" + (chunk_graph_width) + "px");
+        .style("width", "" + (chunk_graph_width) + "px");*/
 
-    var chunk_div = d3.select("#chunks")
+/*    var chunk_div = d3.select("#chunks")
         .style("height", "" + chunk_graph_height + "px")
         .style("width", "" + (chunk_graph_width) + "px")
         .style("overflow", "auto")
         .style("top", "40px")
-        .style("padding-right", "17px");
+        .style("padding-right", "17px");*/
 
     drawChunks();
 
@@ -531,6 +536,45 @@ function drawEverything() {
 
 }
 
+function stackFilterClick() {
+    var element = document.querySelector("#filter-form");
+    console.log("text is " + element.value);
+    var filterText = element.value;
+    element.value = "";
+    var filterWords = filterText.split(" ");
+    for (var word in filterWords) {
+        console.log("adding ST filter for word " + filterWords[word]);
+        traceFilters[filterWords[word]] = function(trace) {
+            console.log("filtering for " + word);
+            var ret = trace.indexOf(filterWords[word]);
+            console.log("returned " + ret);
+            if (ret !== -1) return true;
+            else return false;
+        }
+    }
+
+    // redraw
+    drawChunks();
+
+    drawChunkXAxis();
+
+    drawAggregatePath();
+
+}
+
+function stackFilterResetClick() {
+    for (var f in traceFilters) {
+        delete traceFilters[f];
+    }
+    drawChunks();
+
+    drawChunkXAxis();
+
+    drawAggregatePath();
+}
+
 module.exports = {
-    updateData: updateData
+    updateData: updateData,
+    stackFilterClick: stackFilterClick,
+    stackFilterResetClick: stackFilterResetClick
 };

@@ -15,7 +15,7 @@ function createWindow () {
     // Create the browser window.
     var mainScreen = electron.screen.getPrimaryDisplay();
     mainWindow = new BrowserWindow({width: mainScreen.size.width, height: mainScreen.size.height,
-        titleBarStyle: 'hidden',
+        titleBarStyle: 'hiddenInset',
         backgroundColor: '#424242'
     })
 
@@ -37,7 +37,7 @@ function createWindow () {
         mainWindow = null
     })
     require('./js/menu/mainmenu');
-    mainWindow.openDevTools()
+    //mainWindow.openDevTools()
 }
 
 // This method will be called when Electron has finished

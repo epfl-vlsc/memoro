@@ -6,7 +6,7 @@ var chunk_graph = require("./js/chunkgraph");
 
 function initApp() {
     addAppEventListeners();
-    chunk_graph.updateData("hplgst.json");
+    //chunk_graph.updateData("hplgst.json");
 }
 
 function stackFilterClick() {

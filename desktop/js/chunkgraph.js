@@ -26,8 +26,8 @@ var bytesToStringNoDecimal = function (bytes) {
     }
 }
 
+// convenience globals
 var json_file = "";
-var display_data;
 var filtered_data;
 var binary_path = "";
 
@@ -38,6 +38,7 @@ var chunk_graph_height;
 var chunk_y_axis_space;
 var top_spacing = 30;
 var x;  // the x range
+var max_x;
 
 var filters = [];
 var traceFilters = [];
@@ -47,11 +48,13 @@ var aggregate_max = 0;
 // file open callback function
 function updateData(datafile) {
     json_file = datafile;
+    console.log("loading")
     var data = JSON.parse(fs.readFileSync(datafile, 'utf-8'));
-    console.log(JSON.stringify(data));
+    //console.log(JSON.stringify(data));
+    console.log("done")
     binary_path = data["binary"];
-    display_data = data["data"]
     filtered_data = data["data"]
+    console.log("done again")
 
     drawEverything();
 }
@@ -66,7 +69,7 @@ function filterChunk(chunk) {
 }
 
 function filterStackTrace(trace) {
-    console.log("filtering traces with " + Object.keys(traceFilters).length)
+    //console.log("filtering traces with " + Object.keys(traceFilters).length)
     if (Object.keys(traceFilters).length === 0) return true;
     for (var f in traceFilters) {
         if (traceFilters[f](trace)) return true;
@@ -100,9 +103,9 @@ function drawChunks() {
 
 
     // find the max TS value
-    var x_max = xMax();
+    var max_x = xMax();
 
-    x.domain([0, x_max]);
+    x.domain([0, max_x]);
 
     var cur_height = 0;
     var cur_background_class = 0;
@@ -264,7 +267,7 @@ function drawChunks() {
             running += v["value"];
             steps.push({"ts":v["ts"], "value":running})
         });
-        steps.push({"ts":x_max, "value":steps[steps.length-1]["value"]});
+        steps.push({"ts":max_x, "value":steps[steps.length-1]["value"]});
 
         y.domain(d3.extent(steps, function(v) { return v["value"]; }));
 
@@ -323,9 +326,9 @@ function drawChunkXAxis() {
         .scale(x)
         .orient("bottom");
 
-    var x_max = xMax();
+    var max_x = xMax();
 
-    x.domain([0, x_max]);
+    x.domain([0, max_x]);
 
     d3.select("#chunk-x-axis").remove();
 
@@ -341,9 +344,9 @@ function drawChunkXAxis() {
 
 function aggregateData() {
     var starts = [];
-    var x_max = xMax();
+    max_x = xMax();
     filtered_data.forEach(function(trace) {
-        if (!filterStackTrace(trace["trace"])) return;
+        //if (!filterStackTrace(trace["trace"])) return;
         trace["chunks"].forEach(function(chunk) {
             if ("ts_start" in chunk) {
                 for (var f in filters) {
@@ -361,7 +364,7 @@ function aggregateData() {
         running += v["value"];
         steps.push({"ts":v["ts"], "value":running})
     });
-    steps.push({"ts":x_max, "value":steps[steps.length-1]["value"]});
+    steps.push({"ts":max_x, "value":steps[steps.length-1]["value"]});
 
     aggregate_max = d3.max(steps, function (d) {
         return d["value"];
@@ -370,14 +373,51 @@ function aggregateData() {
     return steps;
 }
 
+function binAggregate(ag_data) {
+    // use a number of bins equal to the number of
+    // pixels the graph takes
+    var num_bins = chunk_graph_width - chunk_y_axis_space;
+    var bins = [];
+
+    for (i = 0; i < num_bins; i++) {
+        bins.push({max_val: x.invert(i), num_points: 0, sum: 0});
+    }
+    bins.push({max_val: max_x, num_points: 0, sum: 0});
+
+    var cur_bin = 0;
+    for (var d in ag_data) {
+        if (parseInt(ag_data[d]["ts"]) <= parseInt(bins[cur_bin].max_val)) {
+            bins[cur_bin].sum += ag_data[d].value;
+            bins[cur_bin].num_points++;
+        } else {
+            cur_bin++;
+            while (parseInt(ag_data[d]["ts"]) > parseInt(bins[cur_bin].max_val)) {
+                // we'll have an empty bin, set it equal to preceding
+                bins[cur_bin].num_points = bins[cur_bin-1].num_points;
+                bins[cur_bin].sum = bins[cur_bin-1].sum;
+                cur_bin++;
+            }
+            bins[cur_bin].sum += ag_data[d].value;
+            bins[cur_bin].num_points++;
+        }
+    }
+    var binned_ag = [];
+    for (var b in bins) {
+        binned_ag.push({ts: bins[b].max_val, value: bins[b].sum / bins[b].num_points})
+    }
+    return binned_ag;
+}
 function drawAggregatePath() {
 
     var y = d3.scale.linear()
         .range([100, 0]);
 
+    console.log("aggregate")
     var aggregate_data = aggregateData();
+    console.log("done aggregate with " + aggregate_data.length + " points");
+    var binned_ag = binAggregate(aggregate_data);
 
-    y.domain(d3.extent(aggregate_data, function(v) { return v["value"]; }));
+    y.domain(d3.extent(binned_ag, function(v) { return v["value"]; }));
 
     var yAxisRight = d3.svg.axis().scale(y)
         .orient("right").ticks(5)
@@ -400,34 +440,11 @@ function drawAggregatePath() {
         .attr("height", 120)
         .style("fill", "#6d6d6d");
 
-    var focus_g = aggregate_graph_g.append("g")
-        .classed("focus-line", true);
 
-
-    aggregate_graph_g.append("rect")
-        .attr("width", chunk_graph_width-chunk_y_axis_space + 2)
-        .attr("height", 120)
-        .style("fill", "transparent")
-        .on("mouseover", function() { focus_g.style("display", null); })
-        .on("mouseout", function() { focus_g.style("display", "none"); })
-        .on("mousemove", mousemove);
-
-    var focus = focus_g.append("line")
-        .attr("y0", 0).attr("y1", 120)
-        .attr("x0", 0).attr("x1", 0);
-    focus_g.append("text")
-        .attr("x", 9)
-        .attr("y", "20");
-
-    function mousemove() {
-        var x0 = x.invert(d3.mouse(this)[0]);
-        focus.attr("transform", "translate(" + x(x0) + ",0)");
-        focus.select("text").text(x0);
-    }
-
-    console.log(d3.select("#aggregate-group"));
-    aggregate_graph_g.append("path")
-        .datum(aggregate_data)
+    console.log("graphing line")
+    //console.log(d3.select("#aggregate-group"));
+    var path = aggregate_graph_g.append("path")
+        .datum(binned_ag)
         .attr("fill", "none")
         .attr("stroke", "lightgrey")
         .attr("stroke-linejoin", "round")
@@ -443,6 +460,46 @@ function drawAggregatePath() {
         .attr("id", "aggregate-y-axis")
         .style("fill", "white")
         .call(yAxisRight);
+    console.log("done graphing line")
+
+    // draw the focus line on the graph
+    var focus_g = aggregate_graph_g.append("g")
+        .classed("focus-line", true);
+
+    aggregate_graph_g.append("rect")
+        .attr("width", chunk_graph_width-chunk_y_axis_space + 2)
+        .attr("height", 120)
+        .style("fill", "transparent")
+        .on("mouseover", function() { focus_g.style("display", null); })
+        .on("mouseout", function() { focus_g.style("display", "none"); })
+        .on("mousemove", mousemove);
+
+    focus_g.append("line")
+        .attr("y0", 0).attr("y1", 120)
+        .attr("x0", 0).attr("x1", 0);
+    var text = focus_g.append("text")
+        .style("stroke", "black")
+        .attr("x", 20)
+        .attr("y", "30");
+    text.append("tspan")
+        .attr("id", "time");
+    text.append("tspan")
+        .attr("id", "value");
+
+    // display on mouseover
+    function mousemove() {
+        var x0 = x.invert(d3.mouse(this)[0]);
+        var y_pos = d3.bisector(function(d) {
+            return d["ts"];
+        }).left(binned_ag, x0, 1);
+        var y = binned_ag[y_pos]["value"];
+        focus_g.attr("transform", "translate(" + x(x0) + ",0)");
+        focus_g.select("#time").text(Math.round(x0) + "ns " + bytesToString(y));
+        if (d3.mouse(this)[0] > chunk_graph_width / 2)
+            focus_g.select("text").attr("x", -150);
+        else
+            focus_g.select("text").attr("x", 20);
+    }
 }
 
 function drawEverything() {
@@ -467,14 +524,14 @@ function drawEverything() {
     var div = d3.select("#tooltip")
         .classed("tooltip", true);
 
-    drawChunks();
+    //drawChunks();
 
     // find the max TS value
-    var x_max = xMax();
+    max_x = xMax();
 
-    x.domain([0, x_max]);
+    x.domain([0, max_x]);
 
-    drawChunkXAxis();
+    //drawChunkXAxis();
 
     var aggregate_graph = d3.select("#aggregate-graph")
         .append("svg")
@@ -543,11 +600,11 @@ function drawEverything() {
             return t1 <= tc2 && tc1 <= t2;
         };
         // redraw
-        drawChunks();
+        //drawChunks();
 
-        drawAggregatePath();
+        //drawAggregatePath();
 
-        drawChunkXAxis();
+        //drawChunkXAxis();
 
     });
 
@@ -611,8 +668,14 @@ function stackFilterResetClick() {
     drawAggregatePath();
 }
 
+function removeOne() {
+    console.log(d3.select("#chunks").selectAll("svg")[0][0].remove())
+
+
+}
 module.exports = {
     updateData: updateData,
     stackFilterClick: stackFilterClick,
-    stackFilterResetClick: stackFilterResetClick
+    stackFilterResetClick: stackFilterResetClick,
+    removeOne: removeOne
 };

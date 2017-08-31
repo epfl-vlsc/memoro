@@ -6,11 +6,15 @@ var chunk_graph = require("./js/chunkgraph");
 
 function initApp() {
     addAppEventListeners();
-    //chunk_graph.updateData("hplgst.json");
+    chunk_graph.updateData("hplgst.json");
 }
 
 function stackFilterClick() {
     chunk_graph.stackFilterClick();
+}
+
+function removeOne() {
+    chunk_graph.removeOne();
 }
 
 function stackFilterResetClick() {

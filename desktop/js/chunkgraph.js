@@ -2,7 +2,16 @@ var d3 = require("d3");
 var remote = require("electron").remote;
 var fs = require('fs');
 
-var bytesToString = function (bytes) {
+function bytesToString(bytes,decimals) {
+    if(bytes == 0) return '0 B';
+    var k = 1024,
+        dm = decimals || 2,
+        sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'],
+        i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+}
+
+var bytesToStringNoDecimal = function (bytes) {
     // One way to write it, not the prettiest way to write it.
 
     var fmt = d3.format('.0f');
@@ -32,6 +41,8 @@ var x;  // the x range
 
 var filters = [];
 var traceFilters = [];
+
+var aggregate_max = 0;
 
 // file open callback function
 function updateData(datafile) {
@@ -259,7 +270,7 @@ function drawChunks() {
 
         var yAxisRight = d3.svg.axis().scale(y)
             .orient("right")
-            .tickFormat(bytesToString)
+            .tickFormat(bytesToStringNoDecimal)
             .ticks(4);
 
         //console.log(JSON.stringify(steps));
@@ -352,6 +363,10 @@ function aggregateData() {
     });
     steps.push({"ts":x_max, "value":steps[steps.length-1]["value"]});
 
+    aggregate_max = d3.max(steps, function (d) {
+        return d["value"];
+    });
+
     return steps;
 }
 
@@ -366,7 +381,7 @@ function drawAggregatePath() {
 
     var yAxisRight = d3.svg.axis().scale(y)
         .orient("right").ticks(5)
-        .tickFormat(bytesToString);
+        .tickFormat(bytesToStringNoDecimal);
 
     var line = d3.svg.line()
         .x(function(v) { return x(v["ts"]); })
@@ -376,8 +391,42 @@ function drawAggregatePath() {
     d3.select("#aggregate-path").remove();
     d3.select("#aggregate-y-axis").remove();
 
+    var aggregate_graph_g = d3.select("#aggregate-group");
+    aggregate_graph_g.selectAll("rect").remove();
+    aggregate_graph_g.selectAll("g").remove();
+
+    aggregate_graph_g.append("rect")
+        .attr("width", chunk_graph_width-chunk_y_axis_space + 2)
+        .attr("height", 120)
+        .style("fill", "#6d6d6d");
+
+    var focus_g = aggregate_graph_g.append("g")
+        .classed("focus-line", true);
+
+
+    aggregate_graph_g.append("rect")
+        .attr("width", chunk_graph_width-chunk_y_axis_space + 2)
+        .attr("height", 120)
+        .style("fill", "transparent")
+        .on("mouseover", function() { focus_g.style("display", null); })
+        .on("mouseout", function() { focus_g.style("display", "none"); })
+        .on("mousemove", mousemove);
+
+    var focus = focus_g.append("line")
+        .attr("y0", 0).attr("y1", 120)
+        .attr("x0", 0).attr("x1", 0);
+    focus_g.append("text")
+        .attr("x", 9)
+        .attr("y", "20");
+
+    function mousemove() {
+        var x0 = x.invert(d3.mouse(this)[0]);
+        focus.attr("transform", "translate(" + x(x0) + ",0)");
+        focus.select("text").text(x0);
+    }
+
     console.log(d3.select("#aggregate-group"));
-    d3.select("#aggregate-group").append("path")
+    aggregate_graph_g.append("path")
         .datum(aggregate_data)
         .attr("fill", "none")
         .attr("stroke", "lightgrey")
@@ -401,16 +450,15 @@ function drawEverything() {
     d3.selectAll("g > *").remove();
     d3.selectAll("svg").remove();
 
-
     barHeight = 5;
     chunk_graph_width = d3.select("#chunks-container").node().getBoundingClientRect().width;
     chunk_graph_height = d3.select("#chunks-container").node().getBoundingClientRect().height;
     console.log("width: " + chunk_graph_width);
     chunk_y_axis_space = chunk_graph_width*0.12;  // ten percent should be enough
 
+
     x = d3.scale.linear()
         .range([0, chunk_graph_width - chunk_y_axis_space]);
-
 
     var xAxis = d3.svg.axis()
         .scale(x)
@@ -418,21 +466,6 @@ function drawEverything() {
 
     var div = d3.select("#tooltip")
         .classed("tooltip", true);
-    /*var trace = d3.select("#trace")
-        .classed("trace", true)
-        .style("left", "" + (chunk_graph_width + 5) + "px")
-        .style("top", "40px");*/
-
-/*    d3.select("#chunks-container")
-        .style("height", "" + (win_size[1]-100)+ "px")
-        .style("width", "" + (chunk_graph_width) + "px");*/
-
-/*    var chunk_div = d3.select("#chunks")
-        .style("height", "" + chunk_graph_height + "px")
-        .style("width", "" + (chunk_graph_width) + "px")
-        .style("overflow", "auto")
-        .style("top", "40px")
-        .style("padding-right", "17px");*/
 
     drawChunks();
 
@@ -483,7 +516,7 @@ function drawEverything() {
                 }
             ;
 
-            if( move.x < 1 || (move.x*2<d.width)) {
+            if( move.x < 1 || (move.x*2<d.width - chunk_y_axis_space)) {
                 d.x = p[0];
                 d.width -= move.x;
             } else {
@@ -516,23 +549,28 @@ function drawEverything() {
 
         drawChunkXAxis();
 
-    })
+    });
 
     var aggregate_graph_g = aggregate_graph.append("g");
     aggregate_graph_g.attr("id", "aggregate-group");
 
-    aggregate_graph_g.append("rect")
-        .attr("width", chunk_graph_width-chunk_y_axis_space + 2)
-        .attr("height", 120)
-        .style("fill", "#6d6d6d");
 
 
     drawAggregatePath();
 
-    function type(d) {
-        d.value = +d.value; // coerce to number
-        return d;
-    }
+    var trace_count = 0;
+    var chunk_count = 0;
+    filtered_data.forEach(function(trace) {
+        trace_count++;
+        trace["chunks"].forEach(function(chunk) {
+            chunk_count++;
+        })
+    });
+
+    var info = d3.select("#global-info");
+    info.html("Total alloc points: " + trace_count +
+        "</br>Total Allocations: " + chunk_count +
+        "</br>Max Heap: " + bytesToString(aggregate_max));
 
 }
 

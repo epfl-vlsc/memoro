@@ -19,6 +19,14 @@ div.tooltip {
     margin-top:0!important;
 }
 
+#global-info {
+    height: 40vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    word-wrap:break-word;
+    margin-top:0!important;
+}
+
 #trace hr {
     border: none;
     width: 100%;
@@ -48,6 +56,11 @@ div.tooltip {
 }
 .data_bars {
     fill: steelblue;
+}
+
+.focus-line {
+    stroke: darkgrey;
+
 }
 
 .background1 {

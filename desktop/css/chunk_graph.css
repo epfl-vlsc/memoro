@@ -37,7 +37,14 @@ div.tooltip {
 
 
 #chunks {
-    height: 60vh;
+    height: 35vh;
+    overflow-y: scroll;
+    overflow-x: hidden;
+    padding-right: 20px;
+}
+
+#traces {
+    height: 35vh;
     overflow-y: scroll;
     overflow-x: hidden;
     padding-right: 20px;
@@ -64,11 +71,11 @@ div.tooltip {
 }
 
 .background1 {
-    fill: #F0F0F0;
+    fill: #353a41;
 }
 
 .background2 {
-    fill: #E0E0E0;
+    fill: #4c4c4c;
 }
 
 .svg_spacing {
@@ -76,6 +83,12 @@ div.tooltip {
     padding:0px;
     margin:0px;
     border:0px;
+}
+.svg_spacing_trace {
+    display:block;
+    padding:0px;
+    margin:2px;
+    border:2px;
 }
 
 .chart text {

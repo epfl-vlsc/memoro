@@ -5,7 +5,11 @@
     <title>Heapologist Autopsy</title>
     <link href="css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" type="text/css" href="css/chunk_graph.css">
-    <script src="index.js">
+    <script type="text/javascript" src="node_modules/jquery/dist/jquery.min.js" onload="window.$ = window.jQuery = module.exports;">
+
+    </script>
+
+      <script src="index.js">
     </script>
   </head>
   <body onload="initApp()" >
@@ -20,7 +24,7 @@
         </div>
         <div id="chunk-axis">
         </div>
-        <div id="chunks">
+        <div id="chunks" onscroll="chunkScroll()">
         </div>
         <p>Aggregate Memory Usage</p>
         <div id="aggregate-graph">
@@ -51,6 +55,23 @@
       </div>
     </div>
 
+    <div class="modal fade" id="main-modal">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+            <h4 class="modal-title"></h4>
+          </div>
+          <div class="modal-body">
+            <p></p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+<!--            <button type="button" class="btn btn-primary">Save changes</button>-->
+          </div>
+        </div>
+      </div>
+    </div>
 
     <div class="footer row">
     </div>

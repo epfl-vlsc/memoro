@@ -52,18 +52,24 @@ function updateData(datafile) {
     var data = JSON.parse(fs.readFileSync(datafile, 'utf-8'));
     //console.log(JSON.stringify(data));
     console.log("done")
-    binary_path = data["binary"];
-    filtered_data = data["data"]
-    console.log("done again")
+    if (!("binary" in data) || !("data" in data)) {
+        $(".modal-title").text("Error");
+        $(".modal-body").text("Input JSON is missing binary or data fields.");
+        $("#main-modal").modal("show")
+    } else {
+        binary_path = data["binary"];
+        filtered_data = data["data"];
+        console.log("done again");
 
-    traceFilters["main"] = function(trace) {
-        var ret = trace.indexOf("main");
-        //console.log("returned " + ret);
-        if (ret !== -1) return true;
-        else return false;
+        traceFilters["main"] = function(trace) {
+            var ret = trace.indexOf("main");
+            //console.log("returned " + ret);
+            if (ret !== -1) return true;
+            else return false;
+        };
+
+        drawEverything();
     }
-
-    drawEverything();
 }
  
 function filterChunk(chunk) {
@@ -160,7 +166,7 @@ function drawStackTraces() {
             .style("color", "#c8c8c8")
             .attr("x", 5)
             .attr("y", "15")
-            .text("Chunks: " + d["chunks"].length + ", Peak Bytes: " + bytesToString(peak));
+            .text("Chunks: " + (d["chunks"].length-1) + ", Peak Bytes: " + bytesToString(peak));
 
         var y = d3.scale.linear()
             .range([rectHeight-25, 0]);
@@ -213,13 +219,19 @@ function tooltip(chunk) {
     }
 }
 
-function renderChunkSvg(chunk) {
+function renderChunkSvg(chunk, text, bottom) {
 
-    var chunk_div = d3.select("#chunks")
-    var div = d3.select("#tooltip")
-    var new_svg_g = chunk_div
-        .append("svg")
-        .attr("width", chunk_graph_width)
+    var chunk_div = d3.select("#chunks");
+    var div = d3.select("#tooltip");
+    var new_svg_g;
+    if (bottom) {
+        new_svg_g = chunk_div.append("div").append("svg");
+    }
+    else {
+        new_svg_g = chunk_div.insert("div", ":first-child").append("svg")
+    }
+
+    new_svg_g.attr("width", chunk_graph_width)
         .attr("height", barHeight)
         .classed("svg_spacing_data", true);
     new_svg_g.append("rect")
@@ -233,24 +245,92 @@ function renderChunkSvg(chunk) {
                 .duration(500)
                 .style("opacity", 0);
         });
+    new_svg_g.append("text")
+        .attr("x", (chunk_graph_width - chunk_y_axis_space+10))
+        .attr("y", 6)
+        .text(text.toString())
+        .classed("chunk_text", true)
 }
 
-var current_trace_chunks = null;
+function removeChunksTop(num) {
+    var svgs = d3.select("#chunks").selectAll("div")[0];
+
+    for (i = 0; i < num; i++)
+    {
+        svgs[i].remove();
+    }
+}
+
+function removeChunksBottom(num) {
+
+    var svgs = d3.select("#chunks").selectAll("div")[0];
+    var end = svgs.length;
+
+    for (i = end - num; i < end; i++)
+    {
+        console.log("removing " + i);
+        svgs[i].remove();
+    }
+}
+
+var load_threshold = 80;
+var current_trace_index = null;
+var current_chunk_index = 0;
+var current_chunk_index_low = 0;
+
+function chunkScroll() {
+    var element = document.querySelector("#chunks");
+    var percent = 100 * element.scrollTop / (element.scrollHeight - element.clientHeight);
+    if (percent > load_threshold) {
+        if (current_chunk_index < filtered_data[current_trace_index].chunks.length - 1) {
+            // there are still some to display
+            //console.log("cur chunk index is " + current_chunk_index);
+            var to_append = Math.min(25, filtered_data[current_trace_index].chunks.length - 1 - current_chunk_index);
+            var to_remove = to_append;
+            // remove from top
+
+            //console.log("adding " + to_append + " to bottom");
+            for (i = current_chunk_index; i < current_chunk_index + to_append; i++) {
+                renderChunkSvg(filtered_data[current_trace_index].chunks[i], i, true);
+            }
+            current_chunk_index += to_append;
+            current_chunk_index_low += to_append;
+
+            removeChunksTop(to_remove);
+            //element.scrollTop(old_scroll - element.scrollHeight)
+
+            // append more
+        }
+    } else if (percent < (100 - load_threshold)) {
+        if (current_chunk_index_low > 0) {
+            var to_prepend = Math.min(25, current_chunk_index_low);
+            var to_remove = to_prepend;
+
+            for (i = current_chunk_index_low-1; i >= current_chunk_index_low - to_prepend; i--) {
+                renderChunkSvg(filtered_data[current_trace_index].chunks[i], i, false);
+            }
+            current_chunk_index -= to_prepend;
+            current_chunk_index_low -= to_prepend;
+
+            removeChunksBottom(to_remove);
+        }
+
+    }
+}
+
 // draw the first X chunks from this trace
 function drawChunks(trace) {
 
-    console.log("trace index is " + trace.index)
     // test if this is already present in the div
-    if (current_trace_chunks === trace.index)
+    if (current_trace_index === trace.index)
         return;
 
-    console.log("doing draw chunks");
-    current_trace_chunks = trace.index;
+    current_trace_index = trace.index;
 
     var div = d3.select("#tooltip")
     var chunk_div = d3.select("#chunks")
 
-    chunk_div.selectAll("svg").remove();
+    chunk_div.selectAll("div").remove();
 
 
     // find the max TS value
@@ -258,12 +338,14 @@ function drawChunks(trace) {
 
     x.domain([0, max_x]);
 
-    for (i = 0; i < Math.min(trace.chunks.length, 50); i++) {
+    current_chunk_index_low = 0;
+    current_chunk_index = 0;
+    for (i = 0; i < Math.min(trace.chunks.length, 200); i++) {
         chunk = trace["chunks"][i];
         if (!("ts_start" in chunk))
             break;
-        renderChunkSvg(chunk);
-
+        renderChunkSvg(chunk, current_chunk_index, true);
+        current_chunk_index++;
     }
 /*    trace["chunks"].forEach(function (chunk, i) {
 
@@ -476,7 +558,9 @@ function drawChunkXAxis() {
     var xAxis = d3.svg.axis()
         .scale(x)
         .tickFormat(function(xval) {
-            return (xval / 1000) + "us";
+            if (max_x < 1000000000)
+                return (xval / 1000) + "us";
+            else return (xval / 1000000) + "ms";
         })
         .orient("bottom");
 
@@ -663,7 +747,7 @@ function drawEverything() {
     d3.selectAll("g > *").remove();
     d3.selectAll("svg").remove();
 
-    barHeight = 5;
+    barHeight = 8;
     chunk_graph_width = d3.select("#chunks-container").node().getBoundingClientRect().width;
     chunk_graph_height = d3.select("#chunks-container").node().getBoundingClientRect().height;
     console.log("width: " + chunk_graph_width);
@@ -831,11 +915,12 @@ function stackFilterResetClick() {
 function removeOne() {
     console.log(d3.select("#chunks").selectAll("svg")[0][0].remove())
 
-
 }
+
 module.exports = {
     updateData: updateData,
     stackFilterClick: stackFilterClick,
     stackFilterResetClick: stackFilterResetClick,
-    removeOne: removeOne
+    removeOne: removeOne,
+    chunkScroll: chunkScroll
 };

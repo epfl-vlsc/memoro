@@ -17,6 +17,10 @@ function removeOne() {
     chunk_graph.removeOne();
 }
 
+function chunkScroll() {
+    chunk_graph.chunkScroll();
+}
+
 function stackFilterResetClick() {
     chunk_graph.stackFilterResetClick();
 }

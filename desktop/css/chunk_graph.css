@@ -65,6 +65,11 @@ div.tooltip {
     overflow: hidden;
 }
 
+.chunk_text {
+    font-size: 7px;
+    fill: #eeeeee
+}
+
 .selected-marker {
     fill: darkgrey;
 }

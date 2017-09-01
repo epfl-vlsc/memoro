@@ -37,17 +37,28 @@ div.tooltip {
 
 
 #chunks {
-    height: 35vh;
+    height: 30vh;
+    overflow-y: scroll;
+    overflow-x: hidden;
+    padding-right: 20px;
+    background-color: #353a41;
+}
+
+#traces {
+    height: 30vh;
+    overflow-y: scroll;
+    overflow-x: hidden;
+}
+
+#chunk-axis {
+    height: 7vh;
     overflow-y: scroll;
     overflow-x: hidden;
     padding-right: 20px;
 }
 
-#traces {
-    height: 35vh;
-    overflow-y: scroll;
-    overflow-x: hidden;
-    padding-right: 20px;
+#aggregate-graph {
+    height: 23vh;
 }
 
 #chunks-container {
@@ -83,6 +94,12 @@ div.tooltip {
     padding:0px;
     margin:0px;
     border:0px;
+}
+.svg_spacing_data {
+    display:block;
+    padding:0px;
+    margin:1px;
+    border:1px;
 }
 .svg_spacing_trace {
     display:block;

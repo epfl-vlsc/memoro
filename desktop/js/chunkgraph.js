@@ -105,7 +105,8 @@ function drawStackTraces() {
 
     var cur_background_class = 0;
     filtered_data.forEach(function (d, i) {
-        //console.log("adding svg");
+        d.index = i;
+        console.log("trace index is " + i);
         if (!filterStackTrace(d["trace"])) return;
         var rectHeight = 55;
         var new_svg_g = traces_div
@@ -119,6 +120,8 @@ function drawStackTraces() {
                 if (d3.select(this).classed("selected")) {
                     d3.select(this)
                         .classed("selected", false)
+                    // draws the first 50, rest are drawn on scroll
+                    drawChunks(d);
                 } else {
                     d3.select(this)
                         .classed("selected", true)
@@ -170,7 +173,7 @@ function drawStackTraces() {
         var yAxisRight = d3.svg.axis().scale(y)
             .orient("right")
             .tickFormat(bytesToStringNoDecimal)
-            .ticks(3);
+            .ticks(2);
 
         //console.log(JSON.stringify(steps));
         var line = d3.svg.line()
@@ -197,21 +200,57 @@ function drawStackTraces() {
 
 }
 
+function tooltip(chunk) {
+    return function() {
+        var div = d3.select("#tooltip")
+        div.transition()
+            .duration(200)
+            .style("opacity", .9);
+        div .html(bytesToString(chunk["size"]) + "</br> Reads: " + chunk["reads"] + "</br>Writes: " + chunk["writes"])
+            .style("left", (d3.event.pageX) + "px")
+            .style("top", (d3.event.pageY - 28) + "px");
+        //div.attr("width", width);
+    }
+}
 
-function drawChunks() {
+function renderChunkSvg(chunk) {
+
+    var chunk_div = d3.select("#chunks")
+    var div = d3.select("#tooltip")
+    var new_svg_g = chunk_div
+        .append("svg")
+        .attr("width", chunk_graph_width)
+        .attr("height", barHeight)
+        .classed("svg_spacing_data", true);
+    new_svg_g.append("rect")
+        .attr("transform", "translate("+ x(chunk["ts_start"])  +",0)")
+        .attr("width", Math.max(x(chunk["ts_end"] - chunk["ts_start"]), 2))
+        .attr("height", barHeight)
+        .classed("data_bars", true)
+        .on("mouseover", tooltip(chunk))
+        .on("mouseout", function(d) {
+            div.transition()
+                .duration(500)
+                .style("opacity", 0);
+        });
+}
+
+var current_trace_chunks = null;
+// draw the first X chunks from this trace
+function drawChunks(trace) {
+
+    console.log("trace index is " + trace.index)
+    // test if this is already present in the div
+    if (current_trace_chunks === trace.index)
+        return;
+
+    console.log("doing draw chunks");
+    current_trace_chunks = trace.index;
 
     var div = d3.select("#tooltip")
-    var trace = d3.select("#trace")
     var chunk_div = d3.select("#chunks")
-        /*.style("height", "" + chunk_graph_height + "px")
-        .style("width", "" + (chunk_graph_width) + "px")
-        .style("overflow", "auto")
-        .style("padding-right", "17px");*/
 
     chunk_div.selectAll("svg").remove();
-
-/*    var x = d3.scale.linear()
-        .range([0, chunk_graph_width - chunk_y_axis_space]);*/
 
 
     // find the max TS value
@@ -219,16 +258,15 @@ function drawChunks() {
 
     x.domain([0, max_x]);
 
-    var cur_height = 0;
-    var cur_background_class = 0;
+    for (i = 0; i < Math.min(trace.chunks.length, 50); i++) {
+        chunk = trace["chunks"][i];
+        if (!("ts_start" in chunk))
+            break;
+        renderChunkSvg(chunk);
 
-    filtered_data.forEach(function (d, i) {
-        //console.log("adding svg");
-        if (!filterStackTrace(d["trace"])) return;
+    }
+/*    trace["chunks"].forEach(function (chunk, i) {
 
-        //console.log("length is " + d["chunks"].length);
-        var rectHeight = filteredChunkLength(d["chunks"]) * barHeight;
-        var rectHeightMin = 60;
         cur_height = 0;
         var new_svg_g = chunk_div
             .append("svg")
@@ -274,7 +312,7 @@ function drawChunks() {
 
             })
             .on("mouseover", function(x) {
-                trace.html(d["trace"].replace(/\|/g, "</br><hr>"))
+                trace_box.html(d["trace"].replace(/\|/g, "</br><hr>"))
                 //div.attr("width", width);
             });
 
@@ -365,7 +403,7 @@ function drawChunks() {
             .range([Math.max(rectHeight, rectHeightMin)-10, 0]);
 
         steps = aggregateData([d], max_x);
-/*        var starts = [];
+/!*        var starts = [];
         d["chunks"].forEach(function(chunk) {
             if ("ts_start" in chunk) {
                 if (!filterChunk(chunk)) return;
@@ -380,7 +418,7 @@ function drawChunks() {
             running += v["value"];
             steps.push({"ts":v["ts"], "value":running})
         });
-        steps.push({"ts":max_x, "value":steps[steps.length-1]["value"]});*/
+        steps.push({"ts":max_x, "value":steps[steps.length-1]["value"]});*!/
 
         y.domain(d3.extent(steps, function(v) { return v["value"]; }));
 
@@ -409,7 +447,7 @@ function drawChunks() {
             .attr("transform", "translate(" + (chunk_graph_width - chunk_y_axis_space + 1) + "," + (rectHeight+5) + ")")
             .style("fill", "white")
             .call(yAxisRight);
-    });
+    });*/
 }
 
 function xMax() {
@@ -437,6 +475,9 @@ function drawChunkXAxis() {
 
     var xAxis = d3.svg.axis()
         .scale(x)
+        .tickFormat(function(xval) {
+            return (xval / 1000) + "us";
+        })
         .orient("bottom");
 
     var max_x = xMax();
@@ -500,9 +541,9 @@ function binAggregate(ag_data) {
             bins[cur_bin].num_points++;
         } else {
             cur_bin++;
-            console.log("comparing " + parseInt(ag_data[d]["ts"]) +" to "+ parseInt(bins[cur_bin].max_val));
+            //console.log("comparing " + parseInt(ag_data[d]["ts"]) +" to "+ parseInt(bins[cur_bin].max_val));
             while (parseInt(ag_data[d]["ts"]) > parseInt(bins[cur_bin].max_val)) {
-                console.log("comparing " + parseInt(ag_data[d]["ts"]) +" to "+ parseInt(bins[cur_bin].max_val));
+                //console.log("comparing " + parseInt(ag_data[d]["ts"]) +" to "+ parseInt(bins[cur_bin].max_val));
                 // we'll have an empty bin, set it equal to preceding
                 bins[cur_bin].num_points = bins[cur_bin-1].num_points;
                 bins[cur_bin].sum = bins[cur_bin-1].sum;
@@ -641,11 +682,14 @@ function drawEverything() {
 
     // find the max TS value
     max_x = xMax();
+    x.domain([0, max_x]);
+
     //drawChunks();
     drawStackTraces();
 
+    drawChunkXAxis();
 
-    x.domain([0, max_x]);
+
 
     //drawChunkXAxis();
 
@@ -765,7 +809,7 @@ function stackFilterClick() {
     }
 
     // redraw
-    drawChunks();
+    //drawChunks();
 
     drawChunkXAxis();
 
@@ -777,7 +821,7 @@ function stackFilterResetClick() {
     for (var f in traceFilters) {
         delete traceFilters[f];
     }
-    drawChunks();
+    //drawChunks();
 
     drawChunkXAxis();
 

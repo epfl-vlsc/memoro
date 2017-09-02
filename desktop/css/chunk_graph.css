@@ -11,7 +11,7 @@ div.tooltip {
     opacity: 0;
 }
 #trace {
-    font: 10px monospace;
+    font: 12px monospace;
     height: 60vh;
     overflow-y: auto;
     overflow-x: hidden;

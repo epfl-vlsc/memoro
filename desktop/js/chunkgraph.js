@@ -32,6 +32,7 @@ var filtered_data;
 var binary_path = "";
 
 var barHeight;
+var total_chunks;
 
 var chunk_graph_width;
 var chunk_graph_height;
@@ -59,7 +60,11 @@ function updateData(datafile) {
     } else {
         binary_path = data["binary"];
         filtered_data = data["data"];
-        console.log("done again");
+        total_chunks = d3.sum(filtered_data, function(t) {
+            return t.chunks.length - 1;
+        });
+        total_traces = filtered_data.length;
+        console.log("done again total chunks " + total_chunks);
 
         traceFilters["main"] = function(trace) {
             var ret = trace.indexOf("main");
@@ -171,7 +176,8 @@ function drawStackTraces() {
         var y = d3.scale.linear()
             .range([rectHeight-25, 0]);
 
-        steps = aggregateData([d], max_x);
+        console.log("sub aggregate")
+        //steps = aggregateData([d], max_x);
         var binned = binAggregate(steps);
 
         y.domain(d3.extent(binned, function(v) { return v["value"]; }));
@@ -580,10 +586,27 @@ function drawChunkXAxis() {
         .call(xAxis);
 }
 
+const MAX_AGGREGATE_BINS = 1000;
 function aggregateData(data, x_max) {
-    var starts = [];
+    var starts = [];//new Array(total_chunks*2);
+    var values = []; //new Array(total_chunks*2);
+    var num_steps = 0;
     data.forEach(function(trace) {
         if (!filterStackTrace(trace["trace"])) return;
+
+/*        for (i = 0; i < trace["chunks"].length; i++) {
+            if ("ts_start" in trace.chunks[i]) {
+                for (var f in filters) {
+                    if (!filters[f](trace.chunks[i])) ;
+                }
+                starts[num_steps] = chunk["ts_start"];
+                values[num_steps++] = chunk["size"];
+                starts[num_steps] = chunk["ts_end"];
+                values[num_steps++] = -chunk["size"];
+            }
+
+        }*/
+
         trace["chunks"].forEach(function(chunk) {
             if ("ts_start" in chunk) {
                 for (var f in filters) {
@@ -594,6 +617,7 @@ function aggregateData(data, x_max) {
             }
         })
     });
+
     starts.sort(function(a, b) { return a["ts"] - b["ts"]});
     var running = 0;
     var steps = [{"ts":0, "value":0}];
@@ -610,7 +634,9 @@ function aggregateData(data, x_max) {
 function binAggregate(ag_data) {
     // use a number of bins equal to the number of
     // pixels the graph takes
-    var num_bins = chunk_graph_width - chunk_y_axis_space;
+    if (ag_data.length < MAX_AGGREGATE_BINS * 10)
+        return ag_data;
+    var num_bins = MAX_AGGREGATE_BINS;
     var bins = [];
 
     for (i = 0; i < num_bins; i++) {
@@ -736,7 +762,7 @@ function drawAggregatePath() {
         focus_g.attr("transform", "translate(" + x(x0) + ",0)");
         focus_g.select("#time").text(Math.round(x0) + "ns " + bytesToString(y));
         if (d3.mouse(this)[0] > chunk_graph_width / 2)
-            focus_g.select("text").attr("x", -150);
+            focus_g.select("text").attr("x", -170);
         else
             focus_g.select("text").attr("x", 20);
     }

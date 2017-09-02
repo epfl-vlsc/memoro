@@ -162,8 +162,8 @@ function drawStackTraces() {
         });
 
         new_svg_g.append("text")
-            .style("font-size", "x-small")
-            .style("color", "#c8c8c8")
+            .style("font-size", "small")
+		    .style("fill", "white")
             .attr("x", 5)
             .attr("y", "15")
             .text("Chunks: " + (d["chunks"].length-1) + ", Peak Bytes: " + bytesToString(peak));

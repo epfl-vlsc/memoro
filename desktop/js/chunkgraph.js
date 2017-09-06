@@ -1,6 +1,8 @@
 var d3 = require("d3");
 var remote = require("electron").remote;
 var fs = require('fs');
+var autopsy = require('../cpp/build/Debug/autopsy.node');
+var process = require('process');
 
 function bytesToString(bytes,decimals) {
     if(bytes == 0) return '0 B';
@@ -53,6 +55,9 @@ function updateData(datafile) {
     var data = JSON.parse(fs.readFileSync(datafile, 'utf-8'));
     //console.log(JSON.stringify(data));
     console.log("done")
+    console.log("testing cpp ...  ");
+    autopsy.set_dataset("./");
+    console.log("done set dataset");
     if (!("binary" in data) || !("data" in data)) {
         $(".modal-title").text("Error");
         $(".modal-body").text("Input JSON is missing binary or data fields.");

@@ -6,6 +6,7 @@ const BrowserWindow = electron.BrowserWindow;
 
 const path = require('path');
 const url = require('url');
+var process = require('process')
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
@@ -36,6 +37,8 @@ function createWindow () {
         // when you should delete the corresponding element.
         mainWindow = null
     })
+
+    console.log(process.pid);
     require('./js/menu/mainmenu');
     //mainWindow.openDevTools()
 }

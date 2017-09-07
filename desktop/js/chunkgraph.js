@@ -681,12 +681,15 @@ function drawAggregatePath() {
 
     console.log("aggregate")
     max_x = xMax();
-    var aggregate_data = aggregateData(filtered_data, max_x);
+    //var aggregate_data = aggregateData(filtered_data, max_x);
+
+    var aggregate_data = autopsy.aggregate_all();
+
     aggregate_max = d3.max(aggregate_data, function (d) {
         return d["value"];
     });
-    console.log("done aggregate with " + aggregate_data.length + " points");
-    var binned_ag = binAggregate(aggregate_data);
+    //var binned_ag = binAggregate(aggregate_data);
+    var binned_ag = aggregate_data;
 
     y.domain(d3.extent(binned_ag, function(v) { return v["value"]; }));
 

@@ -42,6 +42,8 @@ var chunk_y_axis_space;
 var top_spacing = 30;
 var x;  // the x range
 var max_x;
+var num_traces;
+var total_allocations;
 
 var filters = [];
 var traceFilters = [];
@@ -119,11 +121,15 @@ function drawStackTraces() {
 
     x.domain([0, max_x]);
 
+    var traces = autopsy.traces();
+    num_traces = traces.length;
+    total_chunks = 0;
+
     var cur_background_class = 0;
-    filtered_data.forEach(function (d, i) {
-        d.index = i;
-        console.log("trace index is " + i);
-        if (!filterStackTrace(d["trace"])) return;
+    traces.forEach(function (d, i) {
+        //console.log("trace index is " + i);
+        //if (!filterStackTrace(d["trace"])) return;
+        total_chunks += d.num_chunks;
         var rectHeight = 55;
         var new_svg_g = traces_div
             .append("svg")
@@ -162,12 +168,12 @@ function drawStackTraces() {
 
             })
             .on("mouseover", function(x) {
-                trace.html(d["trace"].replace(/\|/g, "</br><hr>"))
+                trace.html(d.trace.replace(/\|/g, "</br><hr>"))
                 //div.attr("width", width);
             });
 
-        steps = aggregateData([d], max_x);
-        var peak = d3.max(steps, function (x) {
+        sampled = autopsy.aggregate_trace(d.trace_index);
+        var peak = d3.max(sampled, function (x) {
             return x["value"];
         });
 
@@ -176,16 +182,12 @@ function drawStackTraces() {
 		    .style("fill", "white")
             .attr("x", 5)
             .attr("y", "15")
-            .text("Chunks: " + (d["chunks"].length-1) + ", Peak Bytes: " + bytesToString(peak));
+            .text("Chunks: " + (d.num_chunks) + ", Peak Bytes: " + bytesToString(peak));
 
         var y = d3.scale.linear()
             .range([rectHeight-25, 0]);
 
-        console.log("sub aggregate")
-        //steps = aggregateData([d], max_x);
-        var binned = binAggregate(steps);
-
-        y.domain(d3.extent(binned, function(v) { return v["value"]; }));
+        y.domain(d3.extent(sampled, function(v) { return v["value"]; }));
 
         var yAxisRight = d3.svg.axis().scale(y)
             .orient("right")
@@ -199,7 +201,7 @@ function drawStackTraces() {
             .interpolate('step-after');
 
         new_svg_g.append("path")
-            .datum(binned)
+            .datum(sampled)
             .attr("fill", "none")
             .attr("stroke", "#c8c8c8")
             .attr("stroke-linejoin", "round")
@@ -223,7 +225,7 @@ function tooltip(chunk) {
         div.transition()
             .duration(200)
             .style("opacity", .9);
-        div .html(bytesToString(chunk["size"]) + "</br> Reads: " + chunk["reads"] + "</br>Writes: " + chunk["writes"])
+        div .html(bytesToString(chunk["size"]) + "</br> Reads: " + chunk["num_reads"] + "</br>Writes: " + chunk["num_writes"])
             .style("left", (d3.event.pageX) + "px")
             .style("top", (d3.event.pageY - 28) + "px");
         //div.attr("width", width);
@@ -293,32 +295,32 @@ function chunkScroll() {
     var element = document.querySelector("#chunks");
     var percent = 100 * element.scrollTop / (element.scrollHeight - element.clientHeight);
     if (percent > load_threshold) {
-        if (current_chunk_index < filtered_data[current_trace_index].chunks.length - 1) {
+        var chunks = autopsy.TraceChunks(current_trace_index, current_chunk_index, 25);
+        if (chunks.length > 0) {
             // there are still some to display
             //console.log("cur chunk index is " + current_chunk_index);
-            var to_append = Math.min(25, filtered_data[current_trace_index].chunks.length - 1 - current_chunk_index);
+            var to_append = chunks.length;
             var to_remove = to_append;
             // remove from top
-
             //console.log("adding " + to_append + " to bottom");
-            for (i = current_chunk_index; i < current_chunk_index + to_append; i++) {
-                renderChunkSvg(filtered_data[current_trace_index].chunks[i], i, true);
+            for (var i = 0; i < to_append; i++) {
+                renderChunkSvg(chunks[i], current_chunk_index + i, true);
             }
             current_chunk_index += to_append;
             current_chunk_index_low += to_append;
 
             removeChunksTop(to_remove);
-            //element.scrollTop(old_scroll - element.scrollHeight)
-
-            // append more
         }
     } else if (percent < (100 - load_threshold)) {
         if (current_chunk_index_low > 0) {
-            var to_prepend = Math.min(25, current_chunk_index_low);
+            var chunks = autopsy.TraceChunks(current_trace_index, Math.max(current_chunk_index_low-25, 0), 25);
+            if (chunks.length == 0)
+                console.log("oh fuck chunks is 0");
+            var to_prepend = chunks.length;
             var to_remove = to_prepend;
 
-            for (i = current_chunk_index_low-1; i >= current_chunk_index_low - to_prepend; i--) {
-                renderChunkSvg(filtered_data[current_trace_index].chunks[i], i, false);
+            for (i = chunks.length-1; i >= 0; i--) {
+                renderChunkSvg(chunks[i], current_chunk_index_low - (to_prepend - i), false);
             }
             current_chunk_index -= to_prepend;
             current_chunk_index_low -= to_prepend;
@@ -333,148 +335,29 @@ function chunkScroll() {
 function drawChunks(trace) {
 
     // test if this is already present in the div
-    if (current_trace_index === trace.index)
+    if (current_trace_index === trace.trace_index)
         return;
 
-    current_trace_index = trace.index;
+    current_trace_index = trace.trace_index;
 
-    var div = d3.select("#tooltip")
-    var chunk_div = d3.select("#chunks")
+    var chunk_div = d3.select("#chunks");
 
     chunk_div.selectAll("div").remove();
-
 
     // find the max TS value
     var max_x = xMax();
 
     x.domain([0, max_x]);
 
-    current_chunk_index_low = 0;
-    current_chunk_index = 0;
-    for (i = 0; i < Math.min(trace.chunks.length, 200); i++) {
-        chunk = trace["chunks"][i];
-        if (!("ts_start" in chunk))
-            break;
-        renderChunkSvg(chunk, current_chunk_index, true);
-        current_chunk_index++;
+    current_chunk_index_low = trace.chunk_index;
+    current_chunk_index = Math.min(trace.num_chunks, 200);
+    chunks  = autopsy.trace_chunks(trace.trace_index, current_chunk_index_low, current_chunk_index);
+
+    for (var i = 0; i < chunks.length; i++) {
+        renderChunkSvg(chunks[i], current_chunk_index_low + i, true);
     }
-/*    trace["chunks"].forEach(function (chunk, i) {
 
-        cur_height = 0;
-        var new_svg_g = chunk_div
-            .append("svg")
-            .attr("width", chunk_graph_width)
-            .attr("height", rectHeight)
-            .classed("svg_spacing", true)
-            .on("mouseover", function(x) {
-                d3.select(this)
-                    .transition()
-                    .duration(500)
-                    .attr("height", Math.max(rectHeight*2, rectHeightMin + rectHeight))
-            })
-            .on("click", function(x) {
-                if (d3.select(this).classed("selected")) {
-                    d3.select(this)
-                        .classed("selected", false)
-                } else {
-                    d3.select(this)
-                        .classed("selected", true)
-                }
-            })
-            .on("mouseout", function(x) {
-                if (!d3.select(this).classed("selected"))
-                    d3.select(this)
-                        .transition()
-                        .duration(500)
-                        .attr("height", rectHeight)
-            })
-            .append("g");
-
-        new_svg_g.append("rect")
-            .attr("transform", "translate(0, 0)")
-            .attr("width", chunk_graph_width - chunk_y_axis_space)
-            .attr("height", Math.max(rectHeight*2, rectHeightMin + rectHeight))
-            .attr("class", function(x) {
-                if (cur_background_class == 0) {
-                    cur_background_class = 1;
-                    return "background1";
-                } else {
-                    cur_background_class = 0;
-                    return "background2";
-                }
-
-            })
-            .on("mouseover", function(x) {
-                trace_box.html(d["trace"].replace(/\|/g, "</br><hr>"))
-                //div.attr("width", width);
-            });
-
-        //console.log(d["chunks"].toString());
-        var g = new_svg_g.selectAll("rect.data")
-            .data(d["chunks"])
-            .enter();
-
-        g.append("rect")
-            .filter(function(chunk) {
-                return filterChunk(chunk);
-            })
-            .attr("transform", function (chunk, i) {
-                if ("ts_start" in chunk) {
-                    //console.log("process chunk " + chunk["ts_start"] + " x: " + x(chunk["ts_start"]) );
-                    var ret = "translate("+ x(chunk["ts_start"])  +"," + cur_height * barHeight + ")";
-                    cur_height++;
-                    return ret;
-                }
-                else {
-                    //console.log("empty chunk");
-                    return "translate(0, 0)";
-                }
-            })
-            .attr("width", function (chunk) {
-                if ("ts_end" in chunk)
-                    return x(chunk["ts_end"] - chunk["ts_start"]);
-                else return x(0)
-            })
-            .attr("height", function(chunk) {
-                if ("ts_end" in chunk)
-                    return barHeight - 1;
-                else return 0
-            })
-            .attr("class", "data_bars")
-            .on("mouseover", function(d) {
-                div.transition()
-                    .duration(200)
-                    .style("opacity", .9);
-                div .html(bytesToString(d["size"]) + "</br> Reads: " + d["reads"] + "</br>Writes: " + d["writes"])
-                    .style("left", (d3.event.pageX) + "px")
-                    .style("top", (d3.event.pageY - 28) + "px");
-                //div.attr("width", width);
-            })
-            .on("mouseout", function(d) {
-                div.transition()
-                    .duration(500)
-                    .style("opacity", 0);
-            });
-
-        cur_height = 0;
-        g.append("line")
-            .filter(function(chunk) {
-                return filterChunk(chunk);
-            })
-            .each(function(d) {
-                d3.select(this).attr({
-                    y1: cur_height*barHeight,
-                    y2: cur_height * barHeight + barHeight - 1,
-                    x1: "ts_first" in d ? x(d["ts_first"]) : 0,
-                    x2: "ts_first" in d ? x(d["ts_first"]) : 0,
-                    // don't display if its 0 (unknown) or is the empty chunk
-                    display: !("ts_first" in d) || d["ts_first"] === 0 ? "none" : null
-                }).style("stroke", "black");
-                if ("ts_first" in d)
-                    cur_height++;
-            });
-
-        cur_height = 0;
+/*        cur_height = 0;
         g.append("line")
             .filter(function(chunk) {
                 return filterChunk(chunk);
@@ -490,81 +373,16 @@ function drawChunks(trace) {
                 }).style("stroke", "black");
                 if ("ts_last" in d)
                     cur_height++;
-            });
+            });*/
 
-        var y = d3.scale.linear()
-            .range([Math.max(rectHeight, rectHeightMin)-10, 0]);
-
-        steps = aggregateData([d], max_x);
-/!*        var starts = [];
-        d["chunks"].forEach(function(chunk) {
-            if ("ts_start" in chunk) {
-                if (!filterChunk(chunk)) return;
-                starts.push({"ts":chunk["ts_start"], "value":chunk["size"]});
-                starts.push({"ts":chunk["ts_end"], "value":-chunk["size"]});
-            }
-        });
-        starts.sort(function(a, b) { return a["ts"] - b["ts"]});
-        var running = 0;
-        var steps = [{"ts":0, "value":0}];
-        starts.forEach(function (v) {
-            running += v["value"];
-            steps.push({"ts":v["ts"], "value":running})
-        });
-        steps.push({"ts":max_x, "value":steps[steps.length-1]["value"]});*!/
-
-        y.domain(d3.extent(steps, function(v) { return v["value"]; }));
-
-        var yAxisRight = d3.svg.axis().scale(y)
-            .orient("right")
-            .tickFormat(bytesToStringNoDecimal)
-            .ticks(4);
-
-        //console.log(JSON.stringify(steps));
-        var line = d3.svg.line()
-            .x(function(v) { return x(v["ts"]); })
-            .y(function(v) { return y(v["value"]); })
-            .interpolate('step-after');
-
-        new_svg_g.append("path")
-            .datum(steps)
-            .attr("fill", "none")
-            .attr("stroke", "black")
-            .attr("stroke-linejoin", "round")
-            .attr("stroke-linecap", "round")
-            .attr("stroke-width", 1.5)
-            .attr("transform", "translate(0, " + (rectHeight+5) + ")")
-            .attr("d", line);
-        new_svg_g.append("g")
-            .attr("class", "y axis")
-            .attr("transform", "translate(" + (chunk_graph_width - chunk_y_axis_space + 1) + "," + (rectHeight+5) + ")")
-            .style("fill", "white")
-            .call(yAxisRight);
-    });*/
 }
 
 function xMax() {
     // find the max TS value
-    return d3.max(filtered_data, function(d) {
-        if ("trace" in d) {
-            if (!filterStackTrace(d["trace"])) return 0;
-            return d3.max(d["chunks"], function(chunk, i) {
-                if ("ts_start" in chunk) {
-                    for (var f in filters) {
-                        if (!filters[f](chunk)) return 0;
-                    }
-                    return chunk["ts_end"]
-                }
-            })
-        } else
-            return 0
-    });
+    return autopsy.max_time();
 }
 
 function drawChunkXAxis() {
-    /*x = d3.scale.linear()
-        .range([0, chunk_graph_width - chunk_y_axis_space]);*/
-
 
     var xAxis = d3.svg.axis()
         .scale(x)
@@ -591,89 +409,6 @@ function drawChunkXAxis() {
         .call(xAxis);
 }
 
-const MAX_AGGREGATE_BINS = 1000;
-function aggregateData(data, x_max) {
-    var starts = [];//new Array(total_chunks*2);
-    var values = []; //new Array(total_chunks*2);
-    var num_steps = 0;
-    data.forEach(function(trace) {
-        if (!filterStackTrace(trace["trace"])) return;
-
-/*        for (i = 0; i < trace["chunks"].length; i++) {
-            if ("ts_start" in trace.chunks[i]) {
-                for (var f in filters) {
-                    if (!filters[f](trace.chunks[i])) ;
-                }
-                starts[num_steps] = chunk["ts_start"];
-                values[num_steps++] = chunk["size"];
-                starts[num_steps] = chunk["ts_end"];
-                values[num_steps++] = -chunk["size"];
-            }
-
-        }*/
-
-        trace["chunks"].forEach(function(chunk) {
-            if ("ts_start" in chunk) {
-                for (var f in filters) {
-                    if (!filters[f](chunk)) return;
-                }
-                starts.push({"ts":chunk["ts_start"], "value":chunk["size"]});
-                starts.push({"ts":chunk["ts_end"], "value":-chunk["size"]});
-            }
-        })
-    });
-
-    starts.sort(function(a, b) { return a["ts"] - b["ts"]});
-    var running = 0;
-    var steps = [{"ts":0, "value":0}];
-    starts.forEach(function (v) {
-        running += v["value"];
-        steps.push({"ts":v["ts"], "value":running})
-    });
-    steps.push({"ts":x_max, "value":steps[steps.length-1]["value"]});
-
-
-    return steps;
-}
-
-function binAggregate(ag_data) {
-    // use a number of bins equal to the number of
-    // pixels the graph takes
-    if (ag_data.length < MAX_AGGREGATE_BINS * 10)
-        return ag_data;
-    var num_bins = MAX_AGGREGATE_BINS;
-    var bins = [];
-
-    for (i = 0; i < num_bins; i++) {
-        bins.push({max_val: x.invert(i), num_points: 0, sum: 0});
-    }
-    bins.push({max_val: max_x, num_points: 0, sum: 0});
-
-    var cur_bin = 0;
-    for (var d in ag_data) {
-        if (parseInt(ag_data[d]["ts"]) <= parseInt(bins[cur_bin].max_val)) {
-            bins[cur_bin].sum += ag_data[d].value;
-            bins[cur_bin].num_points++;
-        } else {
-            cur_bin++;
-            //console.log("comparing " + parseInt(ag_data[d]["ts"]) +" to "+ parseInt(bins[cur_bin].max_val));
-            while (parseInt(ag_data[d]["ts"]) > parseInt(bins[cur_bin].max_val)) {
-                //console.log("comparing " + parseInt(ag_data[d]["ts"]) +" to "+ parseInt(bins[cur_bin].max_val));
-                // we'll have an empty bin, set it equal to preceding
-                bins[cur_bin].num_points = bins[cur_bin-1].num_points;
-                bins[cur_bin].sum = bins[cur_bin-1].sum;
-                cur_bin++;
-            }
-            bins[cur_bin].sum += ag_data[d].value;
-            bins[cur_bin].num_points++;
-        }
-    }
-    var binned_ag = [];
-    for (var b in bins) {
-        binned_ag.push({ts: bins[b].max_val, value: bins[b].sum / bins[b].num_points})
-    }
-    return binned_ag;
-}
 function drawAggregatePath() {
 
     var y = d3.scale.linear()
@@ -681,13 +416,10 @@ function drawAggregatePath() {
 
     console.log("aggregate")
     max_x = xMax();
-    //var aggregate_data = aggregateData(filtered_data, max_x);
 
     var aggregate_data = autopsy.aggregate_all();
 
-    aggregate_max = d3.max(aggregate_data, function (d) {
-        return d["value"];
-    });
+    aggregate_max = autopsy.max_aggregate();
     //var binned_ag = binAggregate(aggregate_data);
     var binned_ag = aggregate_data;
 
@@ -802,20 +534,14 @@ function drawEverything() {
     max_x = xMax();
     x.domain([0, max_x]);
 
-    //drawChunks();
     drawStackTraces();
 
     drawChunkXAxis();
-
-
-
-    //drawChunkXAxis();
 
     var aggregate_graph = d3.select("#aggregate-graph")
         .append("svg")
         .attr("width", chunk_graph_width)
         .attr("height", 120);
-
 
     aggregate_graph.on("mousedown", function() {
 
@@ -871,6 +597,7 @@ function drawEverything() {
         var t2 = x.invert(x2);
         selection.remove();
         // set a new filter
+        // TODO use autopsy lib filters
         filters["ts_filter"] = function(chunk) {
             if (!("ts_start" in chunk)) return false;
             var tc1 = parseInt(chunk["ts_start"]);
@@ -889,22 +616,11 @@ function drawEverything() {
     var aggregate_graph_g = aggregate_graph.append("g");
     aggregate_graph_g.attr("id", "aggregate-group");
 
-
-
     drawAggregatePath();
 
-    var trace_count = 0;
-    var chunk_count = 0;
-    filtered_data.forEach(function(trace) {
-        trace_count++;
-        trace["chunks"].forEach(function(chunk) {
-            chunk_count++;
-        })
-    });
-
     var info = d3.select("#global-info");
-    info.html("Total alloc points: " + trace_count +
-        "</br>Total Allocations: " + chunk_count +
+    info.html("Total alloc points: " + num_traces +
+        "</br>Total Allocations: " + total_chunks +
         "</br>Max Heap: " + bytesToString(aggregate_max));
 
 }

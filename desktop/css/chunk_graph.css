@@ -1,4 +1,4 @@
-div.tooltip {
+#tooltip {
     position: absolute;
     text-align: center;
     padding: 2px;
@@ -35,17 +35,21 @@ div.tooltip {
     border-top: 1px solid #1c1e22;
 }
 
+body {
+    overflow-y: hidden;
+}
 
 #chunks {
-    height: 30vh;
+    height: 28vh;
     overflow-y: scroll;
     overflow-x: hidden;
-    padding-right: 20px;
+/*    padding-left: 100px;*/
     background-color: #353a41;
+    background-clip:content-box;
 }
 
 #traces {
-    height: 30vh;
+    height: 28vh;
     overflow-y: scroll;
     overflow-x: hidden;
 }
@@ -58,7 +62,7 @@ div.tooltip {
 }
 
 #aggregate-graph {
-    height: 23vh;
+    height: 17vh;
 }
 
 #chunks-container {

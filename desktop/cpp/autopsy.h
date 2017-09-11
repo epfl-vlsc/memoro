@@ -44,6 +44,7 @@ void RemoveMinMaxTime();
 // returns new number of active traces
 void SetTraceKeyword(std::string& keyword);
 void RemoveTraceKeyword(std::string& keyword);
+void TraceFilterReset();
 
 // fill times and values with 1000 aggregate data points from whole dataset
 // respects filters
@@ -59,8 +60,14 @@ void TraceChunks(std::vector<Chunk*>& chunks, int trace_index, int chunk_index, 
 // return list of traces
 void Traces(std::vector<TraceValue>& traces);
 
+void SetFilterMinMax(uint64_t min, uint64_t max);
+void FilterMinMaxReset();
+
 uint64_t MaxTime();
 uint64_t MinTime();
+uint64_t FilterMaxTime();
+uint64_t FilterMinTime();
+
 
 uint64_t MaxAggregate();
 

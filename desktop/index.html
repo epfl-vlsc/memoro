@@ -24,11 +24,17 @@
         </div>
         <div id="chunk-axis">
         </div>
-        <div id="chunks" onscroll="chunkScroll()">
+
+        <div class="row">
+          <div class="col-8 col-md-11" id="chunks" onscroll="chunkScroll()"></div>
+          <div class="col-4 col-md-1" id="chunks-yaxis" ></div>
+
         </div>
+
         <p>Aggregate Memory Usage</p>
         <div id="aggregate-graph">
         </div>
+        <a href="#" class="btn btn-default" onclick="resetTimeClick()">Reset Time</a>
       </div>
 
       <div class="col-md-4 ">
@@ -44,6 +50,7 @@
         <a href="#" class="btn btn-default" onclick="stackFilterClick()">Filter</a>
         <a href="#" class="btn btn-default" onclick="stackFilterResetClick()">Reset</a>
         <a href="#" class="btn btn-default">Help</a>
+        <div class="spinny-load"></div>
 
       </div>
       <div class="col-md-2 ">
@@ -76,8 +83,8 @@
     <div class="footer row">
     </div>
 
-    <div id="tooltip"></div>
   </div>
+  <div id="tooltip"></div>
   <script>window.$ = window.jQuery = require('./node_modules/jquery/dist/jquery.min');</script>
   <script src="./node_modules/bootstrap/dist/js/bootstrap.min.js"></script>
   </body>

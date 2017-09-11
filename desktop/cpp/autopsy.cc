@@ -106,14 +106,15 @@ class Dataset {
           });
 
       // set trace structure pointers to their chunks
+      min_time_ = 0;
       for (int i = 0; i < num_chunks_; i++) {
         Trace& t = traces_[chunks_[i].stack_index];
         t.chunks.push_back(&chunks_[i]);
-        if (chunks_[i].timestamp_start < min_time_)
-          min_time_ = chunks_[i].timestamp_start;
         if (chunks_[i].timestamp_end > max_time_)
           max_time_ = chunks_[i].timestamp_end;
       }
+      filter_min_time_ = 0;
+      filter_max_time_ = max_time_;
       
       // populate chunk aggregate vectors
       for (auto& t : traces_) {
@@ -139,18 +140,30 @@ class Dataset {
     uint64_t MaxAggregate() { return max_aggregate_; }
     uint64_t MaxTime() { return max_time_; }
     uint64_t MinTime() { return min_time_; }
+    uint64_t FilterMaxTime() { return filter_max_time_; }
+    uint64_t FilterMinTime() { return filter_min_time_; }
 
     void SetTraceFilter(string& str) {
       for (auto& s : trace_filters_) 
         if (s == str)
           return;
       trace_filters_.push_back(str);
+      bool filtered = false;
       for (auto& trace : traces_) {
         if (trace.trace.find(str) == string::npos) {
           trace.filtered = true;
-
+          filtered = true;
         }
       }
+      if (filtered)
+        aggregates_.clear();
+    }
+
+    void TraceFilterReset() {
+      if (!trace_filters_.empty()) aggregates_.clear();
+      trace_filters_.clear();
+      for (auto& trace : traces_)
+        trace.filtered = false;
     }
 
     void Traces(vector<TraceValue>& traces) {
@@ -162,7 +175,16 @@ class Dataset {
 
         tmp.trace = &traces_[i].trace;
         tmp.trace_index = i;
-        tmp.chunk_index = 0; // TODO fix for time filtering
+        tmp.chunk_index = 0;
+        bool overlaps = false;
+        for (auto& chunk : traces_[i].chunks) {
+          if (chunk->timestamp_start < filter_max_time_ && chunk->timestamp_end > filter_min_time_) {
+            overlaps = true;
+            break;
+          }
+        }
+        if (!overlaps) continue;
+
         tmp.num_chunks = traces_[i].chunks.size();
         traces.push_back(tmp);
       }
@@ -188,6 +210,19 @@ class Dataset {
       }
     }
 
+    void SetFilterMinMax(uint64_t min, uint64_t max) {
+      if (min >= max) return;
+      if (max > max_time_) return;
+
+      filter_min_time_ = min;
+      filter_max_time_ = max;
+    }
+
+    void FilterMinMaxReset() {
+      filter_min_time_ = min_time_;
+      filter_max_time_ = max_time_;
+    }
+
   private:
 
     Chunk* chunks_;
@@ -198,19 +233,46 @@ class Dataset {
     uint64_t min_time_ = UINT64_MAX;
     uint64_t max_time_ = 0;
     uint64_t max_aggregate_ = 0;
+    uint64_t filter_max_time_;
+    uint64_t filter_min_time_;
 
     vector<string> trace_filters_;
     priority_queue<TimeValue> queue_;
 
     void SampleValues(vector<TimeValue>& points, vector<TimeValue>& values) {
       values.reserve(MAX_POINTS+2);
-      if (points.size() > MAX_POINTS) {
+      // first, find the filtered interval
+      cout << "points size is " << points.size() << endl;
+      int j = 0;
+      for(; j < points.size() && points[j].time < filter_min_time_; j++);
+      int min = j;
+      j++;
+      cout << "min " << min << " j now " << j << endl;
+      if (j == points.size()) {
+        // basically, there were no points inside the interval, 
+        // so we set a straight line of the appropriate value during the filter interval
+        values.push_back({filter_min_time_, points[min-1].value});
+        values.push_back({filter_max_time_, points[min-1].value});
+        return;
+      }
+      for(; j < points.size() && points[j].time <= filter_max_time_; j++);
+      int max = j;
+      //cout << "max " << max << endl;
+      int num_points = max - min + 1;
+      if (num_points == 0 || num_points < 0) {
+        cout << "num points is fucked " << num_points <<  endl;
+        return;
+      }
+
+
+      if (num_points > MAX_POINTS) {
+        values.push_back({filter_min_time_, points[min == 0 ? min : min-1].value});
         // sample MAX POINTS points
-        float interval = (float)points.size() / (float)MAX_POINTS;
+        float interval = (float)num_points / (float)MAX_POINTS;
         int i = 0;
         float index = 0.0f;
         while (i < MAX_POINTS) {
-          int idx = (int) index;
+          int idx = (int) index + min;
           if (idx >= points.size()) {
             cout << " OH FUCK";
             break;
@@ -220,9 +282,12 @@ class Dataset {
           i++;
         }
       } else {
-        values = vector<TimeValue>(points);
+        values.resize(max-min+1);
+        values[0] = {filter_min_time_, points[min == 0 ? min : min-1].value};
+        memcpy(&values[1], &points[min], sizeof(TimeValue)*(max-min));
       }
-      values.push_back({max_time_, values[values.size()-1].value});
+      //cout << "first value is " << values[0].value << " at time " << values[0].time << endl;
+      values.push_back({filter_max_time_, values[values.size()-1].value});
     }
 
     void Aggregate(vector<TimeValue>& points, uint64_t& max_aggregate, 
@@ -269,7 +334,7 @@ class Dataset {
           queue_.pop();
           points.push_back(tmp);
       }
-      points.push_back({max_time_,0});
+      //points.push_back({max_time_,0});
     }
   
     // TODO deduplicate this code
@@ -337,12 +402,21 @@ uint64_t MaxAggregate() {
   return theDataset.MaxAggregate();
 }
 
+// TODO maybe these should just default to the filtered numbers?
 uint64_t MaxTime() {
   return theDataset.MaxTime();
 }
 
 uint64_t MinTime() {
   return theDataset.MinTime();
+}
+
+uint64_t FilterMaxTime() {
+  return theDataset.FilterMaxTime();
+}
+
+uint64_t FilterMinTime() {
+  return theDataset.FilterMinTime();
 }
 
 void SetTraceKeyword(std::string& keyword) {
@@ -361,3 +435,16 @@ void AggregateTrace(std::vector<TimeValue>& values, int trace_index) {
 void TraceChunks(std::vector<Chunk*>& chunks, int trace_index, int chunk_index, int num_chunks) {
   theDataset.TraceChunks(chunks, trace_index, chunk_index, num_chunks);
 }
+
+void SetFilterMinMax(uint64_t min, uint64_t max) {
+  theDataset.SetFilterMinMax(min, max);
+}
+
+void TraceFilterReset() {
+  theDataset.TraceFilterReset();
+}
+
+void FilterMinMaxReset() {
+  theDataset.FilterMinMaxReset();
+}
+

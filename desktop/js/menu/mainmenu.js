@@ -12,12 +12,11 @@ const template = [
                 label: 'Open',
                 accelerator: 'CmdOrCtrl+O',
                 click: function() {
-                    var properties = ['openFile'],
+                    var properties = ['openDirectory'],
                         parentWindow = (process.platform == 'darwin') ? null : BrowserWindow.getFocusedWindow();
 
                     var window = BrowserWindow.getFocusedWindow();
-                    dialog.showOpenDialog(parentWindow, properties, function(f) {
-                        console.log("got a file: " + f)
+                    dialog.showOpenDialog(properties, function(f) {
                         if (f)
                             window.webContents.send('open_file', f);
                         else

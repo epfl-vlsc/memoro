@@ -1,8 +1,6 @@
 var d3 = require("d3");
-var remote = require("electron").remote;
-var fs = require('fs');
 var autopsy = require('../cpp/build/Debug/autopsy.node');
-var process = require('process');
+var path = require('path')
 
 function bytesToString(bytes,decimals) {
     if(bytes == 0) return '0 B';
@@ -50,17 +48,14 @@ var traceFilters = [];
 
 var aggregate_max = 0;
 
+
 // file open callback function
 function updateData(datafile) {
-    json_file = datafile;
-    console.log("loading")
-    var data = JSON.parse(fs.readFileSync(datafile, 'utf-8'));
-    //console.log(JSON.stringify(data));
-    console.log("done")
-    console.log("testing cpp ...  ");
-    autopsy.set_dataset("./");
-    console.log("done set dataset");
-    if (!("binary" in data) || !("data" in data)) {
+
+    var folder = path.dirname(datafile)
+    console.log(folder + "/")
+    autopsy.set_dataset(folder + "/");
+/*    if (!("binary" in data) || !("data" in data)) {
         $(".modal-title").text("Error");
         $(".modal-body").text("Input JSON is missing binary or data fields.");
         $("#main-modal").modal("show")
@@ -81,34 +76,8 @@ function updateData(datafile) {
         };
 
         drawEverything();
-    }
-}
- 
-function filterChunk(chunk) {
-    if (!("ts_start" in chunk))
-        return false;
-    for (var f in filters) {
-        if (!filters[f](chunk)) return false;
-    }
-    return true;
-}
-
-function filterStackTrace(trace) {
-    //console.log("filtering traces with " + Object.keys(traceFilters).length)
-    if (Object.keys(traceFilters).length === 0) return true;
-    for (var f in traceFilters) {
-        if (traceFilters[f](trace)) return true;
-    }
-    return false;
-}
-
-function filteredChunkLength(chunks) {
-    var count = 0;
-    for (var c in chunks) {
-        if (filterChunk(chunks[c]))
-            count++;
-    }
-    return count;
+    }*/
+    drawEverything();
 }
 
 function drawStackTraces() {
@@ -117,9 +86,11 @@ function drawStackTraces() {
     var traces_div = d3.select("#traces")
     traces_div.selectAll("svg").remove();
 
-    var max_x = xMax();
+    //var max_x = xMax();
+    var max_x = autopsy.filter_max_time();
+    var min_x = autopsy.filter_min_time();
 
-    x.domain([0, max_x]);
+    x.domain([min_x, max_x]);
 
     var traces = autopsy.traces();
     num_traces = traces.length;
@@ -129,6 +100,7 @@ function drawStackTraces() {
     traces.forEach(function (d, i) {
         //console.log("trace index is " + i);
         //if (!filterStackTrace(d["trace"])) return;
+
         total_chunks += d.num_chunks;
         var rectHeight = 55;
         var new_svg_g = traces_div
@@ -172,6 +144,7 @@ function drawStackTraces() {
                 //div.attr("width", width);
             });
 
+
         sampled = autopsy.aggregate_trace(d.trace_index);
         var peak = d3.max(sampled, function (x) {
             return x["value"];
@@ -196,7 +169,11 @@ function drawStackTraces() {
 
         //console.log(JSON.stringify(steps));
         var line = d3.svg.line()
-            .x(function(v) { return x(v["ts"]); })
+            .x(function(v) {
+                if (v.ts > max_x)
+                    console.log("bigger than max x!! "+ v.ts);
+                return x(v["ts"]);
+            })
             .y(function(v) { return y(v["value"]); })
             .interpolate('step-after');
 
@@ -331,6 +308,12 @@ function chunkScroll() {
     }
 }
 
+function clearChunks() {
+    var chunk_div = d3.select("#chunks");
+
+    chunk_div.selectAll("div").remove();
+}
+
 // draw the first X chunks from this trace
 function drawChunks(trace) {
 
@@ -345,9 +328,14 @@ function drawChunks(trace) {
     chunk_div.selectAll("div").remove();
 
     // find the max TS value
-    var max_x = xMax();
+/*    var max_x = xMax();
 
-    x.domain([0, max_x]);
+    x.domain([0, max_x]);*/
+    var max_x = autopsy.filter_max_time();
+    var min_x = autopsy.filter_min_time();
+    console.log("min x " + min_x + " max x " + max_x)
+
+    x.domain([min_x, max_x]);
 
     current_chunk_index_low = trace.chunk_index;
     current_chunk_index = Math.min(trace.num_chunks, 200);
@@ -357,6 +345,7 @@ function drawChunks(trace) {
         renderChunkSvg(chunks[i], current_chunk_index_low + i, true);
     }
 
+    // TODO redo first last access lines
 /*        cur_height = 0;
         g.append("line")
             .filter(function(chunk) {
@@ -379,7 +368,7 @@ function drawChunks(trace) {
 
 function xMax() {
     // find the max TS value
-    return autopsy.max_time();
+    return autopsy.filter_max_time();
 }
 
 function drawChunkXAxis() {
@@ -393,9 +382,10 @@ function drawChunkXAxis() {
         })
         .orient("bottom");
 
-    var max_x = xMax();
+    var max_x = autopsy.filter_max_time();
+    var min_x = autopsy.filter_min_time();
 
-    x.domain([0, max_x]);
+    x.domain([min_x, max_x]);
 
     d3.select("#chunk-x-axis").remove();
 
@@ -498,7 +488,7 @@ function drawAggregatePath() {
         var y_pos = d3.bisector(function(d) {
             return d["ts"];
         }).left(binned_ag, x0, 1);
-        var y = binned_ag[y_pos]["value"];
+        var y = binned_ag[y_pos-1]["value"];
         focus_g.attr("transform", "translate(" + x(x0) + ",0)");
         focus_g.select("#time").text(Math.round(x0) + "ns " + bytesToString(y));
         if (d3.mouse(this)[0] > chunk_graph_width / 2)
@@ -517,18 +507,11 @@ function drawEverything() {
     chunk_graph_width = d3.select("#chunks-container").node().getBoundingClientRect().width;
     chunk_graph_height = d3.select("#chunks-container").node().getBoundingClientRect().height;
     console.log("width: " + chunk_graph_width);
-    chunk_y_axis_space = chunk_graph_width*0.12;  // ten percent should be enough
+    chunk_y_axis_space = chunk_graph_width*0.13;  // ten percent should be enough
 
 
     x = d3.scale.linear()
         .range([0, chunk_graph_width - chunk_y_axis_space]);
-
-    var xAxis = d3.svg.axis()
-        .scale(x)
-        .orient("bottom");
-
-    var div = d3.select("#tooltip")
-        .classed("tooltip", true);
 
     // find the max TS value
     max_x = xMax();
@@ -598,18 +581,19 @@ function drawEverything() {
         selection.remove();
         // set a new filter
         // TODO use autopsy lib filters
-        filters["ts_filter"] = function(chunk) {
-            if (!("ts_start" in chunk)) return false;
-            var tc1 = parseInt(chunk["ts_start"]);
-            var tc2 = parseInt(chunk["ts_end"]);
-            return t1 <= tc2 && tc1 <= t2;
-        };
+        autopsy.set_filter_minmax(t1, t2);
+
         // redraw
-        //drawChunks();
+        clearChunks();
 
-        //drawAggregatePath();
+        console.log("drawing stacks")
+        drawStackTraces();
 
-        //drawChunkXAxis();
+        console.log("drawing aggregate")
+        drawAggregatePath();
+
+        console.log("drawing axis")
+        drawChunkXAxis();
 
     });
 
@@ -631,20 +615,15 @@ function stackFilterClick() {
     var filterText = element.value;
     element.value = "";
     var filterWords = filterText.split(" ");
-    for (var word in filterWords) {
-        console.log("adding ST filter for word " + filterWords[word]);
-        traceFilters[filterWords[word]] = function(trace) {
-            console.log("filtering for " + word);
-            var ret = trace.indexOf(filterWords[word]);
-            console.log("returned " + ret);
-            if (ret !== -1) return true;
-            else return false;
-        }
+
+    for (var w in filterWords) {
+        console.log("setting filter " + filterWords[w]);
+        autopsy.set_trace_keyword(filterWords[w]);
     }
-
     // redraw
-    //drawChunks();
+    clearChunks();
 
+    drawStackTraces();
     drawChunkXAxis();
 
     drawAggregatePath();
@@ -652,25 +631,29 @@ function stackFilterClick() {
 }
 
 function stackFilterResetClick() {
-    for (var f in traceFilters) {
-        delete traceFilters[f];
-    }
     //drawChunks();
 
+    autopsy.trace_filter_reset();
+    clearChunks();
+    drawStackTraces();
     drawChunkXAxis();
 
     drawAggregatePath();
 }
 
-function removeOne() {
-    console.log(d3.select("#chunks").selectAll("svg")[0][0].remove())
+function resetTimeClick() {
+    autopsy.filter_minmax_reset();
+    clearChunks();
+    drawStackTraces();
+    drawChunkXAxis();
 
+    drawAggregatePath();
 }
 
 module.exports = {
     updateData: updateData,
     stackFilterClick: stackFilterClick,
     stackFilterResetClick: stackFilterResetClick,
-    removeOne: removeOne,
-    chunkScroll: chunkScroll
+    chunkScroll: chunkScroll,
+    resetTimeClick: resetTimeClick
 };

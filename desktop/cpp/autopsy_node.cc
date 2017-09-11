@@ -132,6 +132,22 @@ void Autopsy_MinTime(const v8::FunctionCallbackInfo<v8::Value> & args) {
   args.GetReturnValue().Set(retval);
 }
 
+void Autopsy_FilterMaxTime(const v8::FunctionCallbackInfo<v8::Value> & args) {
+  Isolate* isolate = args.GetIsolate();
+
+  Local<Number> retval = v8::Number::New(isolate, FilterMaxTime());
+
+  args.GetReturnValue().Set(retval);
+}
+
+void Autopsy_FilterMinTime(const v8::FunctionCallbackInfo<v8::Value> & args) {
+  Isolate* isolate = args.GetIsolate();
+
+  Local<Number> retval = v8::Number::New(isolate, FilterMinTime());
+
+  args.GetReturnValue().Set(retval);
+}
+
 void Autopsy_MaxAggregate(const v8::FunctionCallbackInfo<v8::Value> & args) {
   Isolate* isolate = args.GetIsolate();
 
@@ -148,17 +164,38 @@ void Autopsy_SetTraceKeyword(const v8::FunctionCallbackInfo<v8::Value> & args) {
   SetTraceKeyword(keyword);
 }
 
+void Autopsy_SetFilterMinMax(const v8::FunctionCallbackInfo<v8::Value> & args) {
+  Isolate* isolate = args.GetIsolate();
+
+  uint64_t t1 = args[0]->NumberValue();
+  uint64_t t2 = args[1]->NumberValue();
+  SetFilterMinMax(t1, t2);
+
+}
+
+void Autopsy_TraceFilterReset(const v8::FunctionCallbackInfo<v8::Value> & args) {
+  TraceFilterReset();
+}
+
+void Autopsy_FilterMinMaxReset(const v8::FunctionCallbackInfo<v8::Value> & args) {
+  FilterMinMaxReset();
+}
+
 void init(Handle <Object> exports, Handle<Object> module) {
   NODE_SET_METHOD(exports, "set_dataset", Autopsy_SetDataset);
   NODE_SET_METHOD(exports, "aggregate_all", Autopsy_AggregateAll);
   NODE_SET_METHOD(exports, "max_time", Autopsy_MaxTime);
   NODE_SET_METHOD(exports, "min_time", Autopsy_MinTime);
+  NODE_SET_METHOD(exports, "filter_max_time", Autopsy_FilterMaxTime);
+  NODE_SET_METHOD(exports, "filter_min_time", Autopsy_FilterMinTime);
   NODE_SET_METHOD(exports, "max_aggregate", Autopsy_MaxAggregate);
   NODE_SET_METHOD(exports, "set_trace_keyword", Autopsy_SetTraceKeyword);
   NODE_SET_METHOD(exports, "traces", Autopsy_Traces);
   NODE_SET_METHOD(exports, "aggregate_trace", Autopsy_AggregateTrace);
   NODE_SET_METHOD(exports, "trace_chunks", Autopsy_TraceChunks);
-
+  NODE_SET_METHOD(exports, "set_filter_minmax", Autopsy_SetFilterMinMax);
+  NODE_SET_METHOD(exports, "trace_filter_reset", Autopsy_TraceFilterReset);
+  NODE_SET_METHOD(exports, "filter_minmax_reset", Autopsy_FilterMinMaxReset);
 }
 
 NODE_MODULE(autopsy, init)

@@ -11,9 +11,17 @@ void Autopsy_SetDataset(const v8::FunctionCallbackInfo<v8::Value> & args) {
 
   v8::String::Utf8Value s(args[0]);
   std::string file_path(*s);
+  std::string msg;
 
-  SetDataset(file_path);
+  bool res = SetDataset(file_path, msg);
+    
+  Local<Object> result = Object::New(isolate);
+  result->Set(String::NewFromUtf8(isolate, "message"), 
+      String::NewFromUtf8(isolate, msg.c_str()));
+  result->Set(String::NewFromUtf8(isolate, "result"), 
+      Boolean::New(isolate, res));
   
+  args.GetReturnValue().Set(result);
 }
 
 void Autopsy_AggregateAll(const v8::FunctionCallbackInfo<v8::Value> & args) {

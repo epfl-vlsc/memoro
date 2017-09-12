@@ -11,6 +11,8 @@
 using namespace std;
 
 #define MAX_POINTS 1500
+#define VERSION_MAJOR 0
+#define VERSION_MINOR 1
 
 struct __attribute__((packed)) Header {
   uint8_t version_major = 0;
@@ -36,20 +38,28 @@ bool operator<(const TimeValue& a, const TimeValue& b) {
 class Dataset {
   public:
     Dataset() {}
-    void Reset(string& dir_path) {
+    bool Reset(string& dir_path, string& msg) {
       if (chunk_ptr_)
         delete [] chunk_ptr_;
       traces_.clear();
       
       string trace_file = dir_path + "hplgst.trace";
+      cout << "opening " << trace_file << endl;
       // fopen trace file, build traces array
       FILE* trace_fd = fopen(trace_file.c_str(), "r");
       if (trace_fd == NULL) {
-        cout << "failed to open file\n";
-        return;
+        msg = "failed to open file " + trace_file;
+        return false;
       }
       Header header;
       fread(&header, sizeof(Header), 1, trace_fd);
+
+      if (header.version_major != VERSION_MAJOR || 
+          header.version_minor != VERSION_MINOR) {
+        msg = "Header version mismatch in " + trace_file + ". \
+               Is this a valid trace/chunk file?";
+        return false;
+      }
 
       vector<uint16_t> index;
       index.resize(header.index_size);
@@ -58,10 +68,10 @@ class Dataset {
       traces_.reserve(header.index_size);
       Trace t;
       char trace_buf[4096];
-      for (int i = 0; i < header.index_size; i++) {
+      for (unsigned int i = 0; i < header.index_size; i++) {
         if (index[i] > 4096) {
-          cout << "index is too big!! " << index[i] << endl;
-          return;
+          msg = "index is too big, increase buf size (this is a bug) ";
+          return false;
         } else {
           fread(trace_buf, index[i], 1, trace_fd);
           t.trace = string(trace_buf, index[i]);
@@ -77,8 +87,8 @@ class Dataset {
       // end of file. not sure why yet ...
       //int file_size = 0;
       if (chunk_fd == NULL) {
-        cout << "Failed to open chunk file" << endl;
-        return;
+        msg = "failed to open file " + chunk_file;
+        return false;
       } /*else {
         fseek(chunk_fd, 0L, SEEK_END);
         file_size = ftell(chunk_fd);
@@ -86,6 +96,12 @@ class Dataset {
       }*/
      
       fread(&header, sizeof(Header), 1, chunk_fd);
+      if (header.version_major != VERSION_MAJOR || 
+          header.version_minor != VERSION_MINOR) {
+        msg = "Header version mismatch in " + trace_file + ". \
+               Is this a valid trace/chunk file?";
+        return false;
+      }
       
       index.resize(header.index_size);
       fread(&index[0], 2, header.index_size, chunk_fd);
@@ -107,7 +123,7 @@ class Dataset {
 
       // set trace structure pointers to their chunks
       min_time_ = 0;
-      for (int i = 0; i < num_chunks_; i++) {
+      for (unsigned int i = 0; i < num_chunks_; i++) {
         Trace& t = traces_[chunks_[i].stack_index];
         t.chunks.push_back(&chunks_[i]);
         if (chunks_[i].timestamp_end > max_time_)
@@ -121,6 +137,8 @@ class Dataset {
         Aggregate(t.aggregate, t.max_aggregate, t.chunks);
       }
       aggregates_.reserve(num_chunks_*2);
+
+      return true;
     }
 
     void AggregateAll(vector<TimeValue>& values) {
@@ -242,17 +260,19 @@ class Dataset {
     void SampleValues(vector<TimeValue>& points, vector<TimeValue>& values) {
       values.reserve(MAX_POINTS+2);
       // first, find the filtered interval
-      cout << "points size is " << points.size() << endl;
-      int j = 0;
+      //cout << "points size is " << points.size() << endl;
+      unsigned int j = 0;
       for(; j < points.size() && points[j].time < filter_min_time_; j++);
       int min = j;
       j++;
-      cout << "min " << min << " j now " << j << endl;
+      //cout << "min " << min << " j now " << j << endl;
       if (j == points.size()) {
         // basically, there were no points inside the interval, 
         // so we set a straight line of the appropriate value during the filter interval
+        values.push_back({filter_min_time_, 0});
         values.push_back({filter_min_time_, points[min-1].value});
         values.push_back({filter_max_time_, points[min-1].value});
+        values.push_back({filter_max_time_, 0});
         return;
       }
       for(; j < points.size() && points[j].time <= filter_max_time_; j++);
@@ -263,7 +283,6 @@ class Dataset {
         cout << "num points is fucked " << num_points <<  endl;
         return;
       }
-
 
       if (num_points > MAX_POINTS) {
         values.push_back({filter_min_time_, points[min == 0 ? min : min-1].value});
@@ -384,14 +403,13 @@ class Dataset {
           points.push_back(tmp);
       }
     }
-
 };
 
 // its just easier this way ...
 static Dataset theDataset;
 
-void SetDataset(std::string& file_path) {
-  theDataset.Reset(file_path);
+bool SetDataset(std::string& file_path, string& msg) {
+  return theDataset.Reset(file_path, msg);
 }
 
 void AggregateAll(std::vector<TimeValue>& values) {

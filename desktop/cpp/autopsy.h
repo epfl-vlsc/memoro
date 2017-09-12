@@ -34,7 +34,7 @@ struct TraceValue {
 };
 
 // set the current dataset file, returns dataset stats (num traces, min/max times)
-void SetDataset(std::string& file_path);
+bool SetDataset(std::string& file_path, std::string& msg);
 
 // add a timestamp interval filter
 void SetMinMaxTime(uint64_t max, uint64_t min);

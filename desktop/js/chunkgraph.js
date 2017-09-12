@@ -1,6 +1,7 @@
 var d3 = require("d3");
 var autopsy = require('../cpp/build/Debug/autopsy.node');
 var path = require('path')
+var async = require('async');
 
 function bytesToString(bytes,decimals) {
     if(bytes == 0) return '0 B';
@@ -27,57 +28,66 @@ var bytesToStringNoDecimal = function (bytes) {
 }
 
 // convenience globals
-var json_file = "";
-var filtered_data;
-var binary_path = "";
-
 var barHeight;
 var total_chunks;
 
 var chunk_graph_width;
 var chunk_graph_height;
 var chunk_y_axis_space;
-var top_spacing = 30;
 var x;  // the x range
 var max_x;
 var num_traces;
-var total_allocations;
 
-var filters = [];
-var traceFilters = [];
 
 var aggregate_max = 0;
 
+function showLoader() {
+    var element = document.querySelector("#loadspinner");
+    element.style.visibility = "visible";
+}
+
+function hideLoader() {
+    var element = document.querySelector("#loadspinner");
+    element.style.visibility = "hidden";
+}
 
 // file open callback function
 function updateData(datafile) {
 
+    showLoader();
+
     var folder = path.dirname(datafile)
-    console.log(folder + "/")
-    autopsy.set_dataset(folder + "/");
-/*    if (!("binary" in data) || !("data" in data)) {
+
+    console.log("running now");
+    async.parallel([function(callback) {
+        var res = autopsy.set_dataset(folder+'/');
+        callback(null, res)
+
+    }], function(err, results) {
+        hideLoader();
+        var result = results[0];
+        if (!result.result) {
+            $(".modal-title").text("Error");
+            $(".modal-body").text("File parsing failed with error: " + result.message);
+            $("#main-modal").modal("show")
+        } else {
+
+            // add default "main" filter?
+            drawEverything();
+        }
+    })
+/*    console.log(folder + "/")
+    var result = autopsy.set_dataset(folder + "/");
+    if (!result.result) {
         $(".modal-title").text("Error");
-        $(".modal-body").text("Input JSON is missing binary or data fields.");
+        $(".modal-body").text("File parsing failed with error: " + result.message);
         $("#main-modal").modal("show")
     } else {
-        binary_path = data["binary"];
-        filtered_data = data["data"];
-        total_chunks = d3.sum(filtered_data, function(t) {
-            return t.chunks.length - 1;
-        });
-        total_traces = filtered_data.length;
-        console.log("done again total chunks " + total_chunks);
 
-        traceFilters["main"] = function(trace) {
-            var ret = trace.indexOf("main");
-            //console.log("returned " + ret);
-            if (ret !== -1) return true;
-            else return false;
-        };
-
+        // add default "main" filter?
         drawEverything();
     }*/
-    drawEverything();
+    console.log("done!!");
 }
 
 function drawStackTraces() {
@@ -112,13 +122,18 @@ function drawStackTraces() {
             })
             .on("click", function(x) {
                 if (d3.select(this).classed("selected")) {
+                    d3.selectAll(".select-rect").style("display", "none");
                     d3.select(this)
-                        .classed("selected", false)
-                    // draws the first 50, rest are drawn on scroll
-                    drawChunks(d);
+                        .classed("selected", false);
+                    trace.html("");
+                    clearChunks();
                 } else {
+                    trace.html(d.trace.replace(/\|/g, "</br><hr>"));
+                    d3.selectAll(".select-rect").style("display", "none");
+                    d3.select(this).selectAll(".select-rect").style("display", "inline");
                     d3.select(this)
-                        .classed("selected", true)
+                        .classed("selected", true);
+                    drawChunks(d);
                 }
             })
             .on("mouseout", function(x) {
@@ -140,10 +155,18 @@ function drawStackTraces() {
 
             })
             .on("mouseover", function(x) {
-                trace.html(d.trace.replace(/\|/g, "</br><hr>"))
                 //div.attr("width", width);
             });
 
+        new_svg_g.append("rect")
+            .attr("transform", "translate(0, 0)")
+            .attr("width", chunk_graph_width - chunk_y_axis_space)
+            .attr("height", rectHeight)
+            .style("fill", "none")
+            .style("stroke-width", "2px")
+            .style("stroke", "steelblue")
+            .style("display", "none")
+            .classed("select-rect", true);
 
         sampled = autopsy.aggregate_trace(d.trace_index);
         var peak = d3.max(sampled, function (x) {
@@ -210,7 +233,7 @@ function tooltip(chunk) {
 }
 
 function renderChunkSvg(chunk, text, bottom) {
-
+    var min_x = autopsy.filter_min_time()
     var chunk_div = d3.select("#chunks");
     var div = d3.select("#tooltip");
     var new_svg_g;
@@ -226,7 +249,7 @@ function renderChunkSvg(chunk, text, bottom) {
         .classed("svg_spacing_data", true);
     new_svg_g.append("rect")
         .attr("transform", "translate("+ x(chunk["ts_start"])  +",0)")
-        .attr("width", Math.max(x(chunk["ts_end"] - chunk["ts_start"]), 2))
+        .attr("width", Math.max(x(min_x + chunk["ts_end"] - chunk["ts_start"]), 2))
         .attr("height", barHeight)
         .classed("data_bars", true)
         .on("mouseover", tooltip(chunk))
@@ -236,7 +259,7 @@ function renderChunkSvg(chunk, text, bottom) {
                 .style("opacity", 0);
         });
     new_svg_g.append("text")
-        .attr("x", (chunk_graph_width - chunk_y_axis_space+10))
+        .attr("x", (chunk_graph_width - 130))
         .attr("y", 6)
         .text(text.toString())
         .classed("chunk_text", true)
@@ -272,7 +295,7 @@ function chunkScroll() {
     var element = document.querySelector("#chunks");
     var percent = 100 * element.scrollTop / (element.scrollHeight - element.clientHeight);
     if (percent > load_threshold) {
-        var chunks = autopsy.TraceChunks(current_trace_index, current_chunk_index, 25);
+        var chunks = autopsy.trace_chunks(current_trace_index, current_chunk_index, 25);
         if (chunks.length > 0) {
             // there are still some to display
             //console.log("cur chunk index is " + current_chunk_index);
@@ -290,7 +313,7 @@ function chunkScroll() {
         }
     } else if (percent < (100 - load_threshold)) {
         if (current_chunk_index_low > 0) {
-            var chunks = autopsy.TraceChunks(current_trace_index, Math.max(current_chunk_index_low-25, 0), 25);
+            var chunks = autopsy.trace_chunks(current_trace_index, Math.max(current_chunk_index_low-25, 0), 25);
             if (chunks.length == 0)
                 console.log("oh fuck chunks is 0");
             var to_prepend = chunks.length;
@@ -620,6 +643,7 @@ function stackFilterClick() {
         console.log("setting filter " + filterWords[w]);
         autopsy.set_trace_keyword(filterWords[w]);
     }
+    showLoader();
     // redraw
     clearChunks();
 
@@ -627,27 +651,37 @@ function stackFilterClick() {
     drawChunkXAxis();
 
     drawAggregatePath();
-
+    hideLoader();
 }
 
 function stackFilterResetClick() {
     //drawChunks();
-
+    showLoader();
     autopsy.trace_filter_reset();
     clearChunks();
     drawStackTraces();
     drawChunkXAxis();
 
     drawAggregatePath();
+    hideLoader();
 }
 
 function resetTimeClick() {
+    showLoader();
     autopsy.filter_minmax_reset();
     clearChunks();
     drawStackTraces();
     drawChunkXAxis();
 
     drawAggregatePath();
+    hideLoader();
+}
+
+function showFilterHelp() {
+    $(".modal-title").text("Filter Trace");
+    $(".modal-body").text("Filter stack traces (allocation points) by keyword. \
+    Enter space separated keywords. Any trace not containing those keywords will be filtered out.");
+    $("#main-modal").modal("show")
 }
 
 module.exports = {
@@ -655,5 +689,6 @@ module.exports = {
     stackFilterClick: stackFilterClick,
     stackFilterResetClick: stackFilterResetClick,
     chunkScroll: chunkScroll,
-    resetTimeClick: resetTimeClick
+    resetTimeClick: resetTimeClick,
+    showFilterHelp: showFilterHelp
 };

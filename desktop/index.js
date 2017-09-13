@@ -16,6 +16,10 @@ function initApp() {
                 document.querySelector("#filter-button").click();
             }
         });
+
+    // add div
+    var element = document.querySelector("#overlay");
+    element.style.visibility = "visible";
 }
 
 function stackFilterClick() {

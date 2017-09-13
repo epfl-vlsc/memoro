@@ -56,25 +56,31 @@ function updateData(datafile) {
 
     showLoader();
 
-    var folder = path.dirname(datafile)
+    setTimeout(function() {
+        var folder = path.dirname(datafile)
 
-    async.parallel([function(callback) {
-        var res = autopsy.set_dataset(folder+'/');
-        callback(null, res)
+        async.parallel([function(callback) {
+            var res = autopsy.set_dataset(folder+'/');
+            callback(null, res)
 
-    }], function(err, results) {
-        hideLoader();
-        var result = results[0];
-        if (!result.result) {
-            $(".modal-title").text("Error");
-            $(".modal-body").text("File parsing failed with error: " + result.message);
-            $("#main-modal").modal("show")
-        } else {
+        }], function(err, results) {
+            hideLoader();
+            var result = results[0];
+            if (!result.result) {
+                $(".modal-title").text("Error");
+                $(".modal-body").text("File parsing failed with error: " + result.message);
+                $("#main-modal").modal("show")
+            } else {
 
-            // add default "main" filter?
-            drawEverything();
-        }
-    })
+                // add default "main" filter?
+                drawEverything();
+            }
+        })
+
+        var element = document.querySelector("#overlay");
+        element.style.visibility = "hidden";
+    }, 1000);
+
 }
 
 function constructInferences(inef) {
@@ -124,8 +130,6 @@ function drawStackTraces() {
 
     var cur_background_class = 0;
     traces.forEach(function (d, i) {
-        //console.log("trace index is " + i);
-        //if (!filterStackTrace(d["trace"])) return;
 
         total_chunks += d.num_chunks;
         var rectHeight = 55;
@@ -338,6 +342,8 @@ var current_trace_index = null;
 var current_chunk_index = 0;
 var current_chunk_index_low = 0;
 
+// TODO there is still a small bug in this where upscroll results in
+// negative numbers ... somehow
 function chunkScroll() {
     var element = document.querySelector("#chunks");
     var percent = 100 * element.scrollTop / (element.scrollHeight - element.clientHeight);
@@ -398,10 +404,6 @@ function drawChunks(trace) {
 
     chunk_div.selectAll("div").remove();
 
-    // find the max TS value
-/*    var max_x = xMax();
-
-    x.domain([0, max_x]);*/
     var max_x = autopsy.filter_max_time();
     var min_x = autopsy.filter_min_time();
     //console.log("min x " + min_x + " max x " + max_x)
@@ -415,25 +417,6 @@ function drawChunks(trace) {
     for (var i = 0; i < chunks.length; i++) {
         renderChunkSvg(chunks[i], current_chunk_index_low + i, true);
     }
-
-    // TODO redo first last access lines
-/*        cur_height = 0;
-        g.append("line")
-            .filter(function(chunk) {
-                return filterChunk(chunk);
-            })
-            .each(function(d) {
-                d3.select(this).attr({
-                    y1: cur_height*barHeight,
-                    y2: cur_height * barHeight + barHeight - 1,
-                    x1: "ts_last" in d ? x(d["ts_last"]) : 0,
-                    x2: "ts_last" in d ? x(d["ts_last"]) : 0,
-                    // don't display if its 0 (unknown) or is the empty chunk
-                    display: !("ts_last" in d) || d["ts_last"] === 0 ? "none" : null
-                }).style("stroke", "black");
-                if ("ts_last" in d)
-                    cur_height++;
-            });*/
 
 }
 

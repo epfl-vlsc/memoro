@@ -44,7 +44,10 @@ class Dataset {
       if (chunk_ptr_)
         delete [] chunk_ptr_;
       traces_.clear();
-      
+      min_time_ = UINT64_MAX;
+      aggregates_.clear();
+      trace_filters_.clear();
+
       string trace_file = dir_path + "hplgst.trace";
       cout << "opening " << trace_file << endl;
       // fopen trace file, build traces array
@@ -137,9 +140,7 @@ class Dataset {
       // populate chunk aggregate vectors
       for (auto& t : traces_) {
         Aggregate(t.aggregate, t.max_aggregate, t.chunks);
-        cout << "detecting patterns ..." << endl;
         t.inefficiencies = Detect(t.chunks, pattern_params_);
-        cout << "done" << endl;
       }
       aggregates_.reserve(num_chunks_*2);
 

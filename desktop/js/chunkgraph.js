@@ -90,6 +90,28 @@ function updateData(datafile) {
     console.log("done!!");
 }
 
+function constructInferences(inef) {
+    var ret = "";
+    if (inef.unused)
+        ret += "-> unused chunks </br>"
+    if (inef.read_only)
+        ret += "-> read-only chunks </br>"
+    if (inef.write_only)
+        ret += "-> write-only chunks </br>"
+    if (inef.short_lifetime)
+        ret += "-> short lifetime chunks </br>"
+    if (inef.late_free)
+        ret += "-> chunks freed late </br>"
+    if (inef.early_alloc)
+        ret += "-> chunks allocated early </br>"
+    if (inef.increasing_allocs)
+        ret += "-> increasing allocations </br>"
+    if (inef.top_percentile)
+        ret += "-> in top percentile of chunks allocated </br>"
+
+    return ret;
+}
+
 function drawStackTraces() {
 
     var trace = d3.select("#trace")
@@ -127,13 +149,20 @@ function drawStackTraces() {
                         .classed("selected", false);
                     trace.html("");
                     clearChunks();
+                    var info = d3.select("#inferences");
+                    info.html("");
                 } else {
                     trace.html(d.trace.replace(/\|/g, "</br><hr>"));
                     d3.selectAll(".select-rect").style("display", "none");
                     d3.select(this).selectAll(".select-rect").style("display", "inline");
                     d3.select(this)
                         .classed("selected", true);
+                    console.log("drawing chunks")
                     drawChunks(d);
+                    var info = d3.select("#inferences");
+                    var inef = autopsy.inefficiencies(d.trace_index);
+                    var html = constructInferences(inef);
+                    info.html(html);
                 }
             })
             .on("mouseout", function(x) {
@@ -249,7 +278,7 @@ function renderChunkSvg(chunk, text, bottom) {
         .classed("svg_spacing_data", true);
     new_svg_g.append("rect")
         .attr("transform", "translate("+ x(chunk["ts_start"])  +",0)")
-        .attr("width", Math.max(x(min_x + chunk["ts_end"] - chunk["ts_start"]), 2))
+        .attr("width", Math.max(x(min_x + chunk["ts_end"] - chunk["ts_start"]), 3))
         .attr("height", barHeight)
         .classed("data_bars", true)
         .on("mouseover", tooltip(chunk))
@@ -263,6 +292,31 @@ function renderChunkSvg(chunk, text, bottom) {
         .attr("y", 6)
         .text(text.toString())
         .classed("chunk_text", true)
+    new_svg_g.append("line")
+            .attr({
+                y1: 0,
+                y2: barHeight,
+                x1: x(chunk["ts_first"]),
+                x2: x(chunk["ts_first"]),
+                // don't display if its 0 (unknown) or is the empty chunk
+                display: chunk["ts_first"] === 0 ? "none" : null
+            }).style("stroke", "#65DC4C");
+    var next = 0;
+    if (x(chunk["ts_last"]) - x(chunk["ts_first"]) < 1)
+    {
+        next = x(chunk["ts_first"]) + 2;
+    } else {
+        next = x(chunk["ts_last"]);
+    }
+    new_svg_g.append("line")
+        .attr({
+            y1: 0,
+            y2: barHeight,
+            x1: next,
+            x2: next,
+            // don't display if its 0 (unknown) or is the empty chunk
+            display: chunk["ts_first"] === 0 ? "none" : null
+        }).style("stroke", "#65DC4C");
 }
 
 function removeChunksTop(num) {
@@ -281,7 +335,6 @@ function removeChunksBottom(num) {
 
     for (i = end - num; i < end; i++)
     {
-        console.log("removing " + i);
         svgs[i].remove();
     }
 }
@@ -335,6 +388,7 @@ function clearChunks() {
     var chunk_div = d3.select("#chunks");
 
     chunk_div.selectAll("div").remove();
+    current_trace_index = null;
 }
 
 // draw the first X chunks from this trace
@@ -356,7 +410,7 @@ function drawChunks(trace) {
     x.domain([0, max_x]);*/
     var max_x = autopsy.filter_max_time();
     var min_x = autopsy.filter_min_time();
-    console.log("min x " + min_x + " max x " + max_x)
+    //console.log("min x " + min_x + " max x " + max_x)
 
     x.domain([min_x, max_x]);
 
@@ -457,7 +511,7 @@ function drawAggregatePath() {
     aggregate_graph_g.append("rect")
         .attr("width", chunk_graph_width-chunk_y_axis_space + 2)
         .attr("height", 120)
-        .style("fill", "#6d6d6d");
+        .style("fill", "#353a41");
 
 
     console.log("graphing line")
@@ -465,7 +519,7 @@ function drawAggregatePath() {
     var path = aggregate_graph_g.append("path")
         .datum(binned_ag)
         .attr("fill", "none")
-        .attr("stroke", "lightgrey")
+        .attr("stroke", "steelblue")
         .attr("stroke-linejoin", "round")
         .attr("stroke-linecap", "round")
         .attr("stroke-width", 1.5)
@@ -497,7 +551,7 @@ function drawAggregatePath() {
         .attr("y0", 0).attr("y1", 120)
         .attr("x0", 0).attr("x1", 0);
     var text = focus_g.append("text")
-        .style("stroke", "black")
+        .style("stroke", "lightgray")
         .attr("x", 20)
         .attr("y", "30");
     text.append("tspan")

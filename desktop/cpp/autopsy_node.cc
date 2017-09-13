@@ -3,6 +3,7 @@
 #include <iostream>
 #include <v8.h>
 #include "autopsy.h" 
+#include "pattern.h"
 
 using namespace v8;
 
@@ -173,7 +174,6 @@ void Autopsy_SetTraceKeyword(const v8::FunctionCallbackInfo<v8::Value> & args) {
 }
 
 void Autopsy_SetFilterMinMax(const v8::FunctionCallbackInfo<v8::Value> & args) {
-  Isolate* isolate = args.GetIsolate();
 
   uint64_t t1 = args[0]->NumberValue();
   uint64_t t2 = args[1]->NumberValue();
@@ -187,6 +187,41 @@ void Autopsy_TraceFilterReset(const v8::FunctionCallbackInfo<v8::Value> & args) 
 
 void Autopsy_FilterMinMaxReset(const v8::FunctionCallbackInfo<v8::Value> & args) {
   FilterMinMaxReset();
+}
+  /*Unused = 0x1,
+  WriteOnly = 1 << 1,
+  ReadOnly = 1 << 2,
+  ShortLifetime = 1 << 3,
+  LateFree = 1 << 4,
+  EarlyAlloc =  1 << 5,
+  IncreasingReallocs = 1 << 6,
+  TopPercentile = 1 << 7*/
+
+void Autopsy_Inefficiencies(const v8::FunctionCallbackInfo<v8::Value> & args) {
+  Isolate* isolate = args.GetIsolate();
+
+  int trace_index = args[0]->NumberValue();
+  uint64_t i = Inefficiencies(trace_index);
+
+  Local<Object> result = Object::New(isolate);
+  result->Set(String::NewFromUtf8(isolate, "unused"), 
+      Boolean::New(isolate, HasInefficiency(i, Inefficiency::Unused)));
+  result->Set(String::NewFromUtf8(isolate, "write_only"), 
+      Boolean::New(isolate, HasInefficiency(i, Inefficiency::WriteOnly)));
+  result->Set(String::NewFromUtf8(isolate, "read_only"), 
+      Boolean::New(isolate, HasInefficiency(i, Inefficiency::ReadOnly)));
+  result->Set(String::NewFromUtf8(isolate, "short_lifetime"), 
+      Boolean::New(isolate, HasInefficiency(i, Inefficiency::ShortLifetime)));
+  result->Set(String::NewFromUtf8(isolate, "late_free"), 
+      Boolean::New(isolate, HasInefficiency(i, Inefficiency::LateFree)));
+  result->Set(String::NewFromUtf8(isolate, "early_alloc"), 
+      Boolean::New(isolate, HasInefficiency(i, Inefficiency::EarlyAlloc)));
+  result->Set(String::NewFromUtf8(isolate, "increasing_allocs"), 
+      Boolean::New(isolate, HasInefficiency(i, Inefficiency::IncreasingReallocs)));
+  result->Set(String::NewFromUtf8(isolate, "top_percentile"), 
+      Boolean::New(isolate, HasInefficiency(i, Inefficiency::TopPercentile)));
+  
+  args.GetReturnValue().Set(result);
 }
 
 void init(Handle <Object> exports, Handle<Object> module) {
@@ -204,6 +239,7 @@ void init(Handle <Object> exports, Handle<Object> module) {
   NODE_SET_METHOD(exports, "set_filter_minmax", Autopsy_SetFilterMinMax);
   NODE_SET_METHOD(exports, "trace_filter_reset", Autopsy_TraceFilterReset);
   NODE_SET_METHOD(exports, "filter_minmax_reset", Autopsy_FilterMinMaxReset);
+  NODE_SET_METHOD(exports, "inefficiencies", Autopsy_Inefficiencies);
 }
 
 NODE_MODULE(autopsy, init)

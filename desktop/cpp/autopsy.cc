@@ -1,5 +1,6 @@
 
 #include "autopsy.h"
+#include "pattern.h"
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/mman.h>
@@ -28,6 +29,7 @@ struct Trace {
   uint64_t max_aggregate = 0;
   vector<Chunk*> chunks;
   vector<TimeValue> aggregate;
+  uint64_t inefficiencies = 0;
 };
     
 
@@ -135,6 +137,9 @@ class Dataset {
       // populate chunk aggregate vectors
       for (auto& t : traces_) {
         Aggregate(t.aggregate, t.max_aggregate, t.chunks);
+        cout << "detecting patterns ..." << endl;
+        t.inefficiencies = Detect(t.chunks, pattern_params_);
+        cout << "done" << endl;
       }
       aggregates_.reserve(num_chunks_*2);
 
@@ -241,6 +246,10 @@ class Dataset {
       filter_max_time_ = max_time_;
     }
 
+    uint64_t Inefficiences(int trace_index) {
+      return traces_[trace_index].inefficiencies;
+    }
+
   private:
 
     Chunk* chunks_;
@@ -253,6 +262,7 @@ class Dataset {
     uint64_t max_aggregate_ = 0;
     uint64_t filter_max_time_;
     uint64_t filter_min_time_;
+    PatternParams pattern_params_;
 
     vector<string> trace_filters_;
     priority_queue<TimeValue> queue_;
@@ -464,5 +474,9 @@ void TraceFilterReset() {
 
 void FilterMinMaxReset() {
   theDataset.FilterMinMaxReset();
+}
+
+uint64_t Inefficiencies(int trace_index) {
+  return theDataset.Inefficiences(trace_index);
 }
 

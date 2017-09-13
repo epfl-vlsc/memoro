@@ -20,6 +20,14 @@
 }
 
 #global-info {
+    height: 30vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    word-wrap:break-word;
+    margin-top:0!important;
+}
+
+#inferences {
     height: 40vh;
     overflow-y: auto;
     overflow-x: hidden;

@@ -68,6 +68,7 @@ uint64_t MinTime();
 uint64_t FilterMaxTime();
 uint64_t FilterMinTime();
 
+uint64_t Inefficiencies(int trace_index);
 
 uint64_t MaxAggregate();
 

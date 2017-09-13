@@ -9,6 +9,13 @@ function initApp() {
     element.style.visibility = "hidden";
     addAppEventListeners();
     //chunk_graph.updateData("hplgst.json");
+    document.getElementById("filter-form")
+        .addEventListener("keyup", function(event) {
+            event.preventDefault();
+            if (event.keyCode === 13) {
+                document.querySelector("#filter-button").click();
+            }
+        });
 }
 
 function stackFilterClick() {

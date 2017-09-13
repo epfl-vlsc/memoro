@@ -58,7 +58,6 @@ function updateData(datafile) {
 
     var folder = path.dirname(datafile)
 
-    console.log("running now");
     async.parallel([function(callback) {
         var res = autopsy.set_dataset(folder+'/');
         callback(null, res)
@@ -76,38 +75,30 @@ function updateData(datafile) {
             drawEverything();
         }
     })
-/*    console.log(folder + "/")
-    var result = autopsy.set_dataset(folder + "/");
-    if (!result.result) {
-        $(".modal-title").text("Error");
-        $(".modal-body").text("File parsing failed with error: " + result.message);
-        $("#main-modal").modal("show")
-    } else {
-
-        // add default "main" filter?
-        drawEverything();
-    }*/
-    console.log("done!!");
 }
 
 function constructInferences(inef) {
     var ret = "";
     if (inef.unused)
         ret += "-> unused chunks </br>"
-    if (inef.read_only)
-        ret += "-> read-only chunks </br>"
-    if (inef.write_only)
-        ret += "-> write-only chunks </br>"
-    if (inef.short_lifetime)
-        ret += "-> short lifetime chunks </br>"
-    if (inef.late_free)
-        ret += "-> chunks freed late </br>"
-    if (inef.early_alloc)
-        ret += "-> chunks allocated early </br>"
-    if (inef.increasing_allocs)
-        ret += "-> increasing allocations </br>"
-    if (inef.top_percentile)
-        ret += "-> in top percentile of chunks allocated </br>"
+    if (!inef.unused) {
+        if (inef.read_only)
+            ret += "-> read-only chunks </br>"
+        if (inef.write_only)
+            ret += "-> write-only chunks </br>"
+        if (inef.short_lifetime)
+            ret += "-> short lifetime chunks </br>"
+        if (!inef.short_lifetime) {
+            if (inef.late_free)
+                ret += "-> chunks freed late </br>"
+            if (inef.early_alloc)
+                ret += "-> chunks allocated early </br>"
+        }
+        if (inef.increasing_allocs)
+            ret += "-> increasing allocations </br>"
+        if (inef.top_percentile)
+            ret += "-> in top percentile of chunks allocated </br>"
+    }
 
     return ret;
 }
@@ -117,6 +108,9 @@ function drawStackTraces() {
     var trace = d3.select("#trace")
     var traces_div = d3.select("#traces")
     traces_div.selectAll("svg").remove();
+
+    var info = d3.select("#inferences");
+    info.html("")
 
     //var max_x = xMax();
     var max_x = autopsy.filter_max_time();
@@ -687,48 +681,52 @@ function drawEverything() {
 }
 
 function stackFilterClick() {
-    var element = document.querySelector("#filter-form");
-    console.log("text is " + element.value);
-    var filterText = element.value;
-    element.value = "";
-    var filterWords = filterText.split(" ");
-
-    for (var w in filterWords) {
-        console.log("setting filter " + filterWords[w]);
-        autopsy.set_trace_keyword(filterWords[w]);
-    }
     showLoader();
-    // redraw
-    clearChunks();
+    setTimeout(function() {
+        var element = document.querySelector("#filter-form");
+        console.log("text is " + element.value);
+        var filterText = element.value;
+        element.value = "";
+        var filterWords = filterText.split(" ");
 
-    drawStackTraces();
-    drawChunkXAxis();
+        for (var w in filterWords) {
+            console.log("setting filter " + filterWords[w]);
+            autopsy.set_trace_keyword(filterWords[w]);
+        }
+        clearChunks();
+        drawStackTraces();
+        drawChunkXAxis();
 
-    drawAggregatePath();
-    hideLoader();
+        drawAggregatePath();
+        hideLoader();
+    }, 100);
 }
 
 function stackFilterResetClick() {
     //drawChunks();
     showLoader();
-    autopsy.trace_filter_reset();
-    clearChunks();
-    drawStackTraces();
-    drawChunkXAxis();
+    setTimeout(function() {
+        autopsy.trace_filter_reset();
+        clearChunks();
+        drawStackTraces();
+        drawChunkXAxis();
 
-    drawAggregatePath();
-    hideLoader();
+        drawAggregatePath();
+        hideLoader();
+    }, 100);
 }
 
 function resetTimeClick() {
     showLoader();
-    autopsy.filter_minmax_reset();
-    clearChunks();
-    drawStackTraces();
-    drawChunkXAxis();
+    setTimeout(function() {
+        autopsy.filter_minmax_reset();
+        clearChunks();
+        drawStackTraces();
+        drawChunkXAxis();
 
-    drawAggregatePath();
-    hideLoader();
+        drawAggregatePath();
+        hideLoader();
+    }, 100);
 }
 
 function showFilterHelp() {

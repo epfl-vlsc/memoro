@@ -38,17 +38,19 @@ var x;  // the x range
 var max_x;
 var num_traces;
 
-
 var aggregate_max = 0;
 
 function showLoader() {
-    var element = document.querySelector("#loadspinner");
-    element.style.visibility = "visible";
+    var div = document.createElement("div");
+    div.id = "loadspinner";
+    div.className = "spinny-load";
+    div.html = "Loading ...";
+    document.getElementById("middle-column").appendChild(div);
 }
 
 function hideLoader() {
-    var element = document.querySelector("#loadspinner");
-    element.style.visibility = "hidden";
+    var element = document.getElementById("loadspinner");
+    element.parentNode.removeChild(element);
 }
 
 // file open callback function

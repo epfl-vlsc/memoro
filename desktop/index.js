@@ -5,8 +5,6 @@ const {ipcRenderer} = require('electron')
 var chunk_graph = require("./js/chunkgraph");
 
 function initApp() {
-    var element = document.querySelector("#loadspinner");
-    element.style.visibility = "hidden";
     addAppEventListeners();
     //chunk_graph.updateData("hplgst.json");
     document.getElementById("filter-form")
@@ -46,8 +44,6 @@ function addAppEventListeners() {
 
     ipcRenderer.on('open_file', function(emitter, file_path) {
         console.log(file_path[0]);
-        var element = document.querySelector("#loadspinner");
-        element.style.visibility = "visible";
         chunk_graph.updateData(file_path[0]);
     });
 }

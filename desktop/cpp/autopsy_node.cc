@@ -96,6 +96,8 @@ void Autopsy_TraceChunks(const v8::FunctionCallbackInfo<v8::Value> & args) {
                             Number::New(isolate, chunks[i]->timestamp_first_access));
     result->Set(String::NewFromUtf8(isolate, "ts_last"), 
                             Number::New(isolate, chunks[i]->timestamp_last_access));
+    result->Set(String::NewFromUtf8(isolate, "alloc_call_time"), 
+                            Number::New(isolate, chunks[i]->alloc_call_time));
     result_list->Set(i, result);
   }
 
@@ -119,6 +121,8 @@ void Autopsy_Traces(const v8::FunctionCallbackInfo<v8::Value> & args) {
                             Number::New(isolate, traces[i].num_chunks));
     result->Set(String::NewFromUtf8(isolate, "chunk_index"), 
                             Number::New(isolate, traces[i].chunk_index));
+    result->Set(String::NewFromUtf8(isolate, "alloc_time_total"), 
+                            Number::New(isolate, traces[i].alloc_time_total));
     result_list->Set(i, result);
   }
 
@@ -165,6 +169,14 @@ void Autopsy_MaxAggregate(const v8::FunctionCallbackInfo<v8::Value> & args) {
   args.GetReturnValue().Set(retval);
 }
 
+void Autopsy_GlobalAllocTime(const v8::FunctionCallbackInfo<v8::Value> & args) {
+  Isolate* isolate = args.GetIsolate();
+
+  Local<Number> retval = v8::Number::New(isolate, GlobalAllocTime());
+
+  args.GetReturnValue().Set(retval);
+}
+
 void Autopsy_SetTraceKeyword(const v8::FunctionCallbackInfo<v8::Value> & args) {
 
   v8::String::Utf8Value s(args[0]);
@@ -188,14 +200,6 @@ void Autopsy_TraceFilterReset(const v8::FunctionCallbackInfo<v8::Value> & args) 
 void Autopsy_FilterMinMaxReset(const v8::FunctionCallbackInfo<v8::Value> & args) {
   FilterMinMaxReset();
 }
-  /*Unused = 0x1,
-  WriteOnly = 1 << 1,
-  ReadOnly = 1 << 2,
-  ShortLifetime = 1 << 3,
-  LateFree = 1 << 4,
-  EarlyAlloc =  1 << 5,
-  IncreasingReallocs = 1 << 6,
-  TopPercentile = 1 << 7*/
 
 void Autopsy_Inefficiencies(const v8::FunctionCallbackInfo<v8::Value> & args) {
   Isolate* isolate = args.GetIsolate();
@@ -203,6 +207,7 @@ void Autopsy_Inefficiencies(const v8::FunctionCallbackInfo<v8::Value> & args) {
   int trace_index = args[0]->NumberValue();
   uint64_t i = Inefficiencies(trace_index);
 
+  // there will be more here eventually, probably
   Local<Object> result = Object::New(isolate);
   result->Set(String::NewFromUtf8(isolate, "unused"), 
       Boolean::New(isolate, HasInefficiency(i, Inefficiency::Unused)));
@@ -240,6 +245,7 @@ void init(Handle <Object> exports, Handle<Object> module) {
   NODE_SET_METHOD(exports, "trace_filter_reset", Autopsy_TraceFilterReset);
   NODE_SET_METHOD(exports, "filter_minmax_reset", Autopsy_FilterMinMaxReset);
   NODE_SET_METHOD(exports, "inefficiencies", Autopsy_Inefficiencies);
+  NODE_SET_METHOD(exports, "global_alloc_time", Autopsy_GlobalAllocTime);
 }
 
 NODE_MODULE(autopsy, init)

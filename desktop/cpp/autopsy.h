@@ -17,6 +17,7 @@ struct __attribute__((packed)) Chunk {
   uint64_t timestamp_end = 0;
   uint64_t timestamp_first_access = 0;
   uint64_t timestamp_last_access = 0;
+  uint64_t alloc_call_time = 0;
 };
 
 struct TimeValue {
@@ -31,6 +32,7 @@ struct TraceValue {
   int trace_index;
   int chunk_index;
   int num_chunks;
+  uint64_t alloc_time_total;
 };
 
 // set the current dataset file, returns dataset stats (num traces, min/max times)
@@ -67,6 +69,7 @@ uint64_t MaxTime();
 uint64_t MinTime();
 uint64_t FilterMaxTime();
 uint64_t FilterMinTime();
+uint64_t GlobalAllocTime();
 
 uint64_t Inefficiencies(int trace_index);
 

@@ -33,6 +33,7 @@ var total_chunks;
 
 var chunk_graph_width;
 var chunk_graph_height;
+var aggregate_graph_height;
 var chunk_y_axis_space;
 var x;  // the x range
 var max_x;
@@ -147,7 +148,7 @@ function drawStackTraces() {
                     d3.selectAll(".select-rect").style("display", "none");
                     d3.select(this)
                         .classed("selected", false);
-                    trace.html("");
+                    trace.html("Select an allocation point under \"Heap Allocation\"");
                     clearChunks();
                     var info = d3.select("#inferences");
                     info.html("");
@@ -222,8 +223,6 @@ function drawStackTraces() {
         //console.log(JSON.stringify(steps));
         var line = d3.svg.line()
             .x(function(v) {
-                if (v.ts > max_x)
-                    console.log("bigger than max x!! "+ v.ts);
                 return x(v["ts"]);
             })
             .y(function(v) { return y(v["value"]); })
@@ -433,8 +432,8 @@ function drawChunkXAxis() {
         .scale(x)
         .tickFormat(function(xval) {
             if (max_x < 1000000000)
-                return (xval / 1000) + "us";
-            else return (xval / 1000000) + "ms";
+                return (xval / 1000).toFixed(1) + "us";
+            else return (xval / 1000000).toFixed(1) + "ms";
         })
         .orient("bottom");
 
@@ -451,6 +450,35 @@ function drawChunkXAxis() {
         .attr("width", chunk_graph_width-chunk_y_axis_space)
         .attr("height", 30)
         .append("g")
+        .attr("class", "axis")
+        .call(xAxis);
+}
+
+function drawAggregateAxis() {
+
+    var xAxis = d3.svg.axis()
+        .scale(x)
+        .tickFormat(function(xval) {
+            if (max_x < 1000000000)
+                return (xval / 1000).toFixed(1) + "us";
+            else return (xval / 1000000).toFixed(1) + "ms";
+        })
+        .orient("bottom")
+        .innerTickSize(-120)
+
+    var max_x = autopsy.filter_max_time();
+    var min_x = autopsy.filter_min_time();
+
+    x.domain([min_x, max_x]);
+
+    d3.select("#aggregate-x-axis").remove();
+
+    var xaxis_height = aggregate_graph_height*0.8;
+    d3.select("#aggregate-group")
+        .append("g")
+        .attr("id", "aggregate-x-axis")
+        //.attr("width", chunk_graph_width-chunk_y_axis_space)
+        .attr("transform", "translate(0," + xaxis_height + ")")
         .attr("class", "axis")
         .call(xAxis);
 }
@@ -480,6 +508,12 @@ function drawAggregatePath() {
         .y(function(v) { return y(v["value"]); })
         .interpolate('step-after');
 
+    var area = d3.svg.area()
+        .x(function(v) { return x(v["ts"]); })
+        .y0(aggregate_graph_height*0.8 - 5)
+        .y1(function(v) { return y(v["value"]); })
+        .interpolate('step-after');
+
     d3.select("#aggregate-path").remove();
     d3.select("#aggregate-y-axis").remove();
 
@@ -489,10 +523,11 @@ function drawAggregatePath() {
 
     aggregate_graph_g.append("rect")
         .attr("width", chunk_graph_width-chunk_y_axis_space + 2)
-        .attr("height", 120)
+        .attr("height", aggregate_graph_height)
         .style("fill", "#353a41");
 
 
+    var yaxis_height = .8 * aggregate_graph_height;
     console.log("graphing line")
     //console.log(d3.select("#aggregate-group"));
     var path = aggregate_graph_g.append("path")
@@ -508,11 +543,18 @@ function drawAggregatePath() {
     d3.select("#aggregate-group").append("g")
         .attr("class", "y axis")
         .attr("transform", "translate(" + (chunk_graph_width - chunk_y_axis_space + 3) + ", 5)")
-        .attr("height", 110)
+        .attr("height", yaxis_height)
         .attr("id", "aggregate-y-axis")
         .style("fill", "white")
         .call(yAxisRight);
     console.log("done graphing line")
+
+    aggregate_graph_g.append("path")
+        .datum(binned_ag)
+        .classed("area", true)
+        .attr("transform", "translate(0, 5)")
+        .attr("id", "aggregate-area")
+        .attr("d", area);
 
     // draw the focus line on the graph
     var focus_g = aggregate_graph_g.append("g")
@@ -520,14 +562,14 @@ function drawAggregatePath() {
 
     aggregate_graph_g.append("rect")
         .attr("width", chunk_graph_width-chunk_y_axis_space + 2)
-        .attr("height", 120)
+        .attr("height", yaxis_height)
         .style("fill", "transparent")
         .on("mouseover", function() { focus_g.style("display", null); })
         .on("mouseout", function() { focus_g.style("display", "none"); })
         .on("mousemove", mousemove);
 
     focus_g.append("line")
-        .attr("y0", 0).attr("y1", 120)
+        .attr("y0", 0).attr("y1", yaxis_height)
         .attr("x0", 0).attr("x1", 0);
     var text = focus_g.append("text")
         .style("stroke", "lightgray")
@@ -577,10 +619,12 @@ function drawEverything() {
 
     drawChunkXAxis();
 
+    aggregate_graph_height = d3.select("#aggregate-graph").node().getBoundingClientRect().height;
+    console.log("agg graph height is " + aggregate_graph_height)
     var aggregate_graph = d3.select("#aggregate-graph")
         .append("svg")
         .attr("width", chunk_graph_width)
-        .attr("height", 120);
+        .attr("height", aggregate_graph_height-10);
 
     aggregate_graph.on("mousedown", function() {
 
@@ -647,6 +691,7 @@ function drawEverything() {
 
         console.log("drawing aggregate")
         drawAggregatePath();
+        drawAggregateAxis();
 
         console.log("drawing axis")
         drawChunkXAxis();
@@ -657,11 +702,20 @@ function drawEverything() {
     aggregate_graph_g.attr("id", "aggregate-group");
 
     drawAggregatePath();
+    drawAggregateAxis();
 
+    var trace = d3.select("#trace");
+    trace.html("Select an allocation point number \"Heap Allocations\"")
+
+    var alloc_time = autopsy.global_alloc_time();
+    var time_total = autopsy.max_time() - autopsy.min_time();
+    var percent_alloc_time = 100.0 * alloc_time / time_total;
     var info = d3.select("#global-info");
     info.html("Total alloc points: " + num_traces +
         "</br>Total Allocations: " + total_chunks +
-        "</br>Max Heap: " + bytesToString(aggregate_max));
+        "</br>Max Heap: " + bytesToString(aggregate_max) +
+        "</br>Global alloc time: " + alloc_time +
+        "</br>which is " + percent_alloc_time.toFixed(2) + "% of program time.");
 
 }
 
@@ -683,6 +737,7 @@ function stackFilterClick() {
         drawChunkXAxis();
 
         drawAggregatePath();
+        drawAggregateAxis();
         hideLoader();
     }, 100);
 }
@@ -697,6 +752,7 @@ function stackFilterResetClick() {
         drawChunkXAxis();
 
         drawAggregatePath();
+        drawAggregateAxis();
         hideLoader();
     }, 100);
 }
@@ -710,6 +766,7 @@ function resetTimeClick() {
         drawChunkXAxis();
 
         drawAggregatePath();
+        drawAggregateAxis();
         hideLoader();
     }, 100);
 }

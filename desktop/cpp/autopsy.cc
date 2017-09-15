@@ -30,6 +30,7 @@ struct Trace {
   vector<Chunk*> chunks;
   vector<TimeValue> aggregate;
   uint64_t inefficiencies = 0;
+  uint64_t alloc_time_total = 0;
 };
     
 
@@ -47,6 +48,7 @@ class Dataset {
       min_time_ = UINT64_MAX;
       aggregates_.clear();
       trace_filters_.clear();
+      global_alloc_time_ = 0;
 
       string trace_file = dir_path + "hplgst.trace";
       cout << "opening " << trace_file << endl;
@@ -138,9 +140,16 @@ class Dataset {
       filter_max_time_ = max_time_;
       
       // populate chunk aggregate vectors
+      uint64_t total_alloc_time = 0;
       for (auto& t : traces_) {
         Aggregate(t.aggregate, t.max_aggregate, t.chunks);
         t.inefficiencies = Detect(t.chunks, pattern_params_);
+        for (auto c : t.chunks) {
+          total_alloc_time += c->alloc_call_time;
+        }
+        t.alloc_time_total = total_alloc_time;
+        global_alloc_time_ += total_alloc_time;
+        total_alloc_time = 0;
       }
       aggregates_.reserve(num_chunks_*2);
 
@@ -166,6 +175,7 @@ class Dataset {
     uint64_t MinTime() { return min_time_; }
     uint64_t FilterMaxTime() { return filter_max_time_; }
     uint64_t FilterMinTime() { return filter_min_time_; }
+    uint64_t GlobalAllocTime() { return global_alloc_time_; }
 
     void SetTraceFilter(string& str) {
       for (auto& s : trace_filters_) 
@@ -191,6 +201,8 @@ class Dataset {
     }
 
     void Traces(vector<TraceValue>& traces) {
+      // TODO TraceValue not really needed, could just pass pointers to Trace
+      // and convert directly to V8 objects
       TraceValue tmp;
       traces.reserve(traces_.size());
       for (int i = 0; i < traces_.size(); i++) {
@@ -210,6 +222,7 @@ class Dataset {
         if (!overlaps) continue;
 
         tmp.num_chunks = traces_[i].chunks.size();
+        tmp.alloc_time_total = traces_[i].alloc_time_total;
         traces.push_back(tmp);
       }
     }
@@ -263,6 +276,7 @@ class Dataset {
     uint64_t max_aggregate_ = 0;
     uint64_t filter_max_time_;
     uint64_t filter_min_time_;
+    uint64_t global_alloc_time_ = 0;
     PatternParams pattern_params_;
 
     vector<string> trace_filters_;
@@ -479,5 +493,9 @@ void FilterMinMaxReset() {
 
 uint64_t Inefficiencies(int trace_index) {
   return theDataset.Inefficiences(trace_index);
+}
+
+uint64_t GlobalAllocTime() {
+  return theDataset.GlobalAllocTime();
 }
 

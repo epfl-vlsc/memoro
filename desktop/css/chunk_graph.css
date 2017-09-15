@@ -156,7 +156,7 @@ svg.selected {
 .axis path,
 .axis line {
     fill: none;
-    stroke: #eeeeee;
+    stroke: #69737C;
     shape-rendering: crispEdges;
 }
 .chart line {
@@ -179,6 +179,13 @@ rect.selection {
     fill            : darkgrey;
     opacity: 0.5;
 }
+
+.area {
+    fill: lightsteelblue;
+    stroke-width: 0;
+    opacity:0.3;
+}
+
 svg *::selection {
     background : transparent;
 }

@@ -283,6 +283,7 @@ class Dataset {
     priority_queue<TimeValue> queue_;
 
     void SampleValues(vector<TimeValue>& points, vector<TimeValue>& values) {
+      values.clear();
       values.reserve(MAX_POINTS+2);
       // first, find the filtered interval
       //cout << "points size is " << points.size() << endl;
@@ -295,8 +296,8 @@ class Dataset {
         // basically, there were no points inside the interval, 
         // so we set a straight line of the appropriate value during the filter interval
         values.push_back({filter_min_time_, 0});
-        values.push_back({filter_min_time_, points[min-1].value});
-        values.push_back({filter_max_time_, points[min-1].value});
+        values.push_back({filter_min_time_+1, points[min-1].value});
+        values.push_back({filter_max_time_-1, points[min-1].value});
         values.push_back({filter_max_time_, 0});
         return;
       }
@@ -331,7 +332,10 @@ class Dataset {
         memcpy(&values[1], &points[min], sizeof(TimeValue)*(max-min));
       }
       //cout << "first value is " << values[0].value << " at time " << values[0].time << endl;
-      values.push_back({filter_max_time_, values[values.size()-1].value});
+      if (values[values.size()-1].time > filter_max_time_)
+        values[values.size()-1].time = filter_max_time_;
+      else
+        values.push_back({filter_max_time_ > values[values.size()-1].time ? filter_max_time_ : points[points.size()-1].time, values[values.size()-1].value});
     }
 
     void Aggregate(vector<TimeValue>& points, uint64_t& max_aggregate, 

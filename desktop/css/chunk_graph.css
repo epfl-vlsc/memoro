@@ -112,8 +112,10 @@ svg.selected {
 .line {
     stroke: black;
 }
-.data_bars {
-    fill: steelblue;
+
+.firstlastbars {
+    stroke: #65DC4C;
+    visibility: visible;
 }
 
 .focus-line {

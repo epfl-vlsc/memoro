@@ -36,10 +36,33 @@ var chunk_graph_height;
 var aggregate_graph_height;
 var chunk_y_axis_space;
 var x;  // the x range
+var y;  // aggregate y range
 var max_x;
 var num_traces;
 
 var aggregate_max = 0;
+
+var colors = [
+"#b0c4de",
+"#b0c4de",
+"#a1b8d4",
+"#93acca",
+"#84a0c0",
+"#7594b6",
+"#6788ac",
+"#587ba2",
+"#496f98",
+"#3b638e",
+"#2c5784",
+"#1d4b7a",
+"#0f3f70",
+"#003366"];
+
+// chunk color gradient scale
+var colorScale = d3.scale.quantile()
+/*    .range(["#ffffff", "#f0f5f9", "#e0eaf3", "#d1e0ec", "#c1d5e6", "#b2cbe0", "#a2c1da", "#93b6d3", "#84accd", "#74a1c7",
+        "#6597c1", "#558cba", "#4682b4"]);*/
+.range(colors);
 
 function showLoader() {
     var div = document.createElement("div");
@@ -60,7 +83,7 @@ function updateData(datafile) {
     showLoader();
 
     setTimeout(function() {
-        var folder = path.dirname(datafile)
+        var folder = path.dirname(datafile);
 
         async.parallel([function(callback) {
             var res = autopsy.set_dataset(folder+'/');
@@ -134,8 +157,13 @@ function drawStackTraces() {
     var cur_background_class = 0;
     traces.forEach(function (d, i) {
 
+        sampled = autopsy.aggregate_trace(d.trace_index);
+        var peak = d3.max(sampled, function (x) {
+            return x["value"];
+        });
         total_chunks += d.num_chunks;
         var rectHeight = 55;
+
         var new_svg_g = traces_div
             .append("svg")
             .attr("width", chunk_graph_width)
@@ -143,7 +171,7 @@ function drawStackTraces() {
             .classed("svg_spacing_trace", true)
             .on("mouseover", function(x) {
             })
-            .on("click", function(x) {
+            .on("click", function(s) {
                 if (d3.select(this).classed("selected")) {
                     d3.selectAll(".select-rect").style("display", "none");
                     d3.select(this)
@@ -152,18 +180,39 @@ function drawStackTraces() {
                     clearChunks();
                     var info = d3.select("#inferences");
                     info.html("");
+                    d3.select("#stack-agg-path").remove();
                 } else {
+                    colorScale.domain([1, peak]);
                     trace.html(d.trace.replace(/\|/g, "</br><hr>"));
                     d3.selectAll(".select-rect").style("display", "none");
                     d3.select(this).selectAll(".select-rect").style("display", "inline");
                     d3.select(this)
                         .classed("selected", true);
-                    console.log("drawing chunks")
                     drawChunks(d);
                     var info = d3.select("#inferences");
                     var inef = autopsy.inefficiencies(d.trace_index);
                     var html = constructInferences(inef);
                     info.html(html);
+
+                    fresh_sampled = autopsy.aggregate_trace(d.trace_index);
+                    console.log(fresh_sampled);
+                    var agg_line = d3.svg.line()
+                        .x(function(v) {
+                            return x(v["ts"]);
+                        })
+                        .y(function(v) { return y(v["value"]); })
+                        .interpolate('step-after');
+
+                    d3.select("#stack-agg-path").remove();
+                    var aggregate_graph_g = d3.select("#aggregate-group");
+                    aggregate_graph_g.append("path")
+                        .datum(fresh_sampled)
+                        .attr("id", "stack-agg-path")
+                        .attr("fill", "none")
+                        .attr("stroke", "#c8c8c8")
+                        .attr("stroke-width", 1.0)
+                        .attr("transform", "translate(0, 5)")
+                        .attr("d", agg_line);
                 }
             })
             .on("mouseout", function(x) {
@@ -198,10 +247,7 @@ function drawStackTraces() {
             .style("display", "none")
             .classed("select-rect", true);
 
-        sampled = autopsy.aggregate_trace(d.trace_index);
-        var peak = d3.max(sampled, function (x) {
-            return x["value"];
-        });
+        //sampled = autopsy.aggregate_trace(d.trace_index);
 
         new_svg_g.append("text")
             .style("font-size", "small")
@@ -210,12 +256,12 @@ function drawStackTraces() {
             .attr("y", "15")
             .text("Chunks: " + (d.num_chunks) + ", Peak Bytes: " + bytesToString(peak));
 
-        var y = d3.scale.linear()
+        var stack_y = d3.scale.linear()
             .range([rectHeight-25, 0]);
 
-        y.domain(d3.extent(sampled, function(v) { return v["value"]; }));
+        stack_y.domain(d3.extent(sampled, function(v) { return v["value"]; }));
 
-        var yAxisRight = d3.svg.axis().scale(y)
+        var yAxisRight = d3.svg.axis().scale(stack_y)
             .orient("right")
             .tickFormat(bytesToStringNoDecimal)
             .ticks(2);
@@ -225,16 +271,16 @@ function drawStackTraces() {
             .x(function(v) {
                 return x(v["ts"]);
             })
-            .y(function(v) { return y(v["value"]); })
+            .y(function(v) { return stack_y(v["value"]); })
             .interpolate('step-after');
 
         new_svg_g.append("path")
             .datum(sampled)
             .attr("fill", "none")
             .attr("stroke", "#c8c8c8")
-            .attr("stroke-linejoin", "round")
-            .attr("stroke-linecap", "round")
-            .attr("stroke-width", 1.5)
+            //.attr("stroke-linejoin", "round")
+            //.attr("stroke-linecap", "round")
+            .attr("stroke-width", 1.0)
             .attr("transform", "translate(0, 20)")
             .attr("d", line);
         new_svg_g.append("g")
@@ -242,6 +288,7 @@ function drawStackTraces() {
             .attr("transform", "translate(" + (chunk_graph_width - chunk_y_axis_space + 1) + ",20)")
             .style("fill", "white")
             .call(yAxisRight);
+
 
     });
 
@@ -253,15 +300,25 @@ function tooltip(chunk) {
         div.transition()
             .duration(200)
             .style("opacity", .9);
-        div .html(bytesToString(chunk["size"]) + "</br> Reads: " + chunk["num_reads"] + "</br>Writes: " + chunk["num_writes"])
+        div .html(bytesToString(chunk["size"]) + "</br> Reads: " + chunk["num_reads"]
+            + "</br>Writes: " + chunk["num_writes"] + "</br>")
             .style("left", (d3.event.pageX) + "px")
             .style("top", (d3.event.pageY - 28) + "px");
+        div.append("svg")
+            .attr("width", 10)
+            .attr("height", 10)
+            .append("rect")
+            .attr("width", 10)
+            .attr("height", 10)
+            .style("fill", colorScale(chunk.size))
         //div.attr("width", width);
     }
 }
 
 function renderChunkSvg(chunk, text, bottom) {
     var min_x = autopsy.filter_min_time()
+
+
     var chunk_div = d3.select("#chunks");
     var div = d3.select("#tooltip");
     var new_svg_g;
@@ -279,7 +336,7 @@ function renderChunkSvg(chunk, text, bottom) {
         .attr("transform", "translate("+ x(chunk["ts_start"])  +",0)")
         .attr("width", Math.max(x(min_x + chunk["ts_end"] - chunk["ts_start"]), 3))
         .attr("height", barHeight)
-        .classed("data_bars", true)
+        .style("fill", colorScale(chunk.size))
         .on("mouseover", tooltip(chunk))
         .on("mouseout", function(d) {
             div.transition()
@@ -299,7 +356,8 @@ function renderChunkSvg(chunk, text, bottom) {
                 x2: x(chunk["ts_first"]),
                 // don't display if its 0 (unknown) or is the empty chunk
                 display: chunk["ts_first"] === 0 ? "none" : null
-            }).style("stroke", "#65DC4C");
+            }).style("stroke", "#65DC4C")
+        .classed("firstlastbars", true);
     var next = 0;
     if (x(chunk["ts_last"]) - x(chunk["ts_first"]) < 1)
     {
@@ -315,7 +373,8 @@ function renderChunkSvg(chunk, text, bottom) {
             x2: next,
             // don't display if its 0 (unknown) or is the empty chunk
             display: chunk["ts_first"] === 0 ? "none" : null
-        }).style("stroke", "#65DC4C");
+        }).style("stroke", "#65DC4C")
+        .classed("firstlastbars", true);
 }
 
 function removeChunksTop(num) {
@@ -419,6 +478,30 @@ function drawChunks(trace) {
         renderChunkSvg(chunks[i], current_chunk_index_low + i, true);
     }
 
+    // add the gradient heatmap scale
+    d3.select("#chunks-yaxis").selectAll("svg").remove();
+
+    var legend_g = d3.select("#chunks-yaxis").append("svg")
+        .attr("height", chunk_graph_height)
+        .selectAll()
+        .data(colorScale.quantiles())
+        .enter()
+        .append("g");
+
+    var elem_height = chunk_graph_height / colors.length;
+    legend_g.append("rect")
+        .attr("y", function(d, i) { return elem_height*i; })
+        .attr("width", 10)
+        .attr("height", elem_height)
+        .style("fill", function(d, i) { return colors[i]})
+
+    // now the text
+    legend_g.append("text")
+        .attr("x", 15)
+        .attr("y", function(d, i) { return elem_height*i + elem_height/1.5; })
+        .style("fill", "#ffffff")
+        .text(function(d, i) { return bytesToStringNoDecimal(d)})
+        .style("font-size", "10px");
 }
 
 function xMax() {
@@ -473,7 +556,7 @@ function drawAggregateAxis() {
 
     d3.select("#aggregate-x-axis").remove();
 
-    var xaxis_height = aggregate_graph_height*0.8;
+    var xaxis_height = aggregate_graph_height*0.8 - 5;
     d3.select("#aggregate-group")
         .append("g")
         .attr("id", "aggregate-x-axis")
@@ -485,7 +568,7 @@ function drawAggregateAxis() {
 
 function drawAggregatePath() {
 
-    var y = d3.scale.linear()
+    y = d3.scale.linear()
         .range([100, 0]);
 
     console.log("aggregate")
@@ -510,7 +593,7 @@ function drawAggregatePath() {
 
     var area = d3.svg.area()
         .x(function(v) { return x(v["ts"]); })
-        .y0(aggregate_graph_height*0.8 - 5)
+        .y0(aggregate_graph_height*0.8 - 10)
         .y1(function(v) { return y(v["value"]); })
         .interpolate('step-after');
 
@@ -543,7 +626,7 @@ function drawAggregatePath() {
     d3.select("#aggregate-group").append("g")
         .attr("class", "y axis")
         .attr("transform", "translate(" + (chunk_graph_width - chunk_y_axis_space + 3) + ", 5)")
-        .attr("height", yaxis_height)
+        //.attr("height", yaxis_height)
         .attr("id", "aggregate-y-axis")
         .style("fill", "white")
         .call(yAxisRight);
@@ -569,10 +652,10 @@ function drawAggregatePath() {
         .on("mousemove", mousemove);
 
     focus_g.append("line")
-        .attr("y0", 0).attr("y1", yaxis_height)
+        .attr("y0", 0).attr("y1", yaxis_height-5)
         .attr("x0", 0).attr("x1", 0);
     var text = focus_g.append("text")
-        .style("stroke", "lightgray")
+        .style("fill", "lightgray")
         .attr("x", 20)
         .attr("y", "30");
     text.append("tspan")
@@ -603,7 +686,7 @@ function drawEverything() {
 
     barHeight = 8;
     chunk_graph_width = d3.select("#chunks-container").node().getBoundingClientRect().width;
-    chunk_graph_height = d3.select("#chunks-container").node().getBoundingClientRect().height;
+    chunk_graph_height = d3.select("#chunks").node().getBoundingClientRect().height;
     console.log("width: " + chunk_graph_width);
     chunk_y_axis_space = chunk_graph_width*0.13;  // ten percent should be enough
 
@@ -615,7 +698,6 @@ function drawEverything() {
     max_x = xMax();
     x.domain([0, max_x]);
 
-    drawStackTraces();
 
     drawChunkXAxis();
 
@@ -703,6 +785,8 @@ function drawEverything() {
 
     drawAggregatePath();
     drawAggregateAxis();
+
+    drawStackTraces();
 
     var trace = d3.select("#trace");
     trace.html("Select an allocation point number \"Heap Allocations\"")

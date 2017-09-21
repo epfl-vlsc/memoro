@@ -121,6 +121,8 @@ void Autopsy_Traces(const v8::FunctionCallbackInfo<v8::Value> & args) {
                             Number::New(isolate, traces[i].num_chunks));
     result->Set(String::NewFromUtf8(isolate, "chunk_index"), 
                             Number::New(isolate, traces[i].chunk_index));
+    result->Set(String::NewFromUtf8(isolate, "max_aggregate"), 
+                            Number::New(isolate, traces[i].max_aggregate));
     result->Set(String::NewFromUtf8(isolate, "alloc_time_total"), 
                             Number::New(isolate, traces[i].alloc_time_total));
     result_list->Set(i, result);
@@ -231,22 +233,6 @@ void Autopsy_Inefficiencies(const v8::FunctionCallbackInfo<v8::Value> & args) {
   args.GetReturnValue().Set(result);
 }
 
-void Autopsy_SortOrderSizeIncreasing(const v8::FunctionCallbackInfo<v8::Value> & args) {
-  SortOrderSizeIncreasing();
-}
-
-void Autopsy_SortOrderSizeDecreasing(const v8::FunctionCallbackInfo<v8::Value> & args) {
-  SortOrderSizeDecreasing();
-}
-
-void Autopsy_SortOrderChunksIncreasing(const v8::FunctionCallbackInfo<v8::Value> & args) {
-  SortOrderChunksIncreasing();
-}
-
-void Autopsy_SortOrderChunksDecreasing(const v8::FunctionCallbackInfo<v8::Value> & args) {
-  SortOrderChunksDecreasing();
-}
-
 void init(Handle <Object> exports, Handle<Object> module) {
   NODE_SET_METHOD(exports, "set_dataset", Autopsy_SetDataset);
   NODE_SET_METHOD(exports, "aggregate_all", Autopsy_AggregateAll);
@@ -264,10 +250,6 @@ void init(Handle <Object> exports, Handle<Object> module) {
   NODE_SET_METHOD(exports, "filter_minmax_reset", Autopsy_FilterMinMaxReset);
   NODE_SET_METHOD(exports, "inefficiencies", Autopsy_Inefficiencies);
   NODE_SET_METHOD(exports, "global_alloc_time", Autopsy_GlobalAllocTime);
-  NODE_SET_METHOD(exports, "sort_order_size_increasing", Autopsy_SortOrderSizeIncreasing);
-  NODE_SET_METHOD(exports, "sort_order_size_decreasing", Autopsy_SortOrderSizeDecreasing);
-  NODE_SET_METHOD(exports, "sort_order_chunks_increasing", Autopsy_SortOrderChunksIncreasing);
-  NODE_SET_METHOD(exports, "sort_order_chunks_decreasing", Autopsy_SortOrderChunksDecreasing);
 }
 
 NODE_MODULE(autopsy, init)

@@ -27,13 +27,6 @@ bool operator<(const TimeValue& a, const TimeValue& b) {
   return a.time > b.time;
 }
 
-enum SortOrder : uint32_t {
-  SizeIncreasing = 0,
-  SizeDecreasing,
-  ChunksIncreasing,
-  ChunksDecreasing
-};
-
 class Dataset {
   public:
     Dataset() {}
@@ -151,9 +144,7 @@ class Dataset {
         total_alloc_time = 0;
       }
 
-      current_sort_ = SortOrder::ChunksIncreasing;
       CalculatePercentilesChunk(traces_, pattern_params_);
-      SortOrderSizeIncreasing();
       CalculatePercentilesSize(traces_, pattern_params_);
       // leave this sort order until the user changes
       aggregates_.reserve(num_chunks_*2);
@@ -234,6 +225,7 @@ class Dataset {
 
         tmp.num_chunks = traces_[i].chunks.size();
         tmp.alloc_time_total = traces_[i].alloc_time_total;
+        tmp.max_aggregate = traces_[i].max_aggregate;
         traces.push_back(tmp);
       }
     }
@@ -275,46 +267,6 @@ class Dataset {
       return traces_[trace_index].inefficiencies;
     }
 
-    void SortOrderSizeIncreasing() {
-      // counting on std sort to call move/swap on vec elements
-      // the chunk vectors are vecs of pointers, but can still be large
-      // e.g. 100K -> 1M+
-      if (current_sort_ == SortOrder::SizeIncreasing) return;
-      std::sort(traces_.begin(), traces_.end(), 
-          [](const Trace& a, const Trace& b) -> bool {
-            return a.max_aggregate < b.max_aggregate;
-          });
-      current_sort_ = SortOrder::SizeIncreasing;
-    }
-    
-    void SortOrderSizeDecreasing() {
-      if (current_sort_ == SortOrder::SizeDecreasing) return;
-      std::sort(traces_.begin(), traces_.end(), 
-          [](const Trace& a, const Trace& b) -> bool {
-            return a.max_aggregate > b.max_aggregate;
-          });
-      current_sort_ = SortOrder::SizeDecreasing;
-    }
-    
-    void SortOrderChunksIncreasing() {
-      if (current_sort_ == SortOrder::ChunksIncreasing) return;
-      std::sort(traces_.begin(), traces_.end(), 
-          [](const Trace& a, const Trace& b) -> bool {
-            return a.chunks.size() < b.chunks.size();
-          });
-      current_sort_ = SortOrder::ChunksIncreasing;
-    }
-    
-    void SortOrderChunksDecreasing() {
-      if (current_sort_ == SortOrder::ChunksDecreasing) return;
-
-      std::sort(traces_.begin(), traces_.end(), 
-          [](const Trace& a, const Trace& b) -> bool {
-            return a.chunks.size() > b.chunks.size();
-          });
-      current_sort_ = SortOrder::ChunksDecreasing;
-    }
-
   private:
 
     Chunk* chunks_;
@@ -329,7 +281,6 @@ class Dataset {
     uint64_t filter_min_time_;
     uint64_t global_alloc_time_ = 0;
     PatternParams pattern_params_;
-    uint32_t current_sort_ = 0;
 
     vector<string> trace_filters_;
     priority_queue<TimeValue> queue_;
@@ -557,19 +508,4 @@ uint64_t GlobalAllocTime() {
   return theDataset.GlobalAllocTime();
 }
 
-void SortOrderSizeIncreasing() {
-  theDataset.SortOrderSizeIncreasing();
-}
-
-void SortOrderChunksIncreasing() {
-  theDataset.SortOrderChunksIncreasing();
-}
-
-void SortOrderSizeDecreasing() {
-  theDataset.SortOrderSizeDecreasing();
-}
-
-void SortOrderChunksDecreasing() {
-  theDataset.SortOrderChunksDecreasing();
-}
 

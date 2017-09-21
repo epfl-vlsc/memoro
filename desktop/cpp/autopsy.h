@@ -43,6 +43,7 @@ struct TraceValue {
   int chunk_index;
   int num_chunks;
   uint64_t alloc_time_total;
+  uint64_t max_aggregate;
 };
 
 // set the current dataset file, returns dataset stats (num traces, min/max times)
@@ -84,10 +85,5 @@ uint64_t GlobalAllocTime();
 uint64_t Inefficiencies(int trace_index);
 
 uint64_t MaxAggregate();
-
-void SortOrderSizeIncreasing();
-void SortOrderChunksIncreasing();
-void SortOrderSizeDecreasing();
-void SortOrderChunksDecreasing();
 
 #endif

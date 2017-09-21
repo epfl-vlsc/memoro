@@ -137,6 +137,15 @@ function constructInferences(inef) {
     return ret;
 }
 
+function sortTraces(traces) {
+
+    // TODO get current sort order from UI
+    traces.sort(function(a, b) {
+        return b.max_aggregate - a.max_aggregate;
+    });
+
+}
+
 function drawStackTraces() {
 
     var trace = d3.select("#trace")
@@ -152,8 +161,8 @@ function drawStackTraces() {
 
     x.domain([min_x, max_x]);
 
-    autopsy.sort_order_size_decreasing();
     var traces = autopsy.traces();
+    sortTraces(traces)
     num_traces = traces.length;
     total_chunks = 0;
 
@@ -162,9 +171,7 @@ function drawStackTraces() {
 
         sampled = autopsy.aggregate_trace(d.trace_index);
         console.log("drawing trace with points " + sampled.length);
-        var peak = d3.max(sampled, function (x) {
-            return x["value"];
-        });
+        var peak = d.max_aggregate
         total_chunks += d.num_chunks;
         var rectHeight = 55;
 

@@ -1,6 +1,7 @@
 
 #include "pattern.h"
-  
+#include <vector>
+using namespace std;
 /*Unused = 0x1,
   WriteOnly = 1 << 1,
   ReadOnly = 1 << 2,
@@ -95,11 +96,23 @@ void CalculatePercentilesChunk(std::vector<Trace>& traces, PatternParams& params
 }
 
 void CalculatePercentilesSize(std::vector<Trace>& traces, PatternParams& params) {
- 
+
+  // we need a different sort order but cannot mutate traces like this
+  // since it will invalidate chunk parent indexes
+  typedef pair<uint64_t, unsigned int> TVal;
+  vector<TVal> t;
+  t.reserve(traces.size());
+  for (int i = 0; i < traces.size(); i++) {
+    t.push_back({traces[i].max_aggregate, i});
+  }
+  std::sort(t.begin(), t.end(), [](TVal const& a, TVal const& b) {
+      return a.first < b.first;
+      });
+
   float percentile = params.percentile;
   int index = int(percentile * traces.size());
-  for (unsigned int i = index; i < traces.size(); i++) {
-    traces[i].inefficiencies |= Inefficiency::TopPercentileSize;
+  for (unsigned int i = index; i < t.size(); i++) {
+    traces[t[i].second].inefficiencies |= Inefficiency::TopPercentileSize;
   }
 }
 

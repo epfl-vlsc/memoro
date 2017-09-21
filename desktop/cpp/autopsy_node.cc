@@ -29,7 +29,7 @@ void Autopsy_AggregateAll(const v8::FunctionCallbackInfo<v8::Value> & args) {
   Isolate* isolate = args.GetIsolate();
   std::vector<TimeValue> values;
   AggregateAll(values);
-  //std::cout << "got " << values.size() << " time points!!\n";
+  std::cout << "full agg got " << values.size() << " time points!!\n";
 
   Local<Array> result_list = Array::New(isolate);
   for (unsigned int i = 0; i < values.size(); i++ ) {
@@ -52,7 +52,7 @@ void Autopsy_AggregateTrace(const v8::FunctionCallbackInfo<v8::Value> & args) {
   int trace_index = args[0]->NumberValue();
 
   AggregateTrace(values, trace_index);
-  //std::cout << "got " << values.size() << " time points!!\n";
+  std::cout << "got " << values.size() << " time points!!\n";
 
   Local<Array> result_list = Array::New(isolate);
   for (unsigned int i = 0; i < values.size(); i++ ) {
@@ -223,10 +223,28 @@ void Autopsy_Inefficiencies(const v8::FunctionCallbackInfo<v8::Value> & args) {
       Boolean::New(isolate, HasInefficiency(i, Inefficiency::EarlyAlloc)));
   result->Set(String::NewFromUtf8(isolate, "increasing_allocs"), 
       Boolean::New(isolate, HasInefficiency(i, Inefficiency::IncreasingReallocs)));
-  result->Set(String::NewFromUtf8(isolate, "top_percentile"), 
-      Boolean::New(isolate, HasInefficiency(i, Inefficiency::TopPercentile)));
+  result->Set(String::NewFromUtf8(isolate, "top_percentile_size"), 
+      Boolean::New(isolate, HasInefficiency(i, Inefficiency::TopPercentileSize)));
+  result->Set(String::NewFromUtf8(isolate, "top_percentile_chunks"), 
+      Boolean::New(isolate, HasInefficiency(i, Inefficiency::TopPercentileChunks)));
   
   args.GetReturnValue().Set(result);
+}
+
+void Autopsy_SortOrderSizeIncreasing(const v8::FunctionCallbackInfo<v8::Value> & args) {
+  SortOrderSizeIncreasing();
+}
+
+void Autopsy_SortOrderSizeDecreasing(const v8::FunctionCallbackInfo<v8::Value> & args) {
+  SortOrderSizeDecreasing();
+}
+
+void Autopsy_SortOrderChunksIncreasing(const v8::FunctionCallbackInfo<v8::Value> & args) {
+  SortOrderChunksIncreasing();
+}
+
+void Autopsy_SortOrderChunksDecreasing(const v8::FunctionCallbackInfo<v8::Value> & args) {
+  SortOrderChunksDecreasing();
 }
 
 void init(Handle <Object> exports, Handle<Object> module) {
@@ -246,6 +264,10 @@ void init(Handle <Object> exports, Handle<Object> module) {
   NODE_SET_METHOD(exports, "filter_minmax_reset", Autopsy_FilterMinMaxReset);
   NODE_SET_METHOD(exports, "inefficiencies", Autopsy_Inefficiencies);
   NODE_SET_METHOD(exports, "global_alloc_time", Autopsy_GlobalAllocTime);
+  NODE_SET_METHOD(exports, "sort_order_size_increasing", Autopsy_SortOrderSizeIncreasing);
+  NODE_SET_METHOD(exports, "sort_order_size_decreasing", Autopsy_SortOrderSizeDecreasing);
+  NODE_SET_METHOD(exports, "sort_order_chunks_increasing", Autopsy_SortOrderChunksIncreasing);
+  NODE_SET_METHOD(exports, "sort_order_chunks_decreasing", Autopsy_SortOrderChunksDecreasing);
 }
 
 NODE_MODULE(autopsy, init)

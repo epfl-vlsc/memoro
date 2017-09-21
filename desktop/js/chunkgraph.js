@@ -1,5 +1,5 @@
 var d3 = require("d3");
-var autopsy = require('../cpp/build/Debug/autopsy.node');
+var autopsy = require('../cpp/build/Release/autopsy.node');
 var path = require('path')
 var async = require('async');
 
@@ -128,8 +128,10 @@ function constructInferences(inef) {
         }
         if (inef.increasing_allocs)
             ret += "-> increasing allocations </br>"
-        if (inef.top_percentile)
+        if (inef.top_percentile_chunks)
             ret += "-> in top percentile of chunks allocated </br>"
+        if (inef.top_percentile_size)
+            ret += "-> in top percentile of bytes allocated </br>"
     }
 
     return ret;
@@ -150,6 +152,7 @@ function drawStackTraces() {
 
     x.domain([min_x, max_x]);
 
+    autopsy.sort_order_size_decreasing();
     var traces = autopsy.traces();
     num_traces = traces.length;
     total_chunks = 0;
@@ -158,6 +161,7 @@ function drawStackTraces() {
     traces.forEach(function (d, i) {
 
         sampled = autopsy.aggregate_trace(d.trace_index);
+        console.log("drawing trace with points " + sampled.length);
         var peak = d3.max(sampled, function (x) {
             return x["value"];
         });
@@ -375,7 +379,7 @@ function renderChunkSvg(chunk, text, bottom) {
 }
 
 function removeChunksTop(num) {
-    var svgs = d3.select("#chunks").selectAll("div")[0];
+    var svgs = d3.select("#chunks").selectAll("div")._groups[0];
 
     for (i = 0; i < num; i++)
     {
@@ -385,9 +389,10 @@ function removeChunksTop(num) {
 
 function removeChunksBottom(num) {
 
-    var svgs = d3.select("#chunks").selectAll("div")[0];
+    var svgs = d3.select("#chunks").selectAll("div")._groups[0];
     var end = svgs.length;
 
+    console.log(svgs)
     for (i = end - num; i < end; i++)
     {
         svgs[i].remove();
@@ -424,7 +429,7 @@ function chunkScroll() {
     } else if (percent < (100 - load_threshold)) {
         if (current_chunk_index_low > 0) {
             var chunks = autopsy.trace_chunks(current_trace_index, Math.max(current_chunk_index_low-25, 0), 25);
-            if (chunks.length == 0)
+            if (chunks.length === 0)
                 console.log("oh fuck chunks is 0");
             var to_prepend = chunks.length;
             var to_remove = to_prepend;
@@ -511,10 +516,11 @@ function drawChunkXAxis() {
     var xAxis = d3.axisBottom(x)
         .tickFormat(function(xval) {
             if (max_x < 1000000000)
-                return (xval / 1000).toFixed(1) + "us";
-            else return (xval / 1000000).toFixed(1) + "ms";
+                return (xval / 1000).toFixed(1) + "Kc";
+            else if (max_x < 10000000000) return (xval / 1000000).toFixed(1) + "Mc";
+            else return (xval / 1000000000).toFixed(1) + "Gc";
         })
-        .ticks(10)
+        .ticks(7)
         //.orient("bottom");
 
     var max_x = autopsy.filter_max_time();
@@ -539,11 +545,12 @@ function drawAggregateAxis() {
     var xAxis = d3.axisBottom(x)
         .tickFormat(function(xval) {
             if (max_x < 1000000000)
-                return (xval / 1000).toFixed(1) + "us";
-            else return (xval / 1000000).toFixed(1) + "ms";
+                return (xval / 1000).toFixed(1) + "Kc";
+            else if (max_x < 10000000000) return (xval / 1000000).toFixed(1) + "Mc";
+            else return (xval / 1000000000).toFixed(1) + "Gc";
         })
         //.orient("bottom")
-        .ticks(10)
+        .ticks(7)
         .tickSizeInner(-120)
 
     var max_x = autopsy.filter_max_time();
@@ -573,6 +580,7 @@ function drawAggregatePath() {
 
     var aggregate_data = autopsy.aggregate_all();
 
+    console.log(aggregate_data)
     aggregate_max = autopsy.max_aggregate();
     //var binned_ag = binAggregate(aggregate_data);
     var binned_ag = aggregate_data;
@@ -614,8 +622,6 @@ function drawAggregatePath() {
         .datum(binned_ag)
         .attr("fill", "none")
         .attr("stroke", "steelblue")
-        .attr("stroke-linejoin", "round")
-        .attr("stroke-linecap", "round")
         .attr("stroke-width", 1.5)
         .attr("transform", "translate(0, 5)")
         .attr("id", "aggregate-path")
@@ -745,6 +751,7 @@ function drawEverything() {
             }
 
             s.attr("width", d.width);
+            s.attr("x", d.x);
 
         }
     })

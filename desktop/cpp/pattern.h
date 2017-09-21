@@ -10,7 +10,8 @@ enum Inefficiency : uint64_t {
   LateFree = 1 << 4,
   EarlyAlloc =  1 << 5,
   IncreasingReallocs = 1 << 6,
-  TopPercentile = 1 << 7
+  TopPercentileChunks = 1 << 7,
+  TopPercentileSize = 1 << 8
 };
 
 struct PatternParams {
@@ -22,5 +23,11 @@ struct PatternParams {
 bool HasInefficiency(uint64_t bitvec, Inefficiency i);
 
 // returns bit vector of inefficiency
-uint64_t Detect(std::vector<Chunk*>& chunks, PatternParams& params);
+uint64_t Detect(std::vector<Chunk*> const& chunks, PatternParams& params);
 
+// mutates traces vector elements
+// requires sorted traces by num chunks
+void CalculatePercentilesChunk(std::vector<Trace>& traces, PatternParams& params);
+
+// requires sorted traces by max agg
+void CalculatePercentilesSize(std::vector<Trace>& traces, PatternParams& params);

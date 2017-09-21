@@ -11,7 +11,7 @@
 
 using namespace std;
 
-#define MAX_POINTS 1500
+#define MAX_POINTS 700
 #define VERSION_MAJOR 0
 #define VERSION_MINOR 1
 
@@ -23,20 +23,16 @@ struct __attribute__((packed)) Header {
   uint32_t index_size;
 };
 
-struct Trace {
-  std::string trace;
-  bool filtered = false;
-  uint64_t max_aggregate = 0;
-  vector<Chunk*> chunks;
-  vector<TimeValue> aggregate;
-  uint64_t inefficiencies = 0;
-  uint64_t alloc_time_total = 0;
-};
-    
-
 bool operator<(const TimeValue& a, const TimeValue& b) {
   return a.time > b.time;
 }
+
+enum SortOrder : uint32_t {
+  SizeIncreasing = 0,
+  SizeDecreasing,
+  ChunksIncreasing,
+  ChunksDecreasing
+};
 
 class Dataset {
   public:
@@ -124,11 +120,13 @@ class Dataset {
       fclose(chunk_fd);
 
       // sort the chunks makes bin/aggregate easier
+      cout << "sorting chunks..." << endl;
       sort(chunks_, chunks_+num_chunks_, [](Chunk& a, Chunk& b) {
             return a.timestamp_start < b.timestamp_start;
           });
 
       // set trace structure pointers to their chunks
+      cout << "building structures..." << endl;
       min_time_ = 0;
       for (unsigned int i = 0; i < num_chunks_; i++) {
         Trace& t = traces_[chunks_[i].stack_index];
@@ -140,6 +138,7 @@ class Dataset {
       filter_max_time_ = max_time_;
       
       // populate chunk aggregate vectors
+      cout << "aggregating traces ..." << endl;
       uint64_t total_alloc_time = 0;
       for (auto& t : traces_) {
         Aggregate(t.aggregate, t.max_aggregate, t.chunks);
@@ -151,6 +150,12 @@ class Dataset {
         global_alloc_time_ += total_alloc_time;
         total_alloc_time = 0;
       }
+
+      current_sort_ = SortOrder::ChunksIncreasing;
+      CalculatePercentilesChunk(traces_, pattern_params_);
+      SortOrderSizeIncreasing();
+      CalculatePercentilesSize(traces_, pattern_params_);
+      // leave this sort order until the user changes
       aggregates_.reserve(num_chunks_*2);
 
       return true;
@@ -159,15 +164,21 @@ class Dataset {
     void AggregateAll(vector<TimeValue>& values) {
       // build aggregate structure
       // bin via sampling into times and values arrays
+      cout << "aggregating all ..." << endl;
       if (aggregates_.empty()) Aggregate(aggregates_, max_aggregate_, chunks_, num_chunks_);
+      cout << "done, sampling ..." << endl;
       SampleValues(aggregates_, values);
+      cout << "done" << endl;
     }
     
     void AggregateTrace(vector<TimeValue>& values, int trace_index) {
       // build aggregate structure
       // bin via sampling into times and values arrays
       Trace& t = traces_[trace_index];
+      cout << "sampling trace ..." << endl;
       SampleValues(t.aggregate, values);
+      cout << "done, with " << values.size() << " values" << endl;
+
     }
 
     uint64_t MaxAggregate() { return max_aggregate_; }
@@ -177,7 +188,7 @@ class Dataset {
     uint64_t FilterMinTime() { return filter_min_time_; }
     uint64_t GlobalAllocTime() { return global_alloc_time_; }
 
-    void SetTraceFilter(string& str) {
+    void SetTraceFilter(string const& str) {
       for (auto& s : trace_filters_) 
         if (s == str)
           return;
@@ -264,6 +275,46 @@ class Dataset {
       return traces_[trace_index].inefficiencies;
     }
 
+    void SortOrderSizeIncreasing() {
+      // counting on std sort to call move/swap on vec elements
+      // the chunk vectors are vecs of pointers, but can still be large
+      // e.g. 100K -> 1M+
+      if (current_sort_ == SortOrder::SizeIncreasing) return;
+      std::sort(traces_.begin(), traces_.end(), 
+          [](const Trace& a, const Trace& b) -> bool {
+            return a.max_aggregate < b.max_aggregate;
+          });
+      current_sort_ = SortOrder::SizeIncreasing;
+    }
+    
+    void SortOrderSizeDecreasing() {
+      if (current_sort_ == SortOrder::SizeDecreasing) return;
+      std::sort(traces_.begin(), traces_.end(), 
+          [](const Trace& a, const Trace& b) -> bool {
+            return a.max_aggregate > b.max_aggregate;
+          });
+      current_sort_ = SortOrder::SizeDecreasing;
+    }
+    
+    void SortOrderChunksIncreasing() {
+      if (current_sort_ == SortOrder::ChunksIncreasing) return;
+      std::sort(traces_.begin(), traces_.end(), 
+          [](const Trace& a, const Trace& b) -> bool {
+            return a.chunks.size() < b.chunks.size();
+          });
+      current_sort_ = SortOrder::ChunksIncreasing;
+    }
+    
+    void SortOrderChunksDecreasing() {
+      if (current_sort_ == SortOrder::ChunksDecreasing) return;
+
+      std::sort(traces_.begin(), traces_.end(), 
+          [](const Trace& a, const Trace& b) -> bool {
+            return a.chunks.size() > b.chunks.size();
+          });
+      current_sort_ = SortOrder::ChunksDecreasing;
+    }
+
   private:
 
     Chunk* chunks_;
@@ -278,11 +329,12 @@ class Dataset {
     uint64_t filter_min_time_;
     uint64_t global_alloc_time_ = 0;
     PatternParams pattern_params_;
+    uint32_t current_sort_ = 0;
 
     vector<string> trace_filters_;
     priority_queue<TimeValue> queue_;
 
-    void SampleValues(vector<TimeValue>& points, vector<TimeValue>& values) {
+    void SampleValues(const vector<TimeValue>& points, vector<TimeValue>& values) {
       values.clear();
       values.reserve(MAX_POINTS+2);
       // first, find the filtered interval
@@ -319,7 +371,7 @@ class Dataset {
         while (i < MAX_POINTS) {
           int idx = (int) index + min;
           if (idx >= points.size()) {
-            cout << " OH FUCK";
+            cout << " OH FUCK points size is " << points.size() << " idx is " << idx << " interval is " << interval << endl;
             break;
           }
           values.push_back(points[idx]);
@@ -336,6 +388,8 @@ class Dataset {
         values[values.size()-1].time = filter_max_time_;
       else
         values.push_back({filter_max_time_ > values[values.size()-1].time ? filter_max_time_ : points[points.size()-1].time, values[values.size()-1].value});
+
+      cout << "values size is " << values.size() << endl;
     }
 
     void Aggregate(vector<TimeValue>& points, uint64_t& max_aggregate, 
@@ -501,5 +555,21 @@ uint64_t Inefficiencies(int trace_index) {
 
 uint64_t GlobalAllocTime() {
   return theDataset.GlobalAllocTime();
+}
+
+void SortOrderSizeIncreasing() {
+  theDataset.SortOrderSizeIncreasing();
+}
+
+void SortOrderChunksIncreasing() {
+  theDataset.SortOrderChunksIncreasing();
+}
+
+void SortOrderSizeDecreasing() {
+  theDataset.SortOrderSizeDecreasing();
+}
+
+void SortOrderChunksDecreasing() {
+  theDataset.SortOrderChunksDecreasing();
 }
 

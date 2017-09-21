@@ -14,7 +14,7 @@ bool HasInefficiency(uint64_t bitvec, Inefficiency i) {
   return bitvec & i;
 }
 
-uint64_t Detect(std::vector<Chunk*>& chunks, PatternParams& params) {
+uint64_t Detect(std::vector<Chunk*> const& chunks, PatternParams& params) {
 
   uint64_t min_lifetime = UINT64_MAX;
   unsigned int total_reads = 0, total_writes = 0;
@@ -47,7 +47,7 @@ uint64_t Detect(std::vector<Chunk*>& chunks, PatternParams& params) {
       last_size = chunk->size;
       current_run++;
     } else {
-      if (chunk->size > last_size) {
+      if (chunk->size >= last_size) {
         last_size = chunk->size;
         current_run++;
       } else {
@@ -84,4 +84,35 @@ uint64_t Detect(std::vector<Chunk*>& chunks, PatternParams& params) {
 
   return i;
 }
+
+void CalculatePercentilesChunk(std::vector<Trace>& traces, PatternParams& params) {
+ 
+  float percentile = params.percentile;
+  int index = int(percentile * traces.size());
+  for (unsigned int i = index; i < traces.size(); i++) {
+    traces[i].inefficiencies |= Inefficiency::TopPercentileChunks;
+  }
+}
+
+void CalculatePercentilesSize(std::vector<Trace>& traces, PatternParams& params) {
+ 
+  float percentile = params.percentile;
+  int index = int(percentile * traces.size());
+  for (unsigned int i = index; i < traces.size(); i++) {
+    traces[i].inefficiencies |= Inefficiency::TopPercentileSize;
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 

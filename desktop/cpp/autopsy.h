@@ -25,6 +25,16 @@ struct TimeValue {
   int64_t value;
 };
 
+struct Trace {
+  std::string trace;
+  bool filtered = false;
+  uint64_t max_aggregate = 0;
+  std::vector<Chunk*> chunks;
+  std::vector<TimeValue> aggregate;
+  uint64_t inefficiencies = 0;
+  uint64_t alloc_time_total = 0;
+};
+
 // API will return a list of these to Node layer
 // changing filters will invalidate the indices
 struct TraceValue {
@@ -74,5 +84,10 @@ uint64_t GlobalAllocTime();
 uint64_t Inefficiencies(int trace_index);
 
 uint64_t MaxAggregate();
+
+void SortOrderSizeIncreasing();
+void SortOrderChunksIncreasing();
+void SortOrderSizeDecreasing();
+void SortOrderChunksDecreasing();
 
 #endif

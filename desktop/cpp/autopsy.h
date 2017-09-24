@@ -27,6 +27,7 @@ struct TimeValue {
 
 struct Trace {
   std::string trace;
+  std::string type;
   bool filtered = false;
   uint64_t max_aggregate = 0;
   std::vector<Chunk*> chunks;

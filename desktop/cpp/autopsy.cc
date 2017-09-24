@@ -8,6 +8,10 @@
 #include <iostream>
 #include <vector>
 #include <queue>
+#include <dirent.h>
+#include <fstream>
+#include <algorithm>
+#include <unordered_map>
 
 using namespace std;
 
@@ -38,6 +42,10 @@ class Dataset {
       aggregates_.clear();
       trace_filters_.clear();
       global_alloc_time_ = 0;
+
+      /*if (!InitTypeData(dir_path, msg)) {
+        return false;
+      }*/
 
       string trace_file = dir_path + "hplgst.trace";
       cout << "opening " << trace_file << endl;
@@ -71,6 +79,13 @@ class Dataset {
         } else {
           fread(trace_buf, index[i], 1, trace_fd);
           t.trace = string(trace_buf, index[i]);
+          /*size_t pos = t.trace.find_first_of("|");
+          size_t pos2 = t.trace.find_first_of("|", pos+1);
+          pos = pos2;
+          while (t.trace[pos] != ' ')
+            pos--;
+          string value = t.trace.substr(pos, pos2-pos);
+          cout << "got value:" << value << endl;*/
           traces_.push_back(t);
         }
       }
@@ -149,6 +164,38 @@ class Dataset {
       // leave this sort order until the user changes
       aggregates_.reserve(num_chunks_*2);
 
+      return true;
+    }
+
+    bool InitTypeData(string& dir_path, string& msg) {
+      string dir(dir_path + "typefiles/");
+      vector<string> files;
+      if (GetFiles(dir, files) != 0) {
+        msg = "Directory " + dir + " did not contain valid type files for program\n";
+        cout << msg << endl;
+        return false;
+      }
+      string line;
+      ifstream infile;
+      type_map_.clear();
+      for (auto& f : files) {
+        if (f == "." || f == "..")
+          continue;
+        infile.open(dir + f);
+        while (getline(infile, line)) {
+          size_t pos = line.find_first_of("|");
+          if (pos == string::npos) {
+            msg = "detected incorrect formatting in line " + line + "\n";
+            return false;
+          }
+          type_map_[line.substr(0, pos)] = line.substr(pos+1, line.size() - 1);
+        }
+        infile.close();
+      }
+      /*cout << "the types are: \n";
+      for (auto& k : type_map_) {
+        cout << k.first << " -> " << k.second << endl;
+      }*/
       return true;
     }
 
@@ -281,9 +328,26 @@ class Dataset {
     uint64_t filter_min_time_;
     uint64_t global_alloc_time_ = 0;
     PatternParams pattern_params_;
+    unordered_map<string, string> type_map_;
 
     vector<string> trace_filters_;
     priority_queue<TimeValue> queue_;
+
+    int GetFiles(string dir, vector<string> &files)
+    {
+      DIR *dp;
+      struct dirent *dirp;
+      if((dp  = opendir(dir.c_str())) == NULL) {
+        cout << "Error(" << errno << ") opening " << dir << endl;
+        return errno;
+      }
+
+      while ((dirp = readdir(dp)) != NULL) {
+        files.push_back(string(dirp->d_name));
+      }
+      closedir(dp);
+      return 0;
+    }
 
     void SampleValues(const vector<TimeValue>& points, vector<TimeValue>& values) {
       values.clear();

@@ -43,9 +43,9 @@ class Dataset {
       trace_filters_.clear();
       global_alloc_time_ = 0;
 
-      /*if (!InitTypeData(dir_path, msg)) {
+      if (!InitTypeData(dir_path, msg)) {
         return false;
-      }*/
+      }
 
       string trace_file = dir_path + "hplgst.trace";
       cout << "opening " << trace_file << endl;
@@ -78,13 +78,21 @@ class Dataset {
 
         fread(&trace_buf[0], index[i], 1, trace_fd);
         t.trace = string(&trace_buf[0], index[i]);
-        /*size_t pos = t.trace.find_first_of("|");
-          size_t pos2 = t.trace.find_first_of("|", pos+1);
-          pos = pos2;
-          while (t.trace[pos] != ' ')
+
+        // now i admit, that this is indeed hacky, and entirely
+        // dependent on stack traces being produced by llvm-symbolizer
+        // or at least ending in dir/filename.cpp:<line>:<col> 
+        // if/when we switch to symbolizing here, we will have more options
+        // and more robust code
+        size_t pos = t.trace.find_first_of("|");
+        size_t pos2 = t.trace.find_first_of("|", pos+1);
+        pos = pos2;
+        while (t.trace[pos] != ' ')
           pos--;
-          string value = t.trace.substr(pos, pos2-pos);
-          cout << "got value:" << value << endl;*/
+        string value = t.trace.substr(pos+1, pos2-pos-1);
+        //cout << "got value:" << value << endl;
+        //cout << "with mapped type: " << type_map_[value] << endl;
+        t.type = type_map_[value];
         traces_.push_back(t);
       }
       fclose(trace_fd);
@@ -202,18 +210,18 @@ class Dataset {
       // bin via sampling into times and values arrays
       cout << "aggregating all ..." << endl;
       if (aggregates_.empty()) Aggregate(aggregates_, max_aggregate_, chunks_, num_chunks_);
-      cout << "done, sampling ..." << endl;
+      //cout << "done, sampling ..." << endl;
       SampleValues(aggregates_, values);
-      cout << "done" << endl;
+      //cout << "done" << endl;
     }
     
     void AggregateTrace(vector<TimeValue>& values, int trace_index) {
       // build aggregate structure
       // bin via sampling into times and values arrays
       Trace& t = traces_[trace_index];
-      cout << "sampling trace ..." << endl;
+      //cout << "sampling trace ..." << endl;
       SampleValues(t.aggregate, values);
-      cout << "done, with " << values.size() << " values" << endl;
+      //cout << "done, with " << values.size() << " values" << endl;
 
     }
 
@@ -269,6 +277,7 @@ class Dataset {
         if (!overlaps) continue;
 
         tmp.num_chunks = traces_[i].chunks.size();
+        tmp.type = &traces_[i].type;
         tmp.alloc_time_total = traces_[i].alloc_time_total;
         tmp.max_aggregate = traces_[i].max_aggregate;
         traces.push_back(tmp);
@@ -384,7 +393,7 @@ class Dataset {
         while (i < MAX_POINTS) {
           int idx = (int) index + min;
           if (idx >= points.size()) {
-            cout << " OH FUCK points size is " << points.size() << " idx is " << idx << " interval is " << interval << endl;
+            cout << "POSSIBLE BUG points size is " << points.size() << " idx is " << idx << " interval is " << interval << endl;
             break;
           }
           values.push_back(points[idx]);
@@ -408,7 +417,7 @@ class Dataset {
     void Aggregate(vector<TimeValue>& points, uint64_t& max_aggregate, 
         Chunk* chunks, int num_chunks) {
       if (!queue_.empty()) {
-        cout << "THE QUEUE ISNT EMPTY WTF";
+        cout << "THE QUEUE ISNT EMPTY MAJOR ERROR";
         return;
       }
       TimeValue tmp;
@@ -457,7 +466,7 @@ class Dataset {
         vector<Chunk*>& chunks) {
       int num_chunks = chunks.size();
       if (!queue_.empty()) {
-        cout << "THE QUEUE ISNT EMPTY WTF";
+        cout << "THE QUEUE ISNT EMPTY MAJOR ERROR";
         return;
       }
       TimeValue tmp;

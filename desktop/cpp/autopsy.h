@@ -40,6 +40,7 @@ struct Trace {
 // changing filters will invalidate the indices
 struct TraceValue {
   std::string* trace;
+  std::string* type;
   int trace_index;
   int chunk_index;
   int num_chunks;

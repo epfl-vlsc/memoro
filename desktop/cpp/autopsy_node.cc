@@ -115,6 +115,8 @@ void Autopsy_Traces(const v8::FunctionCallbackInfo<v8::Value> & args) {
     Local<Object> result = Object::New(isolate);
     result->Set(String::NewFromUtf8(isolate, "trace"), 
                             String::NewFromUtf8(isolate, traces[i].trace->c_str()));
+    result->Set(String::NewFromUtf8(isolate, "type"), 
+                            String::NewFromUtf8(isolate, traces[i].type->c_str()));
     result->Set(String::NewFromUtf8(isolate, "trace_index"), 
                             Number::New(isolate, traces[i].trace_index));
     result->Set(String::NewFromUtf8(isolate, "num_chunks"), 

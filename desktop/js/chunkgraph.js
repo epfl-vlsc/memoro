@@ -264,7 +264,8 @@ function drawStackTraces() {
 		    .style("fill", "white")
             .attr("x", 5)
             .attr("y", "15")
-            .text("Chunks: " + (d.num_chunks) + ", Peak Bytes: " + bytesToString(peak));
+            .text("Chunks: " + (d.num_chunks) + ", Peak Bytes: " + bytesToString(peak) + " Type: "
+            + d.type);
 
         var stack_y = d3.scaleLinear()
             .range([rectHeight-25, 0]);

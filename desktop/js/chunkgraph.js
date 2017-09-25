@@ -132,6 +132,10 @@ function constructInferences(inef) {
             ret += "-> in top percentile of chunks allocated </br>"
         if (inef.top_percentile_size)
             ret += "-> in top percentile of bytes allocated </br>"
+        if (inef.multi_thread)
+            ret += "-> chunks accessed by multiple threads </br>"
+        if (inef.low_access_coverage)
+            ret += "-> chunks have low access coverage </br>"
     }
 
     return ret;
@@ -312,7 +316,10 @@ function tooltip(chunk) {
             .duration(200)
             .style("opacity", .9);
         div .html(bytesToString(chunk["size"]) + "</br> Reads: " + chunk["num_reads"]
-            + "</br>Writes: " + chunk["num_writes"] + "</br>")
+            + "</br>Writes: " + chunk["num_writes"] + "</br>Coverage Ratio: " +
+            ((chunk.access_interval_high - chunk.access_interval_low) / chunk.size).toFixed(1)
+            + "</br>Coverage Interval: [" + chunk.access_interval_low + "," + chunk.access_interval_high
+            + "]</br>")
             .style("left", (d3.event.pageX) + "px")
             .style("top", (d3.event.pageY - 28) + "px");
         div.append("svg")
@@ -682,7 +689,7 @@ function drawAggregatePath() {
         }).left(binned_ag, x0, 1);
         var y = binned_ag[y_pos-1]["value"];
         focus_g.attr("transform", "translate(" + x(x0) + ",0)");
-        focus_g.select("#time").text(Math.round(x0) + "ns " + bytesToString(y));
+        focus_g.select("#time").text(Math.round(x0) + "c " + bytesToString(y));
         if (d3.mouse(this)[0] > chunk_graph_width / 2)
             focus_g.select("text").attr("x", -170);
         else

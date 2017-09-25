@@ -29,7 +29,6 @@ void Autopsy_AggregateAll(const v8::FunctionCallbackInfo<v8::Value> & args) {
   Isolate* isolate = args.GetIsolate();
   std::vector<TimeValue> values;
   AggregateAll(values);
-  std::cout << "full agg got " << values.size() << " time points!!\n";
 
   Local<Array> result_list = Array::New(isolate);
   for (unsigned int i = 0; i < values.size(); i++ ) {
@@ -52,7 +51,6 @@ void Autopsy_AggregateTrace(const v8::FunctionCallbackInfo<v8::Value> & args) {
   int trace_index = args[0]->NumberValue();
 
   AggregateTrace(values, trace_index);
-  std::cout << "got " << values.size() << " time points!!\n";
 
   Local<Array> result_list = Array::New(isolate);
   for (unsigned int i = 0; i < values.size(); i++ ) {
@@ -77,7 +75,6 @@ void Autopsy_TraceChunks(const v8::FunctionCallbackInfo<v8::Value> & args) {
   int num_chunks  = args[2]->NumberValue();
 
   TraceChunks(chunks, trace_index, chunk_index, num_chunks);
-  //std::cout << "got " << values.size() << " time points!!\n";
 
   Local<Array> result_list = Array::New(isolate);
   for (unsigned int i = 0; i < chunks.size(); i++ ) {
@@ -98,6 +95,12 @@ void Autopsy_TraceChunks(const v8::FunctionCallbackInfo<v8::Value> & args) {
                             Number::New(isolate, chunks[i]->timestamp_last_access));
     result->Set(String::NewFromUtf8(isolate, "alloc_call_time"), 
                             Number::New(isolate, chunks[i]->alloc_call_time));
+    result->Set(String::NewFromUtf8(isolate, "multi_thread"), 
+                            Boolean::New(isolate, chunks[i]->multi_thread));
+    result->Set(String::NewFromUtf8(isolate, "access_interval_low"), 
+                            Number::New(isolate, chunks[i]->access_interval_low));
+    result->Set(String::NewFromUtf8(isolate, "access_interval_high"), 
+                            Number::New(isolate, chunks[i]->access_interval_high));
     result_list->Set(i, result);
   }
 
@@ -231,6 +234,10 @@ void Autopsy_Inefficiencies(const v8::FunctionCallbackInfo<v8::Value> & args) {
       Boolean::New(isolate, HasInefficiency(i, Inefficiency::TopPercentileSize)));
   result->Set(String::NewFromUtf8(isolate, "top_percentile_chunks"), 
       Boolean::New(isolate, HasInefficiency(i, Inefficiency::TopPercentileChunks)));
+  result->Set(String::NewFromUtf8(isolate, "multi_thread"), 
+      Boolean::New(isolate, HasInefficiency(i, Inefficiency::MultiThread)));
+  result->Set(String::NewFromUtf8(isolate, "low_access_coverage"), 
+      Boolean::New(isolate, HasInefficiency(i, Inefficiency::LowAccessCoverage)));
   
   args.GetReturnValue().Set(result);
 }

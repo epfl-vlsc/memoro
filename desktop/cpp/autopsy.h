@@ -10,7 +10,7 @@ struct __attribute__((packed)) Chunk {
   uint8_t num_reads = 0;
   uint8_t num_writes = 0;
   uint8_t allocated = 0;
-  uint8_t pad;
+  uint8_t multi_thread;
   uint32_t stack_index = 0; // used for file writer
   uint64_t size = 0;
   uint64_t timestamp_start = 0;
@@ -18,6 +18,8 @@ struct __attribute__((packed)) Chunk {
   uint64_t timestamp_first_access = 0;
   uint64_t timestamp_last_access = 0;
   uint64_t alloc_call_time = 0;
+  uint32_t access_interval_low = 0;
+  uint32_t access_interval_high = 0;
 };
 
 struct TimeValue {

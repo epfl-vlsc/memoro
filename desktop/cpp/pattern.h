@@ -11,13 +11,16 @@ enum Inefficiency : uint64_t {
   EarlyAlloc =  1 << 5,
   IncreasingReallocs = 1 << 6,
   TopPercentileChunks = 1 << 7,
-  TopPercentileSize = 1 << 8
+  TopPercentileSize = 1 << 8,
+  MultiThread = 1 << 9,
+  LowAccessCoverage = 1 << 10
 };
 
 struct PatternParams {
   unsigned int short_lifetime = 1000000; // in ns currently
   unsigned int alloc_min_run = 4;
   float percentile = 0.9f;
+  float access_coverage = 0.5f;
 };
 
 bool HasInefficiency(uint64_t bitvec, Inefficiency i);

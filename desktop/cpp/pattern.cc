@@ -20,6 +20,8 @@ uint64_t Detect(std::vector<Chunk*> const& chunks, PatternParams& params) {
   uint64_t min_lifetime = UINT64_MAX;
   unsigned int total_reads = 0, total_writes = 0;
   bool has_early_alloc = false, has_late_free = false;
+  bool has_multi_thread = false;
+  bool has_low_access_coverage = false;
   uint64_t last_size;
   unsigned int current_run = 0, longest_run = 0;
 
@@ -57,6 +59,13 @@ uint64_t Detect(std::vector<Chunk*> const& chunks, PatternParams& params) {
         last_size = chunk->size;
       }
     }
+    // multithread
+    if (chunk->multi_thread)
+      has_multi_thread = true;
+
+    if (float(chunk->access_interval_high - chunk->access_interval_low) / float(chunk->size) < params.access_coverage)
+      has_low_access_coverage = true;
+
   }
 
   uint64_t i = 0;
@@ -81,6 +90,12 @@ uint64_t Detect(std::vector<Chunk*> const& chunks, PatternParams& params) {
 
   if (longest_run >= params.alloc_min_run) {
     i |= Inefficiency::IncreasingReallocs;
+  }
+  if (has_multi_thread) {
+    i |= Inefficiency::MultiThread;
+  }
+  if (has_low_access_coverage) {
+    i |= Inefficiency::LowAccessCoverage;
   }
 
   return i;

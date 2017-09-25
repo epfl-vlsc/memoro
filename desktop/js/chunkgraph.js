@@ -407,7 +407,7 @@ function removeChunksBottom(num) {
     var svgs = d3.select("#chunks").selectAll("div")._groups[0];
     var end = svgs.length;
 
-    console.log(svgs)
+    //console.log(svgs)
     for (i = end - num; i < end; i++)
     {
         svgs[i].remove();
@@ -428,7 +428,7 @@ function chunkScroll() {
         var chunks = autopsy.trace_chunks(current_trace_index, current_chunk_index, 25);
         if (chunks.length > 0) {
             // there are still some to display
-            //console.log("cur chunk index is " + current_chunk_index);
+            console.log("cur chunk index is " + current_chunk_index);
             var to_append = chunks.length;
             var to_remove = to_append;
             // remove from top
@@ -443,7 +443,7 @@ function chunkScroll() {
         }
     } else if (percent < (100 - load_threshold)) {
         if (current_chunk_index_low > 0) {
-            var chunks = autopsy.trace_chunks(current_trace_index, Math.max(current_chunk_index_low-25, 0), 25);
+            var chunks = autopsy.trace_chunks(current_trace_index, Math.max(current_chunk_index_low-25, 0), Math.min(25, current_chunk_index_low));
             if (chunks.length === 0)
                 console.log("oh fuck chunks is 0");
             var to_prepend = chunks.length;
@@ -858,6 +858,44 @@ function stackFilterResetClick() {
     }, 100);
 }
 
+function typeFilterClick() {
+    showLoader();
+    setTimeout(function() {
+        var element = document.querySelector("#filter-form");
+        console.log("text is " + element.value);
+        var filterText = element.value;
+        element.value = "";
+        var filterWords = filterText.split(" ");
+
+        for (var w in filterWords) {
+            console.log("setting filter " + filterWords[w]);
+            autopsy.set_type_keyword(filterWords[w]);
+        }
+        clearChunks();
+        drawStackTraces();
+        drawChunkXAxis();
+
+        drawAggregatePath();
+        drawAggregateAxis();
+        hideLoader();
+    }, 100);
+}
+
+function typeFilterResetClick() {
+    //drawChunks();
+    showLoader();
+    setTimeout(function() {
+        autopsy.type_filter_reset();
+        clearChunks();
+        drawStackTraces();
+        drawChunkXAxis();
+
+        drawAggregatePath();
+        drawAggregateAxis();
+        hideLoader();
+    }, 100);
+}
+
 function resetTimeClick() {
     showLoader();
     setTimeout(function() {
@@ -883,6 +921,8 @@ module.exports = {
     updateData: updateData,
     stackFilterClick: stackFilterClick,
     stackFilterResetClick: stackFilterResetClick,
+    typeFilterClick: typeFilterClick,
+    typeFilterResetClick: typeFilterResetClick,
     chunkScroll: chunkScroll,
     resetTimeClick: resetTimeClick,
     showFilterHelp: showFilterHelp

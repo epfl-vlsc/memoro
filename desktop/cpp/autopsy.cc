@@ -247,12 +247,40 @@ class Dataset {
       if (filtered)
         aggregates_.clear();
     }
+    
+    void SetTypeFilter(string const& str) {
+      cout << "adding type filter:" << str << "|\n";
+      for (auto& s : type_filters_) 
+        if (s == str)
+          return;
+      type_filters_.push_back(str);
+      
+      for (auto& trace : traces_) {
+        trace.type_filtered = true;
+        for (auto& s : type_filters_) {
+          if (s == trace.type) {
+            //cout << "not filtering trace type " << trace.type << " since it matched " << s << endl;
+            trace.type_filtered = false;
+            break;
+          }
+        }
+      }
+      // we assume *something* changed
+      aggregates_.clear();
+    }
 
     void TraceFilterReset() {
       if (!trace_filters_.empty()) aggregates_.clear();
       trace_filters_.clear();
       for (auto& trace : traces_)
         trace.filtered = false;
+    }
+    
+    void TypeFilterReset() {
+      if (!type_filters_.empty()) aggregates_.clear();
+      type_filters_.clear();
+      for (auto& trace : traces_)
+        trace.type_filtered = false;
     }
 
     void Traces(vector<TraceValue>& traces) {
@@ -261,7 +289,7 @@ class Dataset {
       TraceValue tmp;
       traces.reserve(traces_.size());
       for (int i = 0; i < traces_.size(); i++) {
-        if (traces_[i].filtered)
+        if (IsTraceFiltered(traces_[i]))
           continue;
 
         tmp.trace = &traces_[i].trace;
@@ -338,7 +366,12 @@ class Dataset {
     unordered_map<string, string> type_map_;
 
     vector<string> trace_filters_;
+    vector<string> type_filters_;
     priority_queue<TimeValue> queue_;
+
+    inline bool IsTraceFiltered(Trace const& t) {
+      return t.filtered || t.type_filtered;
+    }
 
     int GetFiles(string dir, vector<string> &files)
     {
@@ -411,7 +444,7 @@ class Dataset {
       else
         values.push_back({filter_max_time_ > values[values.size()-1].time ? filter_max_time_ : points[points.size()-1].time, values[values.size()-1].value});
 
-      cout << "values size is " << values.size() << endl;
+      //cout << "values size is " << values.size() << endl;
     }
 
     void Aggregate(vector<TimeValue>& points, uint64_t& max_aggregate, 
@@ -427,7 +460,7 @@ class Dataset {
 
       int i = 0;
       while (i < num_chunks) {
-        if (traces_[chunks[i].stack_index].filtered) {
+        if (IsTraceFiltered(traces_[chunks[i].stack_index])) {
           i++;
           continue;
         }
@@ -476,7 +509,7 @@ class Dataset {
 
       int i = 0;
       while (i < num_chunks) {
-        if (traces_[chunks[i]->stack_index].filtered) {
+        if (IsTraceFiltered(traces_[chunks[i]->stack_index])) {
           i++;
           continue;
         }
@@ -547,6 +580,11 @@ void SetTraceKeyword(std::string& keyword) {
   theDataset.SetTraceFilter(keyword);
 }
 
+void SetTypeKeyword(std::string& keyword) {
+  // will only include traces that contain this keyword
+  theDataset.SetTypeFilter(keyword);
+}
+
 void Traces(std::vector<TraceValue>& traces) {
   theDataset.Traces(traces);
 }
@@ -565,6 +603,10 @@ void SetFilterMinMax(uint64_t min, uint64_t max) {
 
 void TraceFilterReset() {
   theDataset.TraceFilterReset();
+}
+
+void TypeFilterReset() {
+  theDataset.TypeFilterReset();
 }
 
 void FilterMinMaxReset() {

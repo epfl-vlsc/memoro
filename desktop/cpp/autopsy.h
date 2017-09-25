@@ -31,6 +31,7 @@ struct Trace {
   std::string trace;
   std::string type;
   bool filtered = false;
+  bool type_filtered = false;
   uint64_t max_aggregate = 0;
   std::vector<Chunk*> chunks;
   std::vector<TimeValue> aggregate;
@@ -62,6 +63,9 @@ void RemoveMinMaxTime();
 void SetTraceKeyword(std::string& keyword);
 void RemoveTraceKeyword(std::string& keyword);
 void TraceFilterReset();
+
+void SetTypeKeyword(std::string& keyword);
+void TypeFilterReset();
 
 // fill times and values with 1000 aggregate data points from whole dataset
 // respects filters

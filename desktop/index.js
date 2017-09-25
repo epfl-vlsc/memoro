@@ -7,21 +7,17 @@ var chunk_graph = require("./js/chunkgraph");
 function initApp() {
     addAppEventListeners();
     //chunk_graph.updateData("hplgst.json");
-    document.getElementById("filter-form")
+/*    document.getElementById("filter-form")
         .addEventListener("keyup", function(event) {
             event.preventDefault();
             if (event.keyCode === 13) {
                 document.querySelector("#filter-button").click();
             }
-        });
+        });*/
 
     // add div
     var element = document.querySelector("#overlay");
     element.style.visibility = "visible";
-}
-
-function stackFilterClick() {
-    chunk_graph.stackFilterClick();
 }
 
 function resetTimeClick() {
@@ -32,12 +28,24 @@ function chunkScroll() {
     chunk_graph.chunkScroll();
 }
 
-function filterHelpClick() {
-    chunk_graph.showFilterHelp();
+function stackFilterClick() {
+    chunk_graph.stackFilterClick();
 }
 
 function stackFilterResetClick() {
     chunk_graph.stackFilterResetClick();
+}
+
+function typeFilterClick() {
+    chunk_graph.typeFilterClick();
+}
+
+function typeFilterResetClick() {
+    chunk_graph.typeFilterResetClick();
+}
+
+function filterHelpClick() {
+    chunk_graph.showFilterHelp();
 }
 
 function addAppEventListeners() {

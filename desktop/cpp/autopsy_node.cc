@@ -192,6 +192,14 @@ void Autopsy_SetTraceKeyword(const v8::FunctionCallbackInfo<v8::Value> & args) {
   SetTraceKeyword(keyword);
 }
 
+void Autopsy_SetTypeKeyword(const v8::FunctionCallbackInfo<v8::Value> & args) {
+
+  v8::String::Utf8Value s(args[0]);
+  std::string keyword(*s);
+
+  SetTypeKeyword(keyword);
+}
+
 void Autopsy_SetFilterMinMax(const v8::FunctionCallbackInfo<v8::Value> & args) {
 
   uint64_t t1 = args[0]->NumberValue();
@@ -202,6 +210,10 @@ void Autopsy_SetFilterMinMax(const v8::FunctionCallbackInfo<v8::Value> & args) {
 
 void Autopsy_TraceFilterReset(const v8::FunctionCallbackInfo<v8::Value> & args) {
   TraceFilterReset();
+}
+
+void Autopsy_TypeFilterReset(const v8::FunctionCallbackInfo<v8::Value> & args) {
+  TypeFilterReset();
 }
 
 void Autopsy_FilterMinMaxReset(const v8::FunctionCallbackInfo<v8::Value> & args) {
@@ -251,11 +263,13 @@ void init(Handle <Object> exports, Handle<Object> module) {
   NODE_SET_METHOD(exports, "filter_min_time", Autopsy_FilterMinTime);
   NODE_SET_METHOD(exports, "max_aggregate", Autopsy_MaxAggregate);
   NODE_SET_METHOD(exports, "set_trace_keyword", Autopsy_SetTraceKeyword);
+  NODE_SET_METHOD(exports, "set_type_keyword", Autopsy_SetTypeKeyword);
   NODE_SET_METHOD(exports, "traces", Autopsy_Traces);
   NODE_SET_METHOD(exports, "aggregate_trace", Autopsy_AggregateTrace);
   NODE_SET_METHOD(exports, "trace_chunks", Autopsy_TraceChunks);
   NODE_SET_METHOD(exports, "set_filter_minmax", Autopsy_SetFilterMinMax);
   NODE_SET_METHOD(exports, "trace_filter_reset", Autopsy_TraceFilterReset);
+  NODE_SET_METHOD(exports, "type_filter_reset", Autopsy_TypeFilterReset);
   NODE_SET_METHOD(exports, "filter_minmax_reset", Autopsy_FilterMinMaxReset);
   NODE_SET_METHOD(exports, "inefficiencies", Autopsy_Inefficiencies);
   NODE_SET_METHOD(exports, "global_alloc_time", Autopsy_GlobalAllocTime);

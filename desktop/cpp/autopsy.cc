@@ -71,23 +71,21 @@ class Dataset {
 
       traces_.reserve(header.index_size);
       Trace t;
-      char trace_buf[4096];
+      vector<char> trace_buf;  // used as a resizable buffer
       for (unsigned int i = 0; i < header.index_size; i++) {
-        if (index[i] > 4096) {
-          msg = "index is too big, increase buf size (this is a bug) ";
-          return false;
-        } else {
-          fread(trace_buf, index[i], 1, trace_fd);
-          t.trace = string(trace_buf, index[i]);
-          /*size_t pos = t.trace.find_first_of("|");
+        if (index[i] > trace_buf.size())
+          trace_buf.resize(index[i]);
+
+        fread(&trace_buf[0], index[i], 1, trace_fd);
+        t.trace = string(&trace_buf[0], index[i]);
+        /*size_t pos = t.trace.find_first_of("|");
           size_t pos2 = t.trace.find_first_of("|", pos+1);
           pos = pos2;
           while (t.trace[pos] != ' ')
-            pos--;
+          pos--;
           string value = t.trace.substr(pos, pos2-pos);
           cout << "got value:" << value << endl;*/
-          traces_.push_back(t);
-        }
+        traces_.push_back(t);
       }
       fclose(trace_fd);
 

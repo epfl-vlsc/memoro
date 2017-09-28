@@ -5,6 +5,8 @@
     <title>Heapologist Autopsy</title>
     <link href="css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" type="text/css" href="css/chunk_graph.css">
+    <link rel="stylesheet" type="text/css" href="bower_components/d3-flame-graph/dist/d3.flameGraph.css">
+
     <script type="text/javascript" src="node_modules/jquery/dist/jquery.min.js" onload="window.$ = window.jQuery = module.exports;">
 
     </script>
@@ -15,86 +17,114 @@
   <body onload="initApp()" >
 
   <div id="overlay"><h1>File->Open...</h1></div>
-  <div class="container-fluid">
-    <div class="row" style="height: 5vh;-webkit-app-region: drag; width: 100%;">
-    </div>
-    <div class="row">
-      <div class="col-md-6 " id="chunks-container">
-        <p>Heap Allocations</p>
-        <div id="traces">
-        </div>
-        <div id="chunk-axis">
-        </div>
 
+  <ul class="nav nav-tabs">
+    <li class="active"><a href="#detailed" data-toggle="tab" aria-expanded="true">Detailed</a></li>
+    <li class=""><a href="#global" data-toggle="tab" aria-expanded="false">Global</a></li>
+  </ul>
+  <div id="myTabContent" class="tab-content">
+    <div class="tab-pane fade active in" id="detailed">
+      <div class="container-fluid">
         <div class="row">
-          <div class="col-8 col-md-11" id="chunks" onscroll="chunkScroll()"></div>
-          <div class="col-4 col-md-1" id="chunks-yaxis" ></div>
+          <div class="col-md-6 " id="chunks-container">
+            <p>Heap Allocations</p>
+            <div id="traces">
+            </div>
+            <div id="chunk-axis">
+            </div>
 
-        </div>
+            <div class="row">
+              <div class="col-8 col-md-11" id="chunks" onscroll="chunkScroll()"></div>
+              <div class="col-4 col-md-1" id="chunks-yaxis" ></div>
 
-        <p>Aggregate Memory Usage</p>
-        <div id="aggregate-graph">
-        </div>
-        <a href="#" class="btn btn-default" onclick="resetTimeClick()">Reset Time</a>
-      </div>
+            </div>
 
-      <div id="middle-column" class="col-md-4 ">
-        <div class="panel panel-default h-50">
-          <div class="panel-heading">Allocation Point Stacktrace</div>
-          <div id="trace" class="panel-body">
+            <p>Aggregate Memory Usage</p>
+            <div id="aggregate-graph">
+            </div>
+            <a href="#" class="btn btn-default" onclick="resetTimeClick()">Reset Time</a>
+          </div>
+
+          <div id="middle-column" class="col-md-4 ">
+            <div class="panel panel-default h-50">
+              <div class="panel-heading">Allocation Point Stacktrace</div>
+              <div id="trace" class="panel-body">
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="control-label" for="filter-form">Filter Trace</label>
+              <input class="form-control input-sm" type="text" id="filter-form">
+            </div>
+            <a href="#" class="btn btn-default" onclick="stackFilterClick()" id="filter-button">Filter Trace</a>
+            <a href="#" class="btn btn-default" onclick="stackFilterResetClick()">Reset Trace</a>
+            <a href="#" class="btn btn-default" onclick="typeFilterClick()" id="type-filter-button">Filter Type</a>
+            <a href="#" class="btn btn-default" onclick="typeFilterResetClick()">Reset Type</a>
+            <a href="#" class="btn btn-default" onclick="filterHelpClick()">Help</a>
+            <!--        <div id="loadspinner" class="spinny-load">Loading...</div>-->
+
+          </div>
+          <div class="col-md-2 ">
+            <div class="panel panel-default">
+              <div class="panel-heading">Inferences</div>
+              <div id="inferences" class="panel-body">
+              </div>
+            </div>
+            <div class="panel panel-default">
+              <div class="panel-heading">Global</div>
+              <div id="global-info" class="panel-body">
+              </div>
+            </div>
           </div>
         </div>
-        <div class="form-group">
-          <label class="control-label" for="filter-form">Filter Trace</label>
-          <input class="form-control input-sm" type="text" id="filter-form">
-        </div>
-        <a href="#" class="btn btn-default" onclick="stackFilterClick()" id="filter-button">Filter Trace</a>
-        <a href="#" class="btn btn-default" onclick="stackFilterResetClick()">Reset Trace</a>
-        <a href="#" class="btn btn-default" onclick="typeFilterClick()" id="type-filter-button">Filter Type</a>
-        <a href="#" class="btn btn-default" onclick="typeFilterResetClick()">Reset Type</a>
-        <a href="#" class="btn btn-default" onclick="filterHelpClick()">Help</a>
-<!--        <div id="loadspinner" class="spinny-load">Loading...</div>-->
 
-      </div>
-      <div class="col-md-2 ">
-        <div class="panel panel-default">
-          <div class="panel-heading">Inferences</div>
-          <div id="inferences" class="panel-body">
+        <div class="modal fade" id="main-modal">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title"></h4>
+              </div>
+              <div class="modal-body">
+                <p></p>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                <!--            <button type="button" class="btn btn-primary">Save changes</button>-->
+              </div>
+            </div>
           </div>
         </div>
-        <div class="panel panel-default">
-          <div class="panel-heading">Global</div>
-          <div id="global-info" class="panel-body">
+
+        <div class="footer row">
+        </div>
+
+      </div>
+    </div>
+    <div class="tab-pane fade" id="global">
+      <div class="container-fluid">
+        <div class="row">
+          <div class="col-md-8 " id="flamegraph-container">
+            <div class="panel panel-default">
+              <div class="panel-body">
+                <div id="flame-graph-div"></div>
+                <div id="flame-graph-details"></div>
+
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4 " id="other-container">
           </div>
         </div>
       </div>
     </div>
-
-    <div class="modal fade" id="main-modal">
-      <div class="modal-dialog">
-        <div class="modal-content">
-          <div class="modal-header">
-            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-            <h4 class="modal-title"></h4>
-          </div>
-          <div class="modal-body">
-            <p></p>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-<!--            <button type="button" class="btn btn-primary">Save changes</button>-->
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="footer row">
-    </div>
-
   </div>
+
   <div id="tooltip"></div>
   <script>window.$ = window.jQuery = require('./node_modules/jquery/dist/jquery.min');</script>
   <script src="./node_modules/bootstrap/dist/js/bootstrap.min.js"></script>
+  <script src="./bower_components/d3/d3.js"></script>
+  <script src="./bower_components/d3-tip/index.js"></script>
+  <script src="./bower_components/d3-flame-graph/dist/d3.flameGraph.min.js"></script>
   </body>
 
 </html>

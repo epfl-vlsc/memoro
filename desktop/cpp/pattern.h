@@ -1,6 +1,10 @@
 
+#pragma once 
+
 #include "autopsy.h"
 #include <vector>
+
+namespace autopsy {
 
 enum Inefficiency : uint64_t {
   Unused = 0x1,
@@ -34,3 +38,5 @@ void CalculatePercentilesChunk(std::vector<Trace>& traces, PatternParams& params
 
 // requires sorted traces by max agg
 void CalculatePercentilesSize(std::vector<Trace>& traces, PatternParams& params);
+
+}

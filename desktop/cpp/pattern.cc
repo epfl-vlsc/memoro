@@ -1,6 +1,9 @@
 
 #include "pattern.h"
 #include <vector>
+
+namespace autopsy {
+
 using namespace std;
 /*Unused = 0x1,
   WriteOnly = 1 << 1,
@@ -131,16 +134,5 @@ void CalculatePercentilesSize(std::vector<Trace>& traces, PatternParams& params)
   }
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
+}
 

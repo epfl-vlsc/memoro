@@ -1,7 +1,9 @@
-var d3 = require("d3");
+global.d3 = require("d3");
+require("../bower_components/d3-flame-graph/dist/d3.flameGraph")
 var autopsy = require('../cpp/build/Release/autopsy.node');
-var path = require('path')
+var path = require('path');
 var async = require('async');
+
 
 function bytesToString(bytes,decimals) {
     if(bytes == 0) return '0 B';
@@ -166,6 +168,7 @@ function drawStackTraces() {
     x.domain([min_x, max_x]);
 
     var traces = autopsy.traces();
+    console.log("now have " + traces.length + " traces");
     sortTraces(traces)
     num_traces = traces.length;
     total_chunks = 0;
@@ -817,6 +820,41 @@ function drawEverything() {
         "</br>Max Heap: " + bytesToString(aggregate_max) +
         "</br>Global alloc time: " + alloc_time +
         "</br>which is " + percent_alloc_time.toFixed(2) + "% of program time.");
+
+    autopsy.stacktree_by_numallocs();
+    var tree = autopsy.stacktree();
+    console.log(tree);
+
+    var fg_width = document.querySelector("#flamegraph-container").getBoundingClientRect().width;
+    console.log("fg width is " + fg_width);
+    var fgg = d3.flameGraph()
+        .width(800)
+        .cellHeight(20)
+        .transitionDuration(750)
+        .minFrameSize(5)
+        .transitionEase(d3.easeCubic)
+        .sort(true)
+        //Example to sort in reverse order
+        //.sort(function(a,b){ return d3.descending(a.name, b.name);})
+        .title("");
+
+
+
+    var tip = d3.tip()
+        .direction("s")
+        .offset([8, 0])
+        .attr('class', 'd3-flame-graph-tip')
+        .html(function(d) { return "name: " + d.data.name + ", value: " + d.data.value; });
+
+    fgg.tooltip(tip);
+
+    var details = document.getElementById("flame-graph-details");
+
+    fgg.details(details);
+
+    d3.select("#flame-graph-div")
+        .datum(tree)
+        .call(fgg);
 
 }
 

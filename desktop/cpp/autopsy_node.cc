@@ -1,11 +1,13 @@
 
 #include <node.h>
 #include <iostream>
+#include <algorithm>
 #include <v8.h>
 #include "autopsy.h" 
 #include "pattern.h"
 
 using namespace v8;
+using namespace autopsy;
 
 void Autopsy_SetDataset(const v8::FunctionCallbackInfo<v8::Value> & args) {
   Isolate* isolate = args.GetIsolate();
@@ -254,6 +256,32 @@ void Autopsy_Inefficiencies(const v8::FunctionCallbackInfo<v8::Value> & args) {
   args.GetReturnValue().Set(result);
 }
 
+void Autopsy_StackTree(const v8::FunctionCallbackInfo<v8::Value> & args) {
+  // was hoping to keep all the V8 stuff in this file, oh well ..
+  StackTreeObject(args);
+}
+
+void Autopsy_StackTreeByBytes(const v8::FunctionCallbackInfo<v8::Value> & args) {
+
+  uint64_t time = args[0]->NumberValue();
+
+  StackTreeAggregate([time](const Trace* t) -> double {
+    return (double)find_if(t->aggregate.begin(), t->aggregate.end(), 
+        [time](const TimeValue& a) {
+          return a.time >= time;
+        }
+    )->value;
+  });
+
+}
+
+void Autopsy_StackTreeByNumAllocs(const v8::FunctionCallbackInfo<v8::Value> & args) {
+
+  StackTreeAggregate([](const Trace* t) -> double {
+      return (double) t->chunks.size();
+    });
+}
+
 void init(Handle <Object> exports, Handle<Object> module) {
   NODE_SET_METHOD(exports, "set_dataset", Autopsy_SetDataset);
   NODE_SET_METHOD(exports, "aggregate_all", Autopsy_AggregateAll);
@@ -273,6 +301,9 @@ void init(Handle <Object> exports, Handle<Object> module) {
   NODE_SET_METHOD(exports, "filter_minmax_reset", Autopsy_FilterMinMaxReset);
   NODE_SET_METHOD(exports, "inefficiencies", Autopsy_Inefficiencies);
   NODE_SET_METHOD(exports, "global_alloc_time", Autopsy_GlobalAllocTime);
+  NODE_SET_METHOD(exports, "stacktree", Autopsy_StackTree);
+  NODE_SET_METHOD(exports, "stacktree_by_bytes", Autopsy_StackTreeByBytes);
+  NODE_SET_METHOD(exports, "stacktree_by_numallocs", Autopsy_StackTreeByNumAllocs);
 }
 
 NODE_MODULE(autopsy, init)

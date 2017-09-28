@@ -1,5 +1,6 @@
 
 #include "autopsy.h"
+#include "stacktree.h"
 #include "pattern.h"
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -12,6 +13,8 @@
 #include <fstream>
 #include <algorithm>
 #include <unordered_map>
+
+namespace autopsy {
 
 using namespace std;
 
@@ -78,6 +81,7 @@ class Dataset {
 
         fread(&trace_buf[0], index[i], 1, trace_fd);
         t.trace = string(&trace_buf[0], index[i]);
+
 
         // now i admit, that this is indeed hacky, and entirely
         // dependent on stack traces being produced by llvm-symbolizer
@@ -155,6 +159,9 @@ class Dataset {
       cout << "aggregating traces ..." << endl;
       uint64_t total_alloc_time = 0;
       for (auto& t : traces_) {
+        // build the stack tree
+        stack_tree_.InsertTrace(&t);
+        // aggregate data
         Aggregate(t.aggregate, t.max_aggregate, t.chunks);
         t.inefficiencies = Detect(t.chunks, pattern_params_);
         for (auto c : t.chunks) {
@@ -349,6 +356,14 @@ class Dataset {
       return traces_[trace_index].inefficiencies;
     }
 
+    void StackTreeObject(const v8::FunctionCallbackInfo<v8::Value> & args) {
+      stack_tree_.V8Objectify(args);
+    }
+    
+    void StackTreeAggregate(std::function<double (const Trace* t)> f) {
+      stack_tree_.Aggregate(f);
+    }
+
   private:
 
     Chunk* chunks_;
@@ -364,6 +379,8 @@ class Dataset {
     uint64_t global_alloc_time_ = 0;
     PatternParams pattern_params_;
     unordered_map<string, string> type_map_;
+
+    StackTree stack_tree_;
 
     vector<string> trace_filters_;
     vector<string> type_filters_;
@@ -620,5 +637,14 @@ uint64_t Inefficiencies(int trace_index) {
 uint64_t GlobalAllocTime() {
   return theDataset.GlobalAllocTime();
 }
+    
+void StackTreeObject(const v8::FunctionCallbackInfo<v8::Value> & args) {
+  theDataset.StackTreeObject(args);
+}
+    
+void StackTreeAggregate(std::function<double (const Trace* t)> f) {
+  theDataset.StackTreeAggregate(f);
+}
 
+} // namespace
 

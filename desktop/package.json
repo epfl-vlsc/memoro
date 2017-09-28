@@ -12,12 +12,13 @@
     "autopsy"
   ],
   "devDependencies": {
-    "electron": "^1.8.0"
+    "electron": "^1.7.8"
   },
   "dependencies": {
     "async": "^2.5.0",
     "bootstrap": "^3.3.7",
-    "d3": "^4.10.2",
+    "d3": "^4.10.0",
+    "d3-flame-graphs": "^0.4.0-alpha",
     "d3-selection": "^1.1.0",
     "dialog": "^0.3.1",
     "ipc": "0.0.1",

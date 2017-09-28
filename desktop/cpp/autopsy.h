@@ -5,6 +5,10 @@
 #include <string>
 #include <cstdint>
 #include <vector>
+#include <functional>
+#include <v8.h>
+
+namespace autopsy {
 
 struct __attribute__((packed)) Chunk {
   uint8_t num_reads = 0;
@@ -94,4 +98,11 @@ uint64_t Inefficiencies(int trace_index);
 
 uint64_t MaxAggregate();
 
+void StackTreeObject(const v8::FunctionCallbackInfo<v8::Value> & args);
+void StackTreeAggregate(std::function<double (const Trace* t)> f);
+
+} // namespace
+
 #endif
+
+

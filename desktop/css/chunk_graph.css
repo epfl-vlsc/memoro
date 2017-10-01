@@ -75,6 +75,10 @@ body {
     background-clip:content-box;
 }
 
+#flamegraph-panel {
+    height: 70vh;
+}
+
 #traces {
     height: 28vh;
     overflow-y: scroll;

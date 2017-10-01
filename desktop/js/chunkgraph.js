@@ -698,6 +698,8 @@ function drawAggregatePath() {
         else
             focus_g.select("text").attr("x", 20);
     }
+
+
 }
 
 function drawEverything() {
@@ -825,14 +827,15 @@ function drawEverything() {
     var tree = autopsy.stacktree();
     console.log(tree);
 
-    var fg_width = document.querySelector("#flamegraph-container").getBoundingClientRect().width;
-    console.log("fg width is " + fg_width);
+    var fg_width = window.innerWidth *0.60; // getboundingclientrect isnt working i dont understand this crap
+    //var fg_width = bb.right - bb.left;
     var fgg = d3.flameGraph()
-        .width(800)
-        .cellHeight(20)
+        .width(fg_width)
+        .height(window.innerHeight*0.65)
+        .cellHeight(17)
         .transitionDuration(750)
-        .minFrameSize(5)
         .transitionEase(d3.easeCubic)
+        .minFrameSize(1)
         .sort(true)
         //Example to sort in reverse order
         //.sort(function(a,b){ return d3.descending(a.name, b.name);})
@@ -844,7 +847,7 @@ function drawEverything() {
         .direction("s")
         .offset([8, 0])
         .attr('class', 'd3-flame-graph-tip')
-        .html(function(d) { return "name: " + d.data.name + ", value: " + d.data.value; });
+        .html(function(d) { return d.data.name + ", NumAllocs: " + d.data.value; });
 
     fgg.tooltip(tip);
 
@@ -855,6 +858,13 @@ function drawEverything() {
     d3.select("#flame-graph-div")
         .datum(tree)
         .call(fgg);
+
+    var fg_aggregate_graph = d3.select("#fg-aggregate-graph")
+        .append("svg")
+        .attr("width", fg_width)
+        .attr("height", aggregate_graph_height-10);
+    var fg_aggregate_graph_g = fg_aggregate_graph.append("g");
+    aggregate_graph_g.attr("id", "fg-aggregate-group");
 
 }
 

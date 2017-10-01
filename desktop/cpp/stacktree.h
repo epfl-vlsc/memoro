@@ -1,0 +1,33 @@
+
+#pragma once
+
+#include "autopsy.h"
+#include <tuple>
+#include <functional>
+#include <v8.h>
+
+namespace autopsy {
+
+class StackTreeNode;
+
+class StackTree {
+  public:
+    bool InsertTrace(const Trace* t);
+    void Aggregate(std::function<double (const Trace* t)> f);
+
+    // set args return value to object heirarchy representing tree
+    // suitable for the calling JS process
+    void V8Objectify(const v8::FunctionCallbackInfo<v8::Value> & args);
+    
+    // For other datatype conversions, add an objectify function here 
+    // and a recursive helper in StackTreeNode
+
+  private:
+    // multiple roots are possible because 
+    // not all traces start in ``main'' for example, 
+    // some may start in pthread_create() or equivalent
+    std::vector<StackTreeNode*> roots_;
+    double value_ = 0; // the sum total of all root aggregate values
+};
+
+}

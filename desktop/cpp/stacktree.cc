@@ -122,7 +122,6 @@ bool StackTree::InsertTrace(const Trace* t) {
     position = find(position+1, trace.rend(), '#');
   }
 
-  cout << "name ids size is " << name_ids.size() << endl;
   // now we have a list of function name, ID (address) pairs from 
   // `main' to malloc, so to speak ... insert into the stack tree
   auto& first = name_ids[0];

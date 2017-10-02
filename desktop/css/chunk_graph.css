@@ -75,6 +75,9 @@ body {
     background-clip:content-box;
 }
 
+#fg-btn {
+    position: fixed;
+}
 #flamegraph-panel {
     height: 70vh;
 }

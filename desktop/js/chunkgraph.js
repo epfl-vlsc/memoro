@@ -1,5 +1,6 @@
 global.d3 = require("d3");
-require("../bower_components/d3-flame-graph/dist/d3.flameGraph")
+require("../bower_components/d3-flame-graph/dist/d3.flameGraph");
+require("../bower_components/d3-tip/index");
 var autopsy = require('../cpp/build/Release/autopsy.node');
 var path = require('path');
 var async = require('async');
@@ -38,9 +39,12 @@ var chunk_graph_height;
 var aggregate_graph_height;
 var chunk_y_axis_space;
 var x;  // the x range
+var global_x;  // the global tab x range
 var y;  // aggregate y range
 var max_x;
 var num_traces;
+var current_fg_type = "num_allocs";
+var current_fg_time = 0;
 
 var aggregate_max = 0;
 
@@ -588,6 +592,147 @@ function drawAggregateAxis() {
         .call(xAxis);
 }
 
+function drawGlobalAggregateAxis() {
+
+    var xAxis = d3.axisBottom(global_x)
+        .tickFormat(function(xval) {
+            if (max_x < 1000000000)
+                return (xval / 1000).toFixed(1) + "Kc";
+            else if (max_x < 10000000000) return (xval / 1000000).toFixed(1) + "Mc";
+            else return (xval / 1000000000).toFixed(1) + "Gc";
+        })
+        //.orient("bottom")
+        .ticks(7)
+        .tickSizeInner(-120);
+
+    d3.select("#fg-aggregate-x-axis").remove();
+
+    var xaxis_height = aggregate_graph_height*0.8 - 5;
+    d3.select("#fg-aggregate-group")
+        .append("g")
+        .attr("id", "fg-aggregate-x-axis")
+        //.attr("width", chunk_graph_width-chunk_y_axis_space)
+        .attr("transform", "translate(0," + xaxis_height + ")")
+        .attr("class", "axis")
+        .call(xAxis);
+}
+
+function drawGlobalAggregatePath() {
+
+    y = d3.scaleLinear()
+        .range([100, 0]);
+
+    var fg_width = window.innerWidth *0.7;
+    global_x = d3.scaleLinear()
+        .range([0, fg_width - chunk_y_axis_space]);
+
+    // find the max TS value
+    max_x = xMax();
+    global_x.domain([0, max_x]);
+
+    var aggregate_data = autopsy.aggregate_all();
+
+    aggregate_max = autopsy.max_aggregate();
+    //var binned_ag = binAggregate(aggregate_data);
+    var binned_ag = aggregate_data;
+
+    y.domain(d3.extent(binned_ag, function(v) { return v["value"]; }));
+
+    var yAxisRight = d3.axisRight(y)
+        .ticks(5)
+        .tickFormat(bytesToStringNoDecimal);
+
+    var line = d3.line()
+        .x(function(v) { return global_x(v["ts"]); })
+        .y(function(v) { return y(v["value"]); })
+        .curve(d3.curveStepAfter);
+
+    var area = d3.area()
+        .x(function(v) { return global_x(v["ts"]); })
+        .y0(aggregate_graph_height*0.8 - 10)
+        .y1(function(v) { return y(v["value"]); })
+        .curve(d3.curveStepAfter);
+
+    d3.select("#fg-aggregate-path").remove();
+    d3.select("#fg-aggregate-y-axis").remove();
+
+    var fg_aggregate_graph_g = d3.select("#fg-aggregate-group");
+    fg_aggregate_graph_g.selectAll("rect").remove();
+    fg_aggregate_graph_g.selectAll("g").remove();
+
+    fg_aggregate_graph_g.append("rect")
+        .attr("width", fg_width-chunk_y_axis_space + 2)
+        .attr("height", aggregate_graph_height)
+        .style("fill", "#353a41");
+
+
+    var yaxis_height = .8 * aggregate_graph_height;
+
+    fg_aggregate_graph_g.append("path")
+        .datum(binned_ag)
+        .attr("fill", "none")
+        .attr("stroke", "steelblue")
+        .attr("stroke-width", 1.5)
+        .attr("transform", "translate(0, 5)")
+        .attr("id", "fg-aggregate-path")
+        .attr("d", line);
+    d3.select("#fg-aggregate-group").append("g")
+        .attr("class", "y axis")
+        .attr("transform", "translate(" + (fg_width - chunk_y_axis_space + 3) + ", 5)")
+        //.attr("height", yaxis_height)
+        .attr("id", "fg-aggregate-y-axis")
+        .style("fill", "white")
+        .call(yAxisRight);
+    console.log("done graphing line")
+
+    fg_aggregate_graph_g.append("path")
+        .datum(binned_ag)
+        .classed("area", true)
+        .attr("transform", "translate(0, 5)")
+        .attr("id", "fg-aggregate-area")
+        .attr("d", area);
+
+    // draw the focus line on the graph
+    var focus_g = fg_aggregate_graph_g.append("g")
+        .classed("focus-line", true);
+
+    fg_aggregate_graph_g.append("rect")
+        .attr("width", fg_width-chunk_y_axis_space + 2)
+        .attr("height", yaxis_height)
+        .style("fill", "transparent")
+        .on("mouseover", function() { focus_g.style("display", null); })
+        .on("mouseout", function() { focus_g.style("display", "none"); })
+        .on("mousemove", mousemove);
+
+    focus_g.append("line")
+        .attr("y0", 0).attr("y1", yaxis_height-5)
+        .attr("x0", 0).attr("x1", 0);
+    var text = focus_g.append("text")
+        .style("fill", "lightgray")
+        .attr("x", 20)
+        .attr("y", "30");
+    text.append("tspan")
+        .attr("id", "time");
+    text.append("tspan")
+        .attr("id", "value");
+
+    // display on mouseover
+    function mousemove() {
+        var x0 = global_x.invert(d3.mouse(this)[0]);
+        var y_pos = d3.bisector(function(d) {
+            return d["ts"];
+        }).left(binned_ag, x0, 1);
+        var y = binned_ag[y_pos-1]["value"];
+        focus_g.attr("transform", "translate(" + global_x(x0) + ",0)");
+        focus_g.select("#time").text(Math.round(x0) + "c " + bytesToString(y));
+        if (d3.mouse(this)[0] > fg_width / 2)
+            focus_g.select("text").attr("x", -170);
+        else
+            focus_g.select("text").attr("x", 20);
+    }
+
+}
+
 function drawAggregatePath() {
 
     y = d3.scaleLinear()
@@ -632,11 +777,10 @@ function drawAggregatePath() {
         .attr("height", aggregate_graph_height)
         .style("fill", "#353a41");
 
-
     var yaxis_height = .8 * aggregate_graph_height;
     console.log("graphing line")
     //console.log(d3.select("#aggregate-group"));
-    var path = aggregate_graph_g.append("path")
+    aggregate_graph_g.append("path")
         .datum(binned_ag)
         .attr("fill", "none")
         .attr("stroke", "steelblue")
@@ -651,7 +795,6 @@ function drawAggregatePath() {
         .attr("id", "aggregate-y-axis")
         .style("fill", "white")
         .call(yAxisRight);
-    console.log("done graphing line")
 
     aggregate_graph_g.append("path")
         .datum(binned_ag)
@@ -698,10 +841,60 @@ function drawAggregatePath() {
         else
             focus_g.select("text").attr("x", 20);
     }
-
-
 }
 
+function drawFlameGraph() {
+
+    var tree;
+    if (current_fg_type === "num_allocs")
+        autopsy.stacktree_by_numallocs();
+    else if (current_fg_type === "bytes_time")
+        autopsy.stacktree_by_bytes(current_fg_time);
+    else
+        autopsy.stacktree_by_numallocs();
+
+
+    tree = autopsy.stacktree();
+    console.log(tree);
+    d3.select("#flame-graph-div").html("");
+
+    var fg_width = window.innerWidth *0.60; // getboundingclientrect isnt working i dont understand this crap
+    //var fg_width = bb.right - bb.left;
+    var fgg = d3.flameGraph()
+        .width(fg_width)
+        .height(window.innerHeight*0.65)
+        .cellHeight(17)
+        .transitionDuration(750)
+        .transitionEase(d3.easeCubic)
+        .minFrameSize(1)
+        .sort(true)
+        //Example to sort in reverse order
+        //.sort(function(a,b){ return d3.descending(a.name, b.name);})
+        .title("");
+
+    var tip = d3.tip()
+        .direction("s")
+        .offset([8, 0])
+        .attr('class', 'd3-flame-graph-tip')
+        .html(function(d) {
+            if (current_fg_type === "num_allocs")
+                return d.data.name + ", NumAllocs: " + d.data.value;
+            else
+                return d.data.name + ", bytes: " + d.data.value;
+
+        });
+
+    fgg.tooltip(tip);
+
+    var details = document.getElementById("flame-graph-details");
+
+    fgg.details(details);
+
+    d3.select("#flame-graph-div")
+        .datum(tree)
+        .call(fgg);
+
+}
 function drawEverything() {
 
     d3.selectAll("g > *").remove();
@@ -805,13 +998,9 @@ function drawEverything() {
     var aggregate_graph_g = aggregate_graph.append("g");
     aggregate_graph_g.attr("id", "aggregate-group");
 
-    drawAggregatePath();
-    drawAggregateAxis();
-
-    drawStackTraces();
 
     var trace = d3.select("#trace");
-    trace.html("Select an allocation point number \"Heap Allocations\"")
+    trace.html("Select an allocation point under \"Heap Allocations\"");
 
     var alloc_time = autopsy.global_alloc_time();
     var time_total = autopsy.max_time() - autopsy.min_time();
@@ -823,48 +1012,31 @@ function drawEverything() {
         "</br>Global alloc time: " + alloc_time +
         "</br>which is " + percent_alloc_time.toFixed(2) + "% of program time.");
 
-    autopsy.stacktree_by_numallocs();
-    var tree = autopsy.stacktree();
-    console.log(tree);
-
-    var fg_width = window.innerWidth *0.60; // getboundingclientrect isnt working i dont understand this crap
-    //var fg_width = bb.right - bb.left;
-    var fgg = d3.flameGraph()
-        .width(fg_width)
-        .height(window.innerHeight*0.65)
-        .cellHeight(17)
-        .transitionDuration(750)
-        .transitionEase(d3.easeCubic)
-        .minFrameSize(1)
-        .sort(true)
-        //Example to sort in reverse order
-        //.sort(function(a,b){ return d3.descending(a.name, b.name);})
-        .title("");
-
-
-
-    var tip = d3.tip()
-        .direction("s")
-        .offset([8, 0])
-        .attr('class', 'd3-flame-graph-tip')
-        .html(function(d) { return d.data.name + ", NumAllocs: " + d.data.value; });
-
-    fgg.tooltip(tip);
-
-    var details = document.getElementById("flame-graph-details");
-
-    fgg.details(details);
-
-    d3.select("#flame-graph-div")
-        .datum(tree)
-        .call(fgg);
+    drawFlameGraph();
+    var fg_width = window.innerWidth *0.7; // getboundingclientrect isnt working i dont understand this crap
 
     var fg_aggregate_graph = d3.select("#fg-aggregate-graph")
         .append("svg")
         .attr("width", fg_width)
         .attr("height", aggregate_graph_height-10);
     var fg_aggregate_graph_g = fg_aggregate_graph.append("g");
-    aggregate_graph_g.attr("id", "fg-aggregate-group");
+    fg_aggregate_graph_g.attr("id", "fg-aggregate-group");
+
+    fg_aggregate_graph.on("mouseup", function() {
+
+        var p = d3.mouse(this);
+
+        var time = global_x.invert(p[0]);
+        current_fg_time = time;
+        drawFlameGraph();
+    });
+
+    drawAggregatePath();
+    drawGlobalAggregatePath();
+    drawGlobalAggregateAxis();
+    drawAggregateAxis();
+
+    drawStackTraces();
 
 }
 
@@ -965,6 +1137,16 @@ function showFilterHelp() {
     $("#main-modal").modal("show")
 }
 
+function setFlameGraphNumAllocs() {
+    current_fg_type = "num_allocs";
+    drawFlameGraph();
+}
+
+function setFlameGraphBytesTime() {
+    current_fg_type = "bytes_time";
+    drawFlameGraph();
+}
+
 module.exports = {
     updateData: updateData,
     stackFilterClick: stackFilterClick,
@@ -973,5 +1155,7 @@ module.exports = {
     typeFilterResetClick: typeFilterResetClick,
     chunkScroll: chunkScroll,
     resetTimeClick: resetTimeClick,
-    showFilterHelp: showFilterHelp
+    showFilterHelp: showFilterHelp,
+    setFlameGraphBytesTime: setFlameGraphBytesTime,
+    setFlameGraphNumAllocs: setFlameGraphNumAllocs
 };

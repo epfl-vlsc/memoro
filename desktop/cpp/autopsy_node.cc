@@ -266,11 +266,19 @@ void Autopsy_StackTreeByBytes(const v8::FunctionCallbackInfo<v8::Value> & args) 
   uint64_t time = args[0]->NumberValue();
 
   StackTreeAggregate([time](const Trace* t) -> double {
-    return (double)find_if(t->aggregate.begin(), t->aggregate.end(), 
+    auto it = find_if(t->aggregate.begin(), t->aggregate.end(), 
         [time](const TimeValue& a) {
           return a.time >= time;
-        }
-    )->value;
+        });
+    if (it == t->aggregate.end()) {
+      //std::cout << "found no time";
+      return (double) 0;
+    }
+    // take the prev value when our point was actually greater than the selected time
+    if (it != t->aggregate.begin() && it->time > time)
+      it--;
+    //std::cout << "value is " << it->value << " at time " << it->time << " for trace " << t->trace << std::endl;
+    return (double)it->value;
   });
 
 }

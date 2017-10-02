@@ -48,6 +48,24 @@ function filterHelpClick() {
     chunk_graph.showFilterHelp();
 }
 
+function fgAllocationsClick() {
+    console.log("allocations click")
+    chunk_graph.setFlameGraphNumAllocs();
+}
+
+function fgBytesTimeClick() {
+    console.log("bytes time click")
+    chunk_graph.setFlameGraphBytesTime();
+}
+
+function fgMostActiveClick() {
+    console.log("most active click")
+}
+
+function fgHelpClick() {
+    console.log("fg help click")
+}
+
 function addAppEventListeners() {
 
     ipcRenderer.on('open_file', function(emitter, file_path) {

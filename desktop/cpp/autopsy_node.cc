@@ -1,30 +1,74 @@
 
 #include <node.h>
+#include <v8.h>
+#include <uv.h>
 #include <iostream>
 #include <algorithm>
-#include <v8.h>
 #include "autopsy.h" 
 #include "pattern.h"
 
 using namespace v8;
 using namespace autopsy;
 
+struct Work {
+  uv_work_t  request;
+  Persistent<Function> callback;
+
+  std::string file_path;
+  std::string msg;
+  bool result;
+};
+
+static void WorkAsync(uv_work_t *req)
+{
+    Work *work = static_cast<Work *>(req->data);
+
+    work->result = SetDataset(work->file_path, work->msg);
+}
+
+static void WorkAsyncComplete(uv_work_t *req,int status)
+{
+    Isolate * isolate = Isolate::GetCurrent();
+
+    // Fix for Node 4.x - thanks to https://github.com/nwjs/blink/commit/ecda32d117aca108c44f38c8eb2cb2d0810dfdeb
+    v8::HandleScope handleScope(isolate);
+
+    Work *work = static_cast<Work *>(req->data);
+
+    Local<Object> result = Object::New(isolate);
+    result->Set(String::NewFromUtf8(isolate, "message"), 
+        String::NewFromUtf8(isolate, work->msg.c_str()));
+    result->Set(String::NewFromUtf8(isolate, "result"), 
+        Boolean::New(isolate, work->result));
+
+    // set up return arguments
+    Local<Value> argv[1] = { result };
+
+    // execute the callback
+    // https://stackoverflow.com/questions/13826803/calling-javascript-function-from-a-c-callback-in-v8/28554065#28554065
+    Local<Function>::New(isolate, work->callback)->Call(isolate->GetCurrentContext()->Global(), 1, argv);
+
+    // Free up the persistent function callback
+    work->callback.Reset();
+    delete work;
+}
+
 void Autopsy_SetDataset(const v8::FunctionCallbackInfo<v8::Value> & args) {
   Isolate* isolate = args.GetIsolate();
 
   v8::String::Utf8Value s(args[0]);
   std::string file_path(*s);
-  std::string msg;
 
-  bool res = SetDataset(file_path, msg);
-    
-  Local<Object> result = Object::New(isolate);
-  result->Set(String::NewFromUtf8(isolate, "message"), 
-      String::NewFromUtf8(isolate, msg.c_str()));
-  result->Set(String::NewFromUtf8(isolate, "result"), 
-      Boolean::New(isolate, res));
-  
-  args.GetReturnValue().Set(result);
+  Work * work = new Work();
+  work->request.data = work;
+  work->file_path = file_path;
+
+  Local<Function> callback = Local<Function>::Cast(args[1]);
+  work->callback.Reset(isolate, callback);
+
+  uv_queue_work(uv_default_loop(),&work->request,WorkAsync,WorkAsyncComplete);
+
+  args.GetReturnValue().Set(Undefined(isolate));
 }
 
 void Autopsy_AggregateAll(const v8::FunctionCallbackInfo<v8::Value> & args) {

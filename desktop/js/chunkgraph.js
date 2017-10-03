@@ -79,6 +79,8 @@ function showLoader() {
 }
 
 function hideLoader() {
+    // completely remove, otherwise it takes CPU cycles while
+    // animating, even if hidden?
     var element = document.getElementById("loadspinner");
     element.parentNode.removeChild(element);
 }
@@ -88,30 +90,24 @@ function updateData(datafile) {
 
     showLoader();
 
-    setTimeout(function() {
-        var folder = path.dirname(datafile);
+    var folder = path.dirname(datafile);
+    // set dataset is async, because it can take some time with large trace files
+    autopsy.set_dataset(folder+'/', function(result) {
+        hideLoader();
+        console.log(result);
+        if (!result.result) {
+            $(".modal-title").text("Error");
+            $(".modal-body").text("File parsing failed with error: " + result.message);
+            $("#main-modal").modal("show")
+        } else {
 
-        async.parallel([function(callback) {
-            var res = autopsy.set_dataset(folder+'/');
-            callback(null, res)
-
-        }], function(err, results) {
-            hideLoader();
-            var result = results[0];
-            if (!result.result) {
-                $(".modal-title").text("Error");
-                $(".modal-body").text("File parsing failed with error: " + result.message);
-                $("#main-modal").modal("show")
-            } else {
-
-                // add default "main" filter?
-                drawEverything();
-            }
-        })
-
+            // add default "main" filter?
+            drawEverything();
+        }
         var element = document.querySelector("#overlay");
         element.style.visibility = "hidden";
-    }, 1000);
+    });
+
 
 }
 
@@ -622,7 +618,7 @@ function drawGlobalAggregatePath() {
     y = d3.scaleLinear()
         .range([100, 0]);
 
-    var fg_width = window.innerWidth *0.7;
+    var fg_width = window.innerWidth *0.68;
     global_x = d3.scaleLinear()
         .range([0, fg_width - chunk_y_axis_space]);
 
@@ -864,13 +860,17 @@ function drawFlameGraph() {
         .width(fg_width)
         .height(window.innerHeight*0.65)
         .cellHeight(17)
-        .transitionDuration(750)
+        .transitionDuration(400)
         .transitionEase(d3.easeCubic)
         .minFrameSize(1)
         .sort(true)
         //Example to sort in reverse order
         //.sort(function(a,b){ return d3.descending(a.name, b.name);})
         .title("");
+
+/*    fgg.onClick(function (d) {
+        console.info("You clicked on frame "+ d.data.name);
+    });*/
 
     var tip = d3.tip()
         .direction("s")
@@ -880,7 +880,7 @@ function drawFlameGraph() {
             if (current_fg_type === "num_allocs")
                 return d.data.name + ", NumAllocs: " + d.data.value;
             else
-                return d.data.name + ", bytes: " + d.data.value;
+                return d.data.name + ", bytes: " + bytesToString(d.data.value, 2);
 
         });
 
@@ -1013,7 +1013,7 @@ function drawEverything() {
         "</br>which is " + percent_alloc_time.toFixed(2) + "% of program time.");
 
     drawFlameGraph();
-    var fg_width = window.innerWidth *0.7; // getboundingclientrect isnt working i dont understand this crap
+    var fg_width = window.innerWidth *0.68; // getboundingclientrect isnt working i dont understand this crap
 
     var fg_aggregate_graph = d3.select("#fg-aggregate-graph")
         .append("svg")
@@ -1028,6 +1028,16 @@ function drawEverything() {
 
         var time = global_x.invert(p[0]);
         current_fg_time = time;
+
+        d3.select("#global-focus").remove();
+        var focus_g = fg_aggregate_graph_g.append("g")
+            .classed("focus-line", true)
+            .attr("id", "global-focus");
+
+        var xval = global_x(time);
+        focus_g.append("line")
+            .attr("y1", 0).attr("y2", aggregate_graph_height*0.8-5)
+            .attr("x1", xval).attr("x2", xval);
         drawFlameGraph();
     });
 
@@ -1137,6 +1147,15 @@ function showFilterHelp() {
     $("#main-modal").modal("show")
 }
 
+function flameGraphHelp() {
+    $(".modal-title").text("Flame Graph");
+    $(".modal-body").text("Several aggregate data can be displayed by the global flame graph. \
+    First, the total number of allocations (#Allocations) of each allocation point in the code across total program lifetime. \
+    Second, the flame graph can show bytes allocated by each allocation point at a specific point in time. Choose the \
+    specific time point by clicking on the aggregate graph below.");
+    $("#main-modal").modal("show")
+}
+
 function setFlameGraphNumAllocs() {
     current_fg_type = "num_allocs";
     drawFlameGraph();
@@ -1157,5 +1176,6 @@ module.exports = {
     resetTimeClick: resetTimeClick,
     showFilterHelp: showFilterHelp,
     setFlameGraphBytesTime: setFlameGraphBytesTime,
-    setFlameGraphNumAllocs: setFlameGraphNumAllocs
+    setFlameGraphNumAllocs: setFlameGraphNumAllocs,
+    flameGraphHelp: flameGraphHelp
 };

@@ -16,7 +16,12 @@
   </head>
   <body onload="initApp()" >
 
-  <div id="overlay"><h1>File->Open...</h1></div>
+  <div id="overlay">
+    <h1>File->Open...</h1>
+    <div class="progress progress-striped" id="loading-bar">
+      <div class="progress-bar progress-bar-info" style="width: 5%"></div>
+    </div>
+  </div>
 
   <ul class="nav nav-tabs">
     <li class="active"><a href="#detailed" data-toggle="tab" aria-expanded="true">Detailed</a></li>
@@ -77,23 +82,6 @@
           </div>
         </div>
 
-        <div class="modal fade" id="main-modal">
-          <div class="modal-dialog">
-            <div class="modal-content">
-              <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-                <h4 class="modal-title"></h4>
-              </div>
-              <div class="modal-body">
-                <p></p>
-              </div>
-              <div class="modal-footer">
-                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-                <!--            <button type="button" class="btn btn-primary">Save changes</button>-->
-              </div>
-            </div>
-          </div>
-        </div>
 
         <div class="footer row">
         </div>
@@ -123,6 +111,23 @@
             <div id="fg-aggregate-graph"></div>
           </div>
           <div class="col-md-4 " id="other-container">
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal fade" id="main-modal">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+            <h4 class="modal-title"></h4>
+          </div>
+          <div class="modal-body">
+            <p></p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            <!--            <button type="button" class="btn btn-primary">Save changes</button>-->
           </div>
         </div>
       </div>

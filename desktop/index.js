@@ -64,6 +64,7 @@ function fgMostActiveClick() {
 
 function fgHelpClick() {
     console.log("fg help click")
+    chunk_graph.flameGraphHelp();
 }
 
 function addAppEventListeners() {

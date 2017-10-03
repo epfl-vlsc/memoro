@@ -10,6 +10,15 @@
 
 namespace autopsy {
 
+enum LoadingState : uint32_t {
+  LoadData = 0,
+  Parsing,
+  Sorting,
+  Building,
+  Aggregating,
+  Done
+};
+
 struct __attribute__((packed)) Chunk {
   uint8_t num_reads = 0;
   uint8_t num_writes = 0;

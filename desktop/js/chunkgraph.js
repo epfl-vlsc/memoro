@@ -248,7 +248,6 @@ function drawStackTraces() {
                     cur_background_class = 0;
                     return "background2";
                 }
-
             })
             .on("mouseover", function(x) {
                 //div.attr("width", width);
@@ -272,7 +271,7 @@ function drawStackTraces() {
             .attr("x", 5)
             .attr("y", "15")
             .text("Chunks: " + (d.num_chunks) + ", Peak Bytes: " + bytesToString(peak) + " Type: "
-            + d.type);
+                + d.type + " UsageScore: " + d.usage_score.toFixed(2));
 
         var stack_y = d3.scaleLinear()
             .range([rectHeight-25, 0]);
@@ -422,8 +421,6 @@ var current_trace_index = null;
 var current_chunk_index = 0;
 var current_chunk_index_low = 0;
 
-// TODO there is still a small bug in this where upscroll results in
-// negative numbers ... somehow
 function chunkScroll() {
     var element = document.querySelector("#chunks");
     var percent = 100 * element.scrollTop / (element.scrollHeight - element.clientHeight);
@@ -435,7 +432,6 @@ function chunkScroll() {
             var to_append = chunks.length;
             var to_remove = to_append;
             // remove from top
-            //console.log("adding " + to_append + " to bottom");
             for (var i = 0; i < to_append; i++) {
                 renderChunkSvg(chunks[i], current_chunk_index + i, true);
             }
@@ -597,7 +593,6 @@ function drawGlobalAggregateAxis() {
             else if (max_x < 10000000000) return (xval / 1000000).toFixed(1) + "Mc";
             else return (xval / 1000000000).toFixed(1) + "Gc";
         })
-        //.orient("bottom")
         .ticks(7)
         .tickSizeInner(-120);
 
@@ -607,7 +602,6 @@ function drawGlobalAggregateAxis() {
     d3.select("#fg-aggregate-group")
         .append("g")
         .attr("id", "fg-aggregate-x-axis")
-        //.attr("width", chunk_graph_width-chunk_y_axis_space)
         .attr("transform", "translate(0," + xaxis_height + ")")
         .attr("class", "axis")
         .call(xAxis);
@@ -629,7 +623,6 @@ function drawGlobalAggregatePath() {
     var aggregate_data = autopsy.aggregate_all();
 
     aggregate_max = autopsy.max_aggregate();
-    //var binned_ag = binAggregate(aggregate_data);
     var binned_ag = aggregate_data;
 
     y.domain(d3.extent(binned_ag, function(v) { return v["value"]; }));
@@ -734,14 +727,12 @@ function drawAggregatePath() {
     y = d3.scaleLinear()
         .range([100, 0]);
 
-    console.log("aggregate")
     max_x = xMax();
 
     var aggregate_data = autopsy.aggregate_all();
 
     console.log(aggregate_data)
     aggregate_max = autopsy.max_aggregate();
-    //var binned_ag = binAggregate(aggregate_data);
     var binned_ag = aggregate_data;
 
     y.domain(d3.extent(binned_ag, function(v) { return v["value"]; }));
@@ -775,7 +766,6 @@ function drawAggregatePath() {
 
     var yaxis_height = .8 * aggregate_graph_height;
     console.log("graphing line")
-    //console.log(d3.select("#aggregate-group"));
     aggregate_graph_g.append("path")
         .datum(binned_ag)
         .attr("fill", "none")
@@ -855,7 +845,6 @@ function drawFlameGraph() {
     d3.select("#flame-graph-div").html("");
 
     var fg_width = window.innerWidth *0.60; // getboundingclientrect isnt working i dont understand this crap
-    //var fg_width = bb.right - bb.left;
     var fgg = d3.flameGraph()
         .width(fg_width)
         .height(window.innerHeight*0.65)
@@ -906,14 +895,12 @@ function drawEverything() {
     console.log("width: " + chunk_graph_width);
     chunk_y_axis_space = chunk_graph_width*0.13;  // ten percent should be enough
 
-
     x = d3.scaleLinear()
         .range([0, chunk_graph_width - chunk_y_axis_space]);
 
     // find the max TS value
     max_x = xMax();
     x.domain([0, max_x]);
-
 
     drawChunkXAxis();
 
@@ -928,7 +915,6 @@ function drawEverything() {
 
         var p = d3.mouse(this);
 
-        var y = d3.select(this).attr("height");
         aggregate_graph.append( "rect")
             .attr("rx", 6)
             .attr("ry", 6)
@@ -965,7 +951,6 @@ function drawEverything() {
 
             s.attr("width", d.width);
             s.attr("x", d.x);
-
         }
     })
     .on( "mouseup", function() {

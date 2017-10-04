@@ -176,6 +176,8 @@ void Autopsy_Traces(const v8::FunctionCallbackInfo<v8::Value> & args) {
                             Number::New(isolate, traces[i].max_aggregate));
     result->Set(String::NewFromUtf8(isolate, "alloc_time_total"), 
                             Number::New(isolate, traces[i].alloc_time_total));
+    result->Set(String::NewFromUtf8(isolate, "usage_score"), 
+                            Number::New(isolate, traces[i].usage_score));
     result_list->Set(i, result);
   }
 

@@ -18,6 +18,20 @@ bool HasInefficiency(uint64_t bitvec, Inefficiency i) {
   return bitvec & i;
 }
 
+float UsageScore(std::vector<Chunk*> const& chunks) {
+  double sum = 0;
+  uint64_t total_bytes = 0;
+  for (auto chunk : chunks) {
+    if (chunk->num_writes == 0 && chunk->num_reads == 0)
+      continue;
+    sum += double(chunk->access_interval_high - chunk->access_interval_low);
+    total_bytes += chunk->size;
+  }
+  if (sum == 0)
+    return 0;
+  return float(sum) / float(total_bytes);
+}
+
 uint64_t Detect(std::vector<Chunk*> const& chunks, PatternParams& params) {
 
   uint64_t min_lifetime = UINT64_MAX;

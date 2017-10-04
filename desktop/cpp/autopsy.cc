@@ -164,6 +164,7 @@ class Dataset {
         // aggregate data
         Aggregate(t.aggregate, t.max_aggregate, t.chunks);
         t.inefficiencies = Detect(t.chunks, pattern_params_);
+        t.usage_score = UsageScore(t.chunks);
         for (auto c : t.chunks) {
           total_alloc_time += c->alloc_call_time;
         }
@@ -315,6 +316,7 @@ class Dataset {
         tmp.type = &traces_[i].type;
         tmp.alloc_time_total = traces_[i].alloc_time_total;
         tmp.max_aggregate = traces_[i].max_aggregate;
+        tmp.usage_score = traces_[i].usage_score;
         traces.push_back(tmp);
       }
     }

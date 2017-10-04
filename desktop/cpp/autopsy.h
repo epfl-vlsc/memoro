@@ -50,6 +50,10 @@ struct Trace {
   std::vector<TimeValue> aggregate;
   uint64_t inefficiencies = 0;
   uint64_t alloc_time_total = 0;
+
+  float usage_score;
+  float lifetime_score;
+  float useful_lifetime_score;
 };
 
 // API will return a list of these to Node layer
@@ -62,6 +66,10 @@ struct TraceValue {
   int num_chunks;
   uint64_t alloc_time_total;
   uint64_t max_aggregate;
+  
+  float usage_score;
+  float lifetime_score;
+  float useful_lifetime_score;
 };
 
 // set the current dataset file, returns dataset stats (num traces, min/max times)

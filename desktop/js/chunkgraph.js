@@ -987,15 +987,6 @@ function drawEverything() {
     var trace = d3.select("#trace");
     trace.html("Select an allocation point under \"Heap Allocations\"");
 
-    var alloc_time = autopsy.global_alloc_time();
-    var time_total = autopsy.max_time() - autopsy.min_time();
-    var percent_alloc_time = 100.0 * alloc_time / time_total;
-    var info = d3.select("#global-info");
-    info.html("Total alloc points: " + num_traces +
-        "</br>Total Allocations: " + total_chunks +
-        "</br>Max Heap: " + bytesToString(aggregate_max) +
-        "</br>Global alloc time: " + alloc_time +
-        "</br>which is " + percent_alloc_time.toFixed(2) + "% of program time.");
 
     drawFlameGraph();
     var fg_width = window.innerWidth *0.68; // getboundingclientrect isnt working i dont understand this crap
@@ -1032,6 +1023,16 @@ function drawEverything() {
     drawAggregateAxis();
 
     drawStackTraces();
+
+    var alloc_time = autopsy.global_alloc_time();
+    var time_total = autopsy.max_time() - autopsy.min_time();
+    var percent_alloc_time = 100.0 * alloc_time / time_total;
+    var info = d3.select("#global-info");
+    info.html("Total alloc points: " + num_traces +
+        "</br>Total Allocations: " + total_chunks +
+        "</br>Max Heap: " + bytesToString(aggregate_max) +
+        "</br>Global alloc time: " + alloc_time +
+        "</br>which is " + percent_alloc_time.toFixed(2) + "% of program time.");
 
 }
 

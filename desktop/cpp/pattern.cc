@@ -1,6 +1,7 @@
 
 #include "pattern.h"
 #include <vector>
+#include <iostream>
 
 namespace autopsy {
 
@@ -30,6 +31,62 @@ float UsageScore(std::vector<Chunk*> const& chunks) {
   if (sum == 0)
     return 0;
   return float(sum) / float(total_bytes);
+}
+
+// divide chunks into groups (regions) where region boundaries are defined by 
+// `threshold`. If chunk N and chunk N+1 are separated by more than `threshold`, 
+// they are in different regions. 
+float LifetimeScore(std::vector<Chunk*> const& chunks, uint64_t threshold) {
+
+  // we avoid `memorizing' regions right now, but may add in the future 
+  // if we want to annotate in the gui
+  cout << "using threshold " << threshold << endl;
+  double current_lifetime_sum = 0;
+  uint32_t current_num_chunks = 0;
+  uint64_t region_start_time = chunks[0]->timestamp_start;
+  uint64_t region_end_time = chunks[0]->timestamp_end;
+  double region_score_total = 0;
+  uint32_t num_regions = 0;
+  Chunk* prev = nullptr;
+  for (auto chunk : chunks) {
+    if (prev && chunk->timestamp_start - prev->timestamp_start > threshold) {
+      // finish this region
+      if (prev->timestamp_end > region_end_time) region_end_time = prev->timestamp_end;
+      uint64_t region_lifetime = region_end_time - region_start_time;
+      double chunk_avg_lifetime = current_lifetime_sum / double(current_num_chunks);
+      region_score_total += chunk_avg_lifetime / double(region_lifetime);
+      num_regions++;
+
+      // start a new one
+      current_num_chunks = 0;
+      current_lifetime_sum = 0;
+      region_start_time = chunk->timestamp_start;
+      region_end_time = chunk->timestamp_end;
+    }
+    current_lifetime_sum += chunk->timestamp_end - chunk->timestamp_start;
+    current_num_chunks++;
+    if (chunk->timestamp_end > region_end_time) region_end_time = chunk->timestamp_end;
+    prev = chunk;
+  }
+
+  // finish up last region
+  if (prev->timestamp_end > region_end_time) region_end_time = prev->timestamp_end;
+  uint64_t region_lifetime = region_end_time - region_start_time;
+  double chunk_avg_lifetime = current_lifetime_sum / double(current_num_chunks);
+  region_score_total += chunk_avg_lifetime / double(region_lifetime);
+  num_regions++;
+
+  return region_score_total / num_regions;
+}
+
+float UsefulLifetimeScore(std::vector<Chunk*> const& chunks) {
+  double score_sum = 0;
+  for (auto chunk : chunks) {
+    uint64_t total_life = chunk->timestamp_end - chunk->timestamp_start;
+    uint64_t active_life = chunk->timestamp_last_access - chunk->timestamp_first_access; 
+    score_sum += double(active_life) / double(total_life);
+  }
+  return score_sum / chunks.size();
 }
 
 uint64_t Detect(std::vector<Chunk*> const& chunks, PatternParams& params) {

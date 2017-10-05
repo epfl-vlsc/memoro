@@ -184,6 +184,10 @@ void Autopsy_Traces(const v8::FunctionCallbackInfo<v8::Value> & args) {
                             Number::New(isolate, traces[i].alloc_time_total));
     result->Set(String::NewFromUtf8(isolate, "usage_score"), 
                             Number::New(isolate, traces[i].usage_score));
+    result->Set(String::NewFromUtf8(isolate, "lifetime_score"), 
+                            Number::New(isolate, traces[i].lifetime_score));
+    result->Set(String::NewFromUtf8(isolate, "useful_lifetime_score"), 
+                            Number::New(isolate, traces[i].useful_lifetime_score));
     result_list->Set(i, result);
   }
 

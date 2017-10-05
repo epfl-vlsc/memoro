@@ -165,6 +165,8 @@ class Dataset {
         Aggregate(t.aggregate, t.max_aggregate, t.chunks);
         t.inefficiencies = Detect(t.chunks, pattern_params_);
         t.usage_score = UsageScore(t.chunks);
+        t.lifetime_score = LifetimeScore(t.chunks, filter_max_time_ * 0.01f); // 1 percent lifetime for region threshold
+        t.useful_lifetime_score = UsefulLifetimeScore(t.chunks);
         for (auto c : t.chunks) {
           total_alloc_time += c->alloc_call_time;
         }
@@ -317,6 +319,8 @@ class Dataset {
         tmp.alloc_time_total = traces_[i].alloc_time_total;
         tmp.max_aggregate = traces_[i].max_aggregate;
         tmp.usage_score = traces_[i].usage_score;
+        tmp.lifetime_score = traces_[i].lifetime_score;
+        tmp.useful_lifetime_score = traces_[i].useful_lifetime_score;
         traces.push_back(tmp);
       }
     }

@@ -5,7 +5,7 @@
     <title>Heapologist Autopsy</title>
     <link href="css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" type="text/css" href="css/chunk_graph.css">
-    <link rel="stylesheet" type="text/css" href="bower_components/d3-flame-graph/dist/d3.flameGraph.css">
+    <link rel="stylesheet" type="text/css" href="node_modules/d3-flame-graph/dist/d3.flameGraph.css">
 
     <script type="text/javascript" src="node_modules/jquery/dist/jquery.min.js" onload="window.$ = window.jQuery = module.exports;">
 
@@ -142,9 +142,11 @@
   <div id="tooltip"></div>
   <script>window.$ = window.jQuery = require('./node_modules/jquery/dist/jquery.min');</script>
   <script src="./node_modules/bootstrap/dist/js/bootstrap.min.js"></script>
-  <script src="./bower_components/d3/d3.js"></script>
-  <script src="./bower_components/d3-tip/index.js"></script>
-  <script src="./bower_components/d3-flame-graph/dist/d3.flameGraph.min.js"></script>
+
+  <!-- flame graph lib requires d3 to be in scope because it 'adds' itself to it somehow -->
+  <script src="./node_modules/d3/build/d3.js"></script>
+  <script src="./node_modules/d3-tip/index.js"></script>
+  <script src="./node_modules/d3-flame-graph/dist/d3.flameGraph.min.js"></script>
   </body>
 
 </html>

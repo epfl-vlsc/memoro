@@ -18,6 +18,7 @@
     "async": "^2.5.0",
     "bootstrap": "^3.3.7",
     "d3": "^4.10.0",
+    "d3-flame-graph": "^1.0.10",
     "d3-flame-graphs": "^0.4.0-alpha",
     "d3-selection": "^1.1.0",
     "dialog": "^0.3.1",

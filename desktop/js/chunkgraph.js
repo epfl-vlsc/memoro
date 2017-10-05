@@ -1,6 +1,6 @@
 global.d3 = require("d3");
-require("../bower_components/d3-flame-graph/dist/d3.flameGraph");
-require("../bower_components/d3-tip/index");
+require("../node_modules/d3-flame-graph/dist/d3.flameGraph");
+require("../node_modules/d3-tip/index");
 var autopsy = require('../cpp/build/Release/autopsy.node');
 var path = require('path');
 var async = require('async');
@@ -210,6 +210,8 @@ function drawStackTraces() {
                     var info = d3.select("#inferences");
                     var inef = autopsy.inefficiencies(d.trace_index);
                     var html = constructInferences(inef);
+                    html += "Usage: " + d.usage_score.toFixed(2) + "</br>Lifetime: " + d.lifetime_score.toFixed(2)
+                    + "</br>Useful Lifetime: " + d.useful_lifetime_score.toFixed(2);
                     info.html(html);
 
                     fresh_sampled = autopsy.aggregate_trace(d.trace_index);

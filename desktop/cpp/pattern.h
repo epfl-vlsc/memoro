@@ -30,6 +30,9 @@ struct PatternParams {
 bool HasInefficiency(uint64_t bitvec, Inefficiency i);
 
 float UsageScore(std::vector<Chunk*> const& chunks);
+// threshold typically 1% of program lifetime
+float LifetimeScore(std::vector<Chunk*> const& chunks, uint64_t threshold);
+float UsefulLifetimeScore(std::vector<Chunk*> const& chunks);
 
 // returns bit vector of inefficiency
 uint64_t Detect(std::vector<Chunk*> const& chunks, PatternParams& params);

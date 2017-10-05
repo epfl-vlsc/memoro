@@ -89,6 +89,9 @@ body {
     overflow-x: hidden;
 }
 
+#stack-sort-btn {
+
+}
 #chunk-axis {
     height: 7vh;
     overflow-y: scroll;

@@ -143,12 +143,30 @@ function constructInferences(inef) {
     return ret;
 }
 
+var current_sort_order = 'bytes';
 function sortTraces(traces) {
 
-    // TODO get current sort order from UI
-    traces.sort(function(a, b) {
-        return b.max_aggregate - a.max_aggregate;
-    });
+    if (current_sort_order === 'bytes') {
+        traces.sort(function (a, b) {
+            return b.max_aggregate - a.max_aggregate;
+        });
+    } else if (current_sort_order === 'allocations') {
+        traces.sort(function (a, b) {
+            return b.num_chunks - a.num_chunks;
+        });
+    } else if (current_sort_order === 'usage') {
+        traces.sort(function (a, b) {
+            return b.usage_score - a.usage_score;
+        });
+    } else if (current_sort_order === 'lifetime') {
+        traces.sort(function (a, b) {
+            return b.lifetime_score - a.lifetime_score;
+        });
+    } else if (current_sort_order === 'useful_lifetime') {
+        traces.sort(function (a, b) {
+            return b.useful_lifetime_score - a.useful_lifetime_score;
+        });
+    }
 
 }
 
@@ -169,7 +187,7 @@ function drawStackTraces() {
 
     var traces = autopsy.traces();
     console.log("now have " + traces.length + " traces");
-    sortTraces(traces)
+    sortTraces(traces);
     num_traces = traces.length;
     total_chunks = 0;
 
@@ -1154,6 +1172,11 @@ function setFlameGraphBytesTime() {
     drawFlameGraph();
 }
 
+function traceSort(pred) {
+    current_sort_order = pred;
+    drawStackTraces();
+}
+
 module.exports = {
     updateData: updateData,
     stackFilterClick: stackFilterClick,
@@ -1165,5 +1188,6 @@ module.exports = {
     showFilterHelp: showFilterHelp,
     setFlameGraphBytesTime: setFlameGraphBytesTime,
     setFlameGraphNumAllocs: setFlameGraphNumAllocs,
-    flameGraphHelp: flameGraphHelp
+    flameGraphHelp: flameGraphHelp,
+    traceSort: traceSort
 };

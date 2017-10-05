@@ -67,6 +67,10 @@ function fgHelpClick() {
     chunk_graph.flameGraphHelp();
 }
 
+function traceSort(pred) {
+    chunk_graph.traceSort(pred);
+}
+
 function addAppEventListeners() {
 
     ipcRenderer.on('open_file', function(emitter, file_path) {

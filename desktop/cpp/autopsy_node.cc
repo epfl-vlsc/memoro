@@ -19,7 +19,9 @@ struct LoadDatasetWork {
   uv_work_t  request;
   Persistent<Function> callback;
 
-  std::string file_path;
+  std::string dir_path;
+  std::string trace_path;
+  std::string chunk_path;
   std::string msg;
   bool result;
 };
@@ -28,7 +30,7 @@ static void LoadDatasetAsync(uv_work_t *req)
 {
     LoadDatasetWork *work = static_cast<LoadDatasetWork *>(req->data);
 
-    work->result = SetDataset(work->file_path, work->msg);
+    work->result = SetDataset(work->dir_path, work->trace_path, work->chunk_path, work->msg);
 }
 
 static void LoadDatasetAsyncComplete(uv_work_t *req,int status)
@@ -61,15 +63,23 @@ void Autopsy_SetDataset(const v8::FunctionCallbackInfo<v8::Value> & args) {
   Isolate* isolate = args.GetIsolate();
 
   v8::String::Utf8Value s(args[0]);
-  std::string file_path(*s);
+  std::string dir_path(*s);
+
+  v8::String::Utf8Value trace_file(args[1]);
+  std::string trace_path(*trace_file);
+
+  v8::String::Utf8Value chunk_file(args[2]);
+  std::string chunk_path(*chunk_file);
 
   // launch in a separate thread with callback to keep the gui responsive
   // since this can take some time
   LoadDatasetWork* work = new LoadDatasetWork();
   work->request.data = work;
-  work->file_path = file_path;
+  work->dir_path = dir_path;
+  work->trace_path = trace_path;
+  work->chunk_path = chunk_path;
 
-  Local<Function> callback = Local<Function>::Cast(args[1]);
+  Local<Function> callback = Local<Function>::Cast(args[3]);
   work->callback.Reset(isolate, callback);
 
   uv_queue_work(uv_default_loop(),&work->request,LoadDatasetAsync,LoadDatasetAsyncComplete);

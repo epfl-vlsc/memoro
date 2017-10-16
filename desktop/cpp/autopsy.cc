@@ -37,7 +37,7 @@ bool operator<(const TimeValue& a, const TimeValue& b) {
 class Dataset {
   public:
     Dataset() {}
-    bool Reset(string& dir_path, string& msg) {
+    bool Reset(string& dir_path, string& trace_file, string& chunk_file, string& msg) {
       if (chunk_ptr_)
         delete [] chunk_ptr_;
       traces_.clear();
@@ -50,7 +50,6 @@ class Dataset {
         return false;
       }
 
-      string trace_file = dir_path + "hplgst.trace";
       cout << "opening " << trace_file << endl;
       // fopen trace file, build traces array
       FILE* trace_fd = fopen(trace_file.c_str(), "r");
@@ -101,7 +100,6 @@ class Dataset {
       }
       fclose(trace_fd);
 
-      string chunk_file = dir_path + "hplgst.chunks";
       // for some reason I can't mmap the file so we open and copy ...
       FILE* chunk_fd = fopen(chunk_file.c_str(), "r");
       // file size produced by sanitizer is buggy and adds a bunch 0 data to 
@@ -569,8 +567,8 @@ class Dataset {
 // its just easier this way ...
 static Dataset theDataset;
 
-bool SetDataset(std::string& file_path, string& msg) {
-  return theDataset.Reset(file_path, msg);
+bool SetDataset(std::string& dir_path, string& trace_file, string& chunk_file, string& msg) {
+  return theDataset.Reset(dir_path, trace_file, chunk_file, msg);
 }
 
 void AggregateAll(std::vector<TimeValue>& values) {

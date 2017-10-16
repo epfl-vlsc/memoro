@@ -91,8 +91,13 @@ function updateData(datafile) {
     showLoader();
 
     var folder = path.dirname(datafile);
+    var filename = datafile.replace(/^.*[\\\/]/, '');
+    var sp = filename.split('.');
+    var trace_path = folder + "/" + sp[0] + ".trace";
+    var chunk_path = folder + "/" + sp[0] + ".chunks";
+    //console.log("trace " + trace_path + " chunk path " + chunk_path);
     // set dataset is async, because it can take some time with large trace files
-    autopsy.set_dataset(folder+'/', function(result) {
+    autopsy.set_dataset(folder+'/', trace_path, chunk_path, function(result) {
         hideLoader();
         console.log(result);
         if (!result.result) {

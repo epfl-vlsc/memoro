@@ -89,6 +89,27 @@ float UsefulLifetimeScore(std::vector<Chunk*> const& chunks) {
   return score_sum / chunks.size();
 }
 
+float ReallocScore(std::vector<Chunk*> const& chunks) {
+  uint64_t last_size = 0;
+  unsigned int current_run = 0, longest_run = 0;
+  for (auto chunk : chunks) {
+    if (last_size == 0) {
+      last_size = chunk->size;
+      current_run++;
+    } else {
+      if (chunk->size >= last_size) {
+        last_size = chunk->size;
+        current_run++;
+      } else {
+        longest_run = current_run > longest_run ? current_run : longest_run;
+        current_run = 0;
+        last_size = chunk->size;
+      }
+    }
+  }
+  return 0.0f;
+}
+
 uint64_t Detect(std::vector<Chunk*> const& chunks, PatternParams& params) {
 
   uint64_t min_lifetime = UINT64_MAX;
@@ -96,7 +117,7 @@ uint64_t Detect(std::vector<Chunk*> const& chunks, PatternParams& params) {
   bool has_early_alloc = false, has_late_free = false;
   bool has_multi_thread = false;
   bool has_low_access_coverage = false;
-  uint64_t last_size;
+  uint64_t last_size = 0;
   unsigned int current_run = 0, longest_run = 0;
 
   for (auto chunk : chunks) {

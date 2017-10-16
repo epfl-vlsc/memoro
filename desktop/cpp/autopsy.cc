@@ -189,7 +189,7 @@ class Dataset {
       if (GetFiles(dir, files) != 0) {
         msg = "Directory " + dir + " did not contain valid type files for program\n";
         cout << msg << endl;
-        return false;
+        return true;
       }
       string line;
       ifstream infile;

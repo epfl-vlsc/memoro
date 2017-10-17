@@ -66,8 +66,6 @@ var colors = [
 
 // chunk color gradient scale
 var colorScale = d3.scaleQuantile()
-/*    .range(["#ffffff", "#f0f5f9", "#e0eaf3", "#d1e0ec", "#c1d5e6", "#b2cbe0", "#a2c1da", "#93b6d3", "#84accd", "#74a1c7",
-        "#6597c1", "#558cba", "#4682b4"]);*/
 .range(colors);
 
 function showLoader() {
@@ -92,10 +90,11 @@ function updateData(datafile) {
 
     var folder = path.dirname(datafile);
     var filename = datafile.replace(/^.*[\\\/]/, '');
-    var sp = filename.split('.');
-    var trace_path = folder + "/" + sp[0] + ".trace";
-    var chunk_path = folder + "/" + sp[0] + ".chunks";
-    //console.log("trace " + trace_path + " chunk path " + chunk_path);
+    var idx = filename.lastIndexOf('.');
+    var name = filename.substring(0, idx);
+    var trace_path = folder + "/" + name + ".trace";
+    var chunk_path = folder + "/" + name + ".chunks";
+    console.log("trace " + trace_path + " chunk path " + chunk_path);
     // set dataset is async, because it can take some time with large trace files
     autopsy.set_dataset(folder+'/', trace_path, chunk_path, function(result) {
         hideLoader();

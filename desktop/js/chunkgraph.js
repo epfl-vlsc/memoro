@@ -1,4 +1,5 @@
 global.d3 = require("d3");
+const exec = require('child_process').exec;
 require("../node_modules/d3-flame-graph/dist/d3.flameGraph");
 require("../node_modules/d3-tip/index");
 var autopsy = require('../cpp/build/Release/autopsy.node');
@@ -174,6 +175,49 @@ function sortTraces(traces) {
 
 }
 
+function generateTraceHtml(raw) {
+    var traces = raw.split('|');
+    var html = "";
+
+    var trace = document.getElementById("trace");
+    // remove existing
+    while (trace.firstChild) {
+        trace.removeChild(trace.firstChild);
+    }
+
+    traces.forEach(function (t, i) {
+        var p = document.createElement("p");
+        p.innerHTML = t;
+        // TODO make this crap portable to windoze
+        // yet more stuff depending on exact trace formatting
+        // eventually we need to move symbolizer execution to the visualizer
+        // i.e. *here* and have the compiler RT store only binary addrs
+        var first_slash = t.indexOf('/');
+        var colon = t.indexOf(':');
+        var file = t.substring(first_slash, colon);
+        var last_colon = t.lastIndexOf(':');
+        var line = t.substring(colon+1, last_colon);
+
+        // TODO be able to specify multiple options for editors in settings or something
+        var cmd = '/Applications/CLion.app/Contents/MacOS/clion ' + file + ' --line ' + line + " " + file;
+
+        p.ondblclick = function () {
+            console.log("clicked stacktrace " + i);
+            console.log("file is " + file + ", line is " + line);
+            console.log("cmd is: " + cmd);
+            exec(cmd, function(err, stdout, stderr) {
+                if (err) {
+                    // node couldn't execute the command
+                    console.log("could not open text editor " + stdout + "\n" + stderr);
+                }
+            });
+        };
+        p.onmouseover = function () { p.style.fontWeight = 'bold'; };
+        p.onmouseout = function () { p.style.fontWeight = 'normal'; };
+        trace.appendChild(p);
+    })
+}
+
 function drawStackTraces() {
 
     var trace = d3.select("#trace")
@@ -223,7 +267,10 @@ function drawStackTraces() {
                     d3.select("#stack-agg-path").remove();
                 } else {
                     colorScale.domain([1, peak]);
-                    trace.html(d.trace.replace(/\|/g, "</br><hr>"));
+
+                    generateTraceHtml(d.trace);
+                    //trace.html(d.trace.replace(/\|/g, "</br><hr>"));
+
                     d3.selectAll(".select-rect").style("display", "none");
                     d3.select(this).selectAll(".select-rect").style("display", "inline");
                     d3.select(this)

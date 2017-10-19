@@ -188,29 +188,42 @@ function generateTraceHtml(raw) {
     traces.forEach(function (t, i) {
         var p = document.createElement("p");
         p.innerHTML = t;
-        // TODO make this crap portable to windoze
         // yet more stuff depending on exact trace formatting
         // eventually we need to move symbolizer execution to the visualizer
         // i.e. *here* and have the compiler RT store only binary addrs
-        var first_slash = t.indexOf('/');
-        var colon = t.indexOf(':');
-        var file = t.substring(first_slash, colon);
-        var last_colon = t.lastIndexOf(':');
-        var line = t.substring(colon+1, last_colon);
-
-        // TODO be able to specify multiple options for editors in settings or something
-        var cmd = '/Applications/CLion.app/Contents/MacOS/clion ' + file + ' --line ' + line + " " + file;
+        var cmd = "";
+        var line = "";
+        var file = "";
+        var file_line = t.substr(t.indexOf('/'));
+        var last_colon = file_line.lastIndexOf(':');
+        var second_last_colon = file_line.lastIndexOf(':', last_colon-1);
+        if (second_last_colon !== -1) {
+            line = file_line.substring(second_last_colon+1, last_colon);
+            if (isNaN(line)){
+                line = file_line.substr(last_colon+1);
+                if (!isNaN(line)) {
+                    file = file_line.substring(0, last_colon);
+                    // TODO be able to specify multiple options for editors in settings or something
+                    cmd = '/Applications/CLion.app/Contents/MacOS/clion ' + file + ' --line ' + line + " " + file;
+                }
+            } else {
+                file = file_line.substring(0, second_last_colon);
+                cmd = '/Applications/CLion.app/Contents/MacOS/clion ' + file + ' --line ' + line + " " + file;
+            }
+        }
 
         p.ondblclick = function () {
-            console.log("clicked stacktrace " + i);
+/*            console.log("clicked stacktrace " + i);
             console.log("file is " + file + ", line is " + line);
-            console.log("cmd is: " + cmd);
-            exec(cmd, function(err, stdout, stderr) {
-                if (err) {
-                    // node couldn't execute the command
-                    console.log("could not open text editor " + stdout + "\n" + stderr);
-                }
-            });
+            console.log("cmd is: " + cmd);*/
+            if (cmd !== "") {
+                exec(cmd, function(err, stdout, stderr) {
+                    if (err) {
+                        // node couldn't execute the command
+                        console.log("could not open text editor " + stdout + "\n" + stderr);
+                    }
+                });
+            }
         };
         p.onmouseover = function () { p.style.fontWeight = 'bold'; };
         p.onmouseout = function () { p.style.fontWeight = 'normal'; };

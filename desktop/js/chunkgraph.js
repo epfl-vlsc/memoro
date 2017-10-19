@@ -197,10 +197,13 @@ function generateTraceHtml(raw) {
         var file_line = t.substr(t.indexOf('/'));
         var last_colon = file_line.lastIndexOf(':');
         var second_last_colon = file_line.lastIndexOf(':', last_colon-1);
+        // TODO clean up this parsing to something more readable
         if (second_last_colon !== -1) {
             line = file_line.substring(second_last_colon+1, last_colon);
+            console.log(line);
             if (isNaN(line)){
                 line = file_line.substr(last_colon+1);
+                console.log(line);
                 if (!isNaN(line)) {
                     file = file_line.substring(0, last_colon);
                     // TODO be able to specify multiple options for editors in settings or something
@@ -210,12 +213,20 @@ function generateTraceHtml(raw) {
                 file = file_line.substring(0, second_last_colon);
                 cmd = '/Applications/CLion.app/Contents/MacOS/clion ' + file + ' --line ' + line + " " + file;
             }
+        } else {
+            line = file_line.substr(last_colon+1);
+            console.log(line);
+            if (!isNaN(line)) {
+                file = file_line.substring(0, last_colon);
+                // TODO be able to specify multiple options for editors in settings or something
+                cmd = '/Applications/CLion.app/Contents/MacOS/clion ' + file + ' --line ' + line + " " + file;
+            }
         }
 
         p.ondblclick = function () {
-/*            console.log("clicked stacktrace " + i);
+            console.log("clicked stacktrace " + i);
             console.log("file is " + file + ", line is " + line);
-            console.log("cmd is: " + cmd);*/
+            console.log("cmd is: " + cmd);
             if (cmd !== "") {
                 exec(cmd, function(err, stdout, stderr) {
                     if (err) {

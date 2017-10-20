@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>Heapologist Autopsy</title>
     <link href="css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.css">
     <link rel="stylesheet" type="text/css" href="css/chunk_graph.css">
     <link rel="stylesheet" type="text/css" href="node_modules/d3-flame-graph/dist/d3.flameGraph.css">
 
@@ -89,7 +90,9 @@
               </div>
             </div>
             <div class="panel panel-default">
-              <div class="panel-heading">Global</div>
+              <div class="panel-heading">Global
+                <a href="#" class="btn btn-sm " onclick="globalInfoHelpClick()">?</a>
+              </div>
               <div id="global-info" class="panel-body">
               </div>
             </div>
@@ -160,7 +163,7 @@
   <!-- flame graph lib requires d3 to be in scope because it 'adds' itself to it somehow -->
   <script src="./node_modules/d3/build/d3.js"></script>
   <script src="./node_modules/d3-tip/index.js"></script>
-  <script src="./node_modules/d3-flame-graph/dist/d3.flameGraph.min.js"></script>
+  <script src="./node_modules/d3-flame-graph/dist/d3.flameGraph.js"></script>
   </body>
 
 </html>

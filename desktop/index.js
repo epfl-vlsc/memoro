@@ -67,6 +67,11 @@ function fgHelpClick() {
     chunk_graph.flameGraphHelp();
 }
 
+function globalInfoHelpClick() {
+    console.log("fg help click")
+    chunk_graph.globalInfoHelp();
+}
+
 function traceSort(pred) {
     chunk_graph.traceSort(pred);
 }

@@ -1,16 +1,32 @@
 const electron = require('electron');
-// Module to control application life.
 const app = electron.app;
-// Module to create native browser window.
 const BrowserWindow = electron.BrowserWindow;
 
 const path = require('path');
 const url = require('url');
-var process = require('process')
+var process = require('process');
+const settings = require('electron-settings');
+var commandExists = require('command-exists').sync;
+var fs = require('fs');
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
 var mainWindow;
+
+function getDefaultEditorForPlatform() {
+    if (process.platform === "darwin") {
+        if (fs.existsSync('/Applications/CLion.app')) {
+            return { name: "CLion", cmd: "/Applications/CLion.app/Contents/MacOS/clion" }
+        } else if (commandExists('xed')) {
+            return { name: "xed", cmd: "xed"}
+        }
+    } else if (process.platform === "win32") {
+        // TODO define some default crap for windows
+    } else if (process.platform === "linux") {
+        // TODO define some default crap for linux
+    }
+    return { name: "none", cmd: ""};
+}
 
 function createWindow () {
     // Create the browser window.
@@ -42,12 +58,16 @@ function createWindow () {
     console.log(process.pid);
     require('./js/menu/mainmenu');
     //mainWindow.openDevTools()
+
+    if (!settings.has('editor')) {
+        settings.set('editor', getDefaultEditorForPlatform())
+    }
 }
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
-app.on('ready', createWindow)
+app.on('ready', createWindow);
 
 // Quit when all windows are closed.
 app.on('window-all-closed', function () {
@@ -56,7 +76,7 @@ app.on('window-all-closed', function () {
     if (process.platform !== 'darwin') {
         app.quit()
     }
-})
+});
 
 app.on('activate', function () {
     // On OS X it's common to re-create a window in the app when the

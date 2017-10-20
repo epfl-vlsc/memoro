@@ -5,7 +5,9 @@ require("../node_modules/d3-tip/index");
 var autopsy = require('../cpp/build/Release/autopsy.node');
 var path = require('path');
 var async = require('async');
+var fs = require("fs");
 
+const settings = require('electron').remote.require('electron-settings');
 
 function bytesToString(bytes,decimals) {
     if(bytes == 0) return '0 B';
@@ -47,6 +49,13 @@ var num_traces;
 var current_fg_type = "num_allocs";
 var current_fg_time = 0;
 
+var avg_lifetime;
+var avg_usage;
+var avg_useful_life;
+var lifetime_var;
+var usage_var;
+var useful_life_var;
+
 var aggregate_max = 0;
 
 var colors = [
@@ -84,6 +93,11 @@ function hideLoader() {
     element.parentNode.removeChild(element);
 }
 
+function showModal(title, body) {
+    $(".modal-title").text(title);
+    $(".modal-body").html(body);
+    $("#main-modal").modal("show")
+}
 // file open callback function
 function updateData(datafile) {
 
@@ -101,9 +115,7 @@ function updateData(datafile) {
         hideLoader();
         console.log(result);
         if (!result.result) {
-            $(".modal-title").text("Error");
-            $(".modal-body").text("File parsing failed with error: " + result.message);
-            $("#main-modal").modal("show")
+            showModal("Error", "File parsing failed with error: " + result.message);
         } else {
 
             // add default "main" filter?
@@ -161,23 +173,41 @@ function sortTraces(traces) {
         });
     } else if (current_sort_order === 'usage') {
         traces.sort(function (a, b) {
-            return b.usage_score - a.usage_score;
+            return a.usage_score - b.usage_score;
         });
     } else if (current_sort_order === 'lifetime') {
         traces.sort(function (a, b) {
-            return b.lifetime_score - a.lifetime_score;
+            return a.lifetime_score - b.lifetime_score;
         });
     } else if (current_sort_order === 'useful_lifetime') {
         traces.sort(function (a, b) {
-            return b.useful_lifetime_score - a.useful_lifetime_score;
+            return a.useful_lifetime_score - b.useful_lifetime_score;
         });
     }
 
 }
 
+function generateOpenSourceCmd(file, line) {
+    var editor = settings.get('editor');
+    if (editor.name === "none") {
+        showModal("Error", "No editor defined, and no defaults found on system.");
+        return "";
+    }
+    console.log(editor);
+    if (editor.name === "CLion") {
+        return editor.cmd + " " + file + " --line " + line + " " + file;
+    } else if (editor.name === "xed") {
+        return editor.cmd + " --line " + line + " " + file;
+    } else {
+        return "";
+    }
+    // TODO add other supported editors here
+}
+
 function generateTraceHtml(raw) {
+    // parse each trace for source file and line numbers,
+    // add ondblclick events to open in desired editor
     var traces = raw.split('|');
-    var html = "";
 
     var trace = document.getElementById("trace");
     // remove existing
@@ -185,9 +215,10 @@ function generateTraceHtml(raw) {
         trace.removeChild(trace.firstChild);
     }
 
-    traces.forEach(function (t, i) {
+    traces.forEach(function (t) {
+        if (t === "") return;
         var p = document.createElement("p");
-        p.innerHTML = t;
+        p.innerHTML = t + "  ";
         // yet more stuff depending on exact trace formatting
         // eventually we need to move symbolizer execution to the visualizer
         // i.e. *here* and have the compiler RT store only binary addrs
@@ -200,56 +231,83 @@ function generateTraceHtml(raw) {
         // TODO clean up this parsing to something more readable
         if (second_last_colon !== -1) {
             line = file_line.substring(second_last_colon+1, last_colon);
-            console.log(line);
             if (isNaN(line)){
                 line = file_line.substr(last_colon+1);
-                console.log(line);
                 if (!isNaN(line)) {
                     file = file_line.substring(0, last_colon);
-                    // TODO be able to specify multiple options for editors in settings or something
-                    cmd = '/Applications/CLion.app/Contents/MacOS/clion ' + file + ' --line ' + line + " " + file;
+                    cmd = generateOpenSourceCmd(file, line);
                 }
             } else {
                 file = file_line.substring(0, second_last_colon);
-                cmd = '/Applications/CLion.app/Contents/MacOS/clion ' + file + ' --line ' + line + " " + file;
+                //cmd = '/Applications/CLion.app/Contents/MacOS/clion ' + file + ' --line ' + line + " " + file;
+                cmd = generateOpenSourceCmd(file, line);
             }
         } else {
             line = file_line.substr(last_colon+1);
-            console.log(line);
             if (!isNaN(line)) {
                 file = file_line.substring(0, last_colon);
-                // TODO be able to specify multiple options for editors in settings or something
-                cmd = '/Applications/CLion.app/Contents/MacOS/clion ' + file + ' --line ' + line + " " + file;
+                //cmd = '/Applications/CLion.app/Contents/MacOS/clion ' + file + ' --line ' + line + " " + file;
+                cmd = generateOpenSourceCmd(file, line);
             }
         }
 
-        p.ondblclick = function () {
-            console.log("clicked stacktrace " + i);
-            console.log("file is " + file + ", line is " + line);
-            console.log("cmd is: " + cmd);
+/*        p.ondblclick = function () {
+/!*            console.log("file is " + file + ", line is " + line);
+            console.log("cmd is: " + cmd);*!/
+            if (!fs.existsSync(file)) {
+                showModal("Error", "Cannot locate file: " + file);
+            }
             if (cmd !== "") {
                 exec(cmd, function(err, stdout, stderr) {
                     if (err) {
                         // node couldn't execute the command
                         console.log("could not open text editor " + stdout + "\n" + stderr);
+                        showModal("Error", "Open editor failed with stderr: " + stderr);
+                    }
+                });
+            }
+        };*/
+        var btn = document.createElement("i");
+        btn.className += "fa fa-folder-open";
+        btn.style.visibility = "hidden";
+        btn.onclick = function () {
+            /*            console.log("file is " + file + ", line is " + line);
+                        console.log("cmd is: " + cmd);*/
+            if (!fs.existsSync(file)) {
+                showModal("Error", "Cannot locate file: " + file);
+            }
+            if (cmd !== "") {
+                exec(cmd, function(err, stdout, stderr) {
+                    if (err) {
+                        // node couldn't execute the command
+                        console.log("could not open text editor " + stdout + "\n" + stderr);
+                        showModal("Error", "Open editor failed with stderr: " + stderr);
                     }
                 });
             }
         };
-        p.onmouseover = function () { p.style.fontWeight = 'bold'; };
-        p.onmouseout = function () { p.style.fontWeight = 'normal'; };
+        p.appendChild(btn);
+        p.onmouseover = function () {
+            p.style.fontWeight = 'bold';
+            p.getElementsByClassName("fa")[0].style.visibility = "visible";
+        };
+        p.onmouseout = function () {
+            p.style.fontWeight = 'normal';
+            p.getElementsByClassName("fa")[0].style.visibility = "hidden";
+        };
+        var br = document.createElement("hr");
         trace.appendChild(p);
+        trace.appendChild(br);
     })
 }
 
 function drawStackTraces() {
 
-    var trace = d3.select("#trace")
-    var traces_div = d3.select("#traces")
+    var trace = d3.select("#trace");
+    var traces_div = d3.select("#traces");
     traces_div.selectAll("svg").remove();
 
-    var info = d3.select("#inferences");
-    info.html("")
+    d3.select("#inferences").html("");
 
     //var max_x = xMax();
     var max_x = autopsy.filter_max_time();
@@ -258,16 +316,22 @@ function drawStackTraces() {
     x.domain([min_x, max_x]);
 
     var traces = autopsy.traces();
-    console.log("now have " + traces.length + " traces");
     sortTraces(traces);
     num_traces = traces.length;
     total_chunks = 0;
 
+    var total_usage = 0;
+    var total_lifetime = 0;
+    var total_useful_lifetime = 0;
+
     var cur_background_class = 0;
     traces.forEach(function (d, i) {
 
-        sampled = autopsy.aggregate_trace(d.trace_index);
-        console.log("drawing trace with points " + sampled.length);
+        total_usage += d.usage_score;
+        total_lifetime += d.lifetime_score;
+        total_useful_lifetime += d.useful_lifetime_score;
+
+        var sampled = autopsy.aggregate_trace(d.trace_index);
         var peak = d.max_aggregate
         total_chunks += d.num_chunks;
         var rectHeight = 55;
@@ -277,8 +341,8 @@ function drawStackTraces() {
             .attr("width", chunk_graph_width)
             .attr("height", rectHeight)
             .classed("svg_spacing_trace", true)
-            .on("mouseover", function(x) {
-            })
+/*            .on("mouseover", function(x) {
+            })*/
             .on("click", function(s) {
                 if (d3.select(this).classed("selected")) {
                     d3.selectAll(".select-rect").style("display", "none");
@@ -293,7 +357,6 @@ function drawStackTraces() {
                     colorScale.domain([1, peak]);
 
                     generateTraceHtml(d.trace);
-                    //trace.html(d.trace.replace(/\|/g, "</br><hr>"));
 
                     d3.selectAll(".select-rect").style("display", "none");
                     d3.select(this).selectAll(".select-rect").style("display", "inline");
@@ -307,7 +370,7 @@ function drawStackTraces() {
                     + "</br>Useful Lifetime: " + d.useful_lifetime_score.toFixed(2);
                     info.html(html);
 
-                    fresh_sampled = autopsy.aggregate_trace(d.trace_index);
+                    var fresh_sampled = autopsy.aggregate_trace(d.trace_index);
                     var agg_line = d3.line()
                         .x(function(v) {
                             return x(v["ts"]);
@@ -366,7 +429,7 @@ function drawStackTraces() {
             .attr("x", 5)
             .attr("y", "15")
             .text("Chunks: " + (d.num_chunks) + ", Peak Bytes: " + bytesToString(peak) + " Type: "
-                + d.type + " UsageScore: " + d.usage_score.toFixed(2));
+                + d.type);
 
         var stack_y = d3.scaleLinear()
             .range([rectHeight-25, 0]);
@@ -374,11 +437,9 @@ function drawStackTraces() {
         stack_y.domain(d3.extent(sampled, function(v) { return v["value"]; }));
 
         var yAxisRight = d3.axisRight(stack_y)
-            //.orient("right")
             .tickFormat(bytesToStringNoDecimal)
             .ticks(2);
 
-        //console.log(JSON.stringify(steps));
         var line = d3.line()
             .x(function(v) {
                 return x(v["ts"]);
@@ -390,8 +451,6 @@ function drawStackTraces() {
             .datum(sampled)
             .attr("fill", "none")
             .attr("stroke", "#c8c8c8")
-            //.attr("stroke-linejoin", "round")
-            //.attr("stroke-linecap", "round")
             .attr("stroke-width", 1.0)
             .attr("transform", "translate(0, 20)")
             .attr("d", line);
@@ -404,6 +463,22 @@ function drawStackTraces() {
 
     });
 
+    avg_lifetime = total_lifetime / traces.length;
+    avg_usage = total_usage / traces.length;
+    avg_useful_life = total_useful_lifetime / traces.length;
+
+    var lifetime_var_total = 0;
+    var usage_var_total = 0;
+    var useful_lifetime_var_total = 0;
+    traces.forEach(function(t) {
+        lifetime_var_total += Math.pow(t.lifetime_score - avg_lifetime, 2);
+        usage_var_total += Math.pow(t.usage_score - avg_usage, 2);
+        useful_lifetime_var_total += Math.pow(t.useful_lifetime_score - avg_useful_life, 2);
+    });
+
+    lifetime_var = lifetime_var_total / traces.length;
+    usage_var = usage_var_total / traces.length;
+    useful_life_var = useful_lifetime_var_total / traces.length;
 }
 
 function tooltip(chunk) {
@@ -416,7 +491,7 @@ function tooltip(chunk) {
             + "</br>Writes: " + chunk["num_writes"] + "</br>Coverage Ratio: " +
             ((chunk.access_interval_high - chunk.access_interval_low) / chunk.size).toFixed(1)
             + "</br>Coverage Interval: [" + chunk.access_interval_low + "," + chunk.access_interval_high
-            + "]</br>")
+            + "]</br>MultiThread: " + chunk.multi_thread + "</br>")
             .style("left", (d3.event.pageX) + "px")
             .style("top", (d3.event.pageY - 28) + "px");
         div.append("svg")
@@ -660,7 +735,7 @@ function drawAggregateAxis() {
         })
         //.orient("bottom")
         .ticks(7)
-        .tickSizeInner(-120)
+        .tickSizeInner(-120);
 
     var max_x = autopsy.filter_max_time();
     var min_x = autopsy.filter_min_time();
@@ -924,6 +999,52 @@ function drawAggregatePath() {
     }
 }
 
+// copied this color hashing generation stuff from the d3 flamegraph code
+// API is not clearly documented wrt the flameGraph::color function
+function generateHash(name) {
+    // Return a vector (0.0->1.0) that is a hash of the input string.
+    // The hash is computed to favor early characters over later ones, so
+    // that strings with similar starts have similar vectors. Only the first
+    // 6 characters are considered.
+    var hash = 0, weight = 1, max_hash = 0, mod = 10, max_char = 6;
+    if (name) {
+        for (var i = 0; i < name.length; i++) {
+            if (i > max_char) { break; }
+            hash += weight * (name.charCodeAt(i) % mod);
+            max_hash += weight * (mod - 1);
+            weight *= 0.70;
+        }
+        if (max_hash > 0) { hash = hash / max_hash; }
+    }
+    return hash;
+}
+
+function colorHash(name) {
+    // Return an rgb() color string that is a hash of the provided name,
+    // and with a warm palette.
+    var vector = 0;
+    if (name) {
+        var nameArr = name.split('`');
+        if (nameArr.length > 1) {
+            name = nameArr[nameArr.length -1]; // drop module name if present
+        }
+        name = name.split('(')[0]; // drop extra info
+        vector = generateHash(name);
+    }
+    var r = 0 + Math.round(200 * vector);
+    var g = 150 + Math.round(50 * (1 - vector));
+    var b = 220 + Math.round(25 * (1 - vector));
+    return "rgb(" + r + "," + g + "," + b + ")";
+}
+
+function name(d) {
+    return d.data.n || d.data.name;
+}
+
+var colorMapper = function(d) {
+    return d.highlight ? "#E600E6" : colorHash(name(d));
+};
+
 function drawFlameGraph() {
 
     var tree;
@@ -969,6 +1090,7 @@ function drawFlameGraph() {
         });
 
     fgg.tooltip(tip);
+    fgg.color(colorMapper);
 
     var details = document.getElementById("flame-graph-details");
 
@@ -1127,7 +1249,10 @@ function drawEverything() {
         "</br>Total Allocations: " + total_chunks +
         "</br>Max Heap: " + bytesToString(aggregate_max) +
         "</br>Global alloc time: " + alloc_time +
-        "</br>which is " + percent_alloc_time.toFixed(2) + "% of program time.");
+        "</br>which is " + percent_alloc_time.toFixed(2) + "% of program time." +
+        "</br>Avg Lifetime: " + avg_lifetime.toFixed(2) + " \u03C3 " + lifetime_var.toFixed(2) +
+        "</br>Avg Usage: " + avg_usage.toFixed(2) + " \u03C3 " + usage_var.toFixed(2) +
+        "</br>Avg Useful Life: " + avg_useful_life.toFixed(2) + " \u03C3 " + useful_life_var.toFixed(2));
 
 }
 
@@ -1222,19 +1347,28 @@ function resetTimeClick() {
 }
 
 function showFilterHelp() {
-    $(".modal-title").text("Filter Trace");
-    $(".modal-body").text("Filter stack traces (allocation points) by keyword. \
+    showModal("Filter Trace", "Filter stack traces (allocation points) by keyword. \
     Enter space separated keywords. Any trace not containing those keywords will be filtered out.");
-    $("#main-modal").modal("show")
 }
 
 function flameGraphHelp() {
-    $(".modal-title").text("Flame Graph");
-    $(".modal-body").text("Several aggregate data can be displayed by the global flame graph. \
+    showModal("Flame Graph", "Several aggregate data can be displayed by the global flame graph. \
     First, the total number of allocations (#Allocations) of each allocation point in the code across total program lifetime. \
     Second, the flame graph can show bytes allocated by each allocation point at a specific point in time. Choose the \
-    specific time point by clicking on the aggregate graph below.");
-    $("#main-modal").modal("show")
+    specific time point by clicking on the aggregate graph below.")
+}
+
+function globalInfoHelp() {
+    showModal("Global Info", "Globally applicable data. </br> \
+    <b> Total alloc points</b>: Total number of allocation points in the profiled run. </br> \
+    <b> Total Allocations</b>: Total number of allocations made over the program lifetime. </br> \
+    <b> Max Heap</b>: Bytes allocated on the heap at it's maximum point in time. </br> \
+    <b> Global Alloc time</b>: Approximate time spent in allocation functions. This tends to be overestimated due to instrumentation. </br> \
+    </br>The following scores provide quantitative intuition into how good or bad allocations from particular points were in several categories. \
+    1.0 is best, 0.0 is worst. See the documentation for details on how these are calculated. </br> \
+    <b> Avg Lifetime</b>: The average lifetime score and variance of all allocation points. </br> \
+    <b> Avg Usage</b>: The average usage score and variance of all allocation points. </br> \
+    <b> Avg Useful Life</b>: The average useful life score and variance of all allocation points. </br>")
 }
 
 function setFlameGraphNumAllocs() {
@@ -1252,6 +1386,7 @@ function traceSort(pred) {
     drawStackTraces();
 }
 
+// TODO separate out functionality, modularize
 module.exports = {
     updateData: updateData,
     stackFilterClick: stackFilterClick,
@@ -1264,5 +1399,6 @@ module.exports = {
     setFlameGraphBytesTime: setFlameGraphBytesTime,
     setFlameGraphNumAllocs: setFlameGraphNumAllocs,
     flameGraphHelp: flameGraphHelp,
-    traceSort: traceSort
+    traceSort: traceSort,
+    globalInfoHelp: globalInfoHelp
 };

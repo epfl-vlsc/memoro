@@ -4,8 +4,8 @@ require("../node_modules/d3-flame-graph/dist/d3.flameGraph");
 require("../node_modules/d3-tip/index");
 var autopsy = require('../cpp/build/Release/autopsy.node');
 var path = require('path');
-var async = require('async');
 var fs = require("fs");
+var gmean = require('compute-gmean');
 
 const settings = require('electron').remote.require('electron-settings');
 
@@ -74,6 +74,21 @@ var colors = [
 "#0f3f70",
 "#003366"];
 
+var badness_colors = [
+    "#0085ff",
+    "#00cfff",
+    "#00ffe5",
+    "#00ff9b",
+    "#00ff51",
+    "#00ff07",
+    "#43ff00",
+    "#8cff00",
+    "#d6ff00",
+    "#ffde00",
+    "#ff9400",
+    "#ff4a00",
+    "#ff0000"];
+
 // chunk color gradient scale
 var colorScale = d3.scaleQuantile()
 .range(colors);
@@ -124,10 +139,34 @@ function updateData(datafile) {
         var element = document.querySelector("#overlay");
         element.style.visibility = "hidden";
     });
-
-
 }
 
+function badnessTooltip(idx) {
+
+    return function() {
+        var div = d3.select("#tooltip");
+        div.transition()
+            .duration(200)
+            .style("opacity", .9);
+        div.html("")
+            .style("left", (d3.event.pageX) + "px")
+            .style("top", (d3.event.pageY - 28) + "px");
+        var svg = div.append("svg")
+            .attr("width", 10*badness_colors.length)
+            .attr("height", 15);
+
+        badness_colors.forEach(function(c, i) {
+            var circ = svg.append("circle")
+                .attr("transform", "translate(" + (5+i*10) + ", 8)")
+                .attr("r", 5)
+                .style("fill", c);
+            if (idx === i)
+                circ.style("stroke", "black");
+        })
+
+        //div.attr("width", width);
+    }
+}
 function constructInferences(inef) {
     var ret = "";
     if (inef.unused)
@@ -341,13 +380,10 @@ function drawStackTraces() {
             .attr("width", chunk_graph_width)
             .attr("height", rectHeight)
             .classed("svg_spacing_trace", true)
-/*            .on("mouseover", function(x) {
-            })*/
             .on("click", function(s) {
                 if (d3.select(this).classed("selected")) {
                     d3.selectAll(".select-rect").style("display", "none");
-                    d3.select(this)
-                        .classed("selected", false);
+                    d3.select(this).classed("selected", false);
                     trace.html("Select an allocation point under \"Heap Allocation\"");
                     clearChunks();
                     var info = d3.select("#inferences");
@@ -360,8 +396,7 @@ function drawStackTraces() {
 
                     d3.selectAll(".select-rect").style("display", "none");
                     d3.select(this).selectAll(".select-rect").style("display", "inline");
-                    d3.select(this)
-                        .classed("selected", true);
+                    d3.select(this).classed("selected", true);
                     drawChunks(d);
                     var info = d3.select("#inferences");
                     var inef = autopsy.inefficiencies(d.trace_index);
@@ -390,8 +425,6 @@ function drawStackTraces() {
                         .attr("d", agg_line);
                 }
             })
-            .on("mouseout", function(x) {
-            })
             .append("g");
 
         new_svg_g.append("rect")
@@ -399,16 +432,32 @@ function drawStackTraces() {
             .attr("width", chunk_graph_width - chunk_y_axis_space)
             .attr("height", rectHeight)
             .attr("class", function(x) {
-                if (cur_background_class == 0) {
+                if (cur_background_class === 0) {
                     cur_background_class = 1;
                     return "background1";
                 } else {
                     cur_background_class = 0;
                     return "background2";
                 }
-            })
-            .on("mouseover", function(x) {
-                //div.attr("width", width);
+            });
+
+        var mean = gmean([d.lifetime_score < 0.01 ? 0.01 : d.lifetime_score, d.usage_score < 0.01 ? 0.01 : d.usage_score,
+            d.useful_lifetime_score < 0.01 ? 0.01 : d.useful_lifetime_score]);
+        var badness_col = Math.round((1.0 - mean) * (badness_colors.length - 1));
+        console.log("mean is " + mean);
+        console.log("badness color idx is " + badness_col);
+        new_svg_g.append('circle')
+            .attr("transform", "translate(" + (chunk_graph_width - chunk_y_axis_space - 15) + ", 4)")
+            .attr("cx", 5)
+            .attr("cy", 5)
+            .attr("r", 5)
+            .style("fill", badness_colors[badness_col])
+            .on("mouseover", badnessTooltip(badness_col))
+            .on("mouseout", function(d) {
+                var div = d3.select("#tooltip");
+                div.transition()
+                    .duration(500)
+                    .style("opacity", 0);
             });
 
         new_svg_g.append("rect")
@@ -459,8 +508,6 @@ function drawStackTraces() {
             .attr("transform", "translate(" + (chunk_graph_width - chunk_y_axis_space + 1) + ",20)")
             .style("fill", "white")
             .call(yAxisRight);
-
-
     });
 
     avg_lifetime = total_lifetime / traces.length;
@@ -1099,8 +1146,8 @@ function drawFlameGraph() {
     d3.select("#flame-graph-div")
         .datum(tree)
         .call(fgg);
-
 }
+
 function drawEverything() {
 
     d3.selectAll("g > *").remove();
@@ -1200,10 +1247,8 @@ function drawEverything() {
     var aggregate_graph_g = aggregate_graph.append("g");
     aggregate_graph_g.attr("id", "aggregate-group");
 
-
     var trace = d3.select("#trace");
     trace.html("Select an allocation point under \"Heap Allocations\"");
-
 
     drawFlameGraph();
     var fg_width = window.innerWidth *0.68; // getboundingclientrect isnt working i dont understand this crap

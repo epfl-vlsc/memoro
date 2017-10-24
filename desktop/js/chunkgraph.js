@@ -128,7 +128,7 @@ function updateData(datafile) {
     // set dataset is async, because it can take some time with large trace files
     autopsy.set_dataset(folder+'/', trace_path, chunk_path, function(result) {
         hideLoader();
-        console.log(result);
+        //console.log(result);
         if (!result.result) {
             showModal("Error", "File parsing failed with error: " + result.message);
         } else {
@@ -232,7 +232,6 @@ function generateOpenSourceCmd(file, line) {
         showModal("Error", "No editor defined, and no defaults found on system.");
         return "";
     }
-    console.log(editor);
     if (editor.name === "CLion") {
         return editor.cmd + " " + file + " --line " + line + " " + file;
     } else if (editor.name === "xed") {
@@ -324,6 +323,12 @@ function generateTraceHtml(raw) {
                     }
                 });
             }
+        };
+        btn.onmouseover = function() {
+            btn.className = "fa fa-folder-open-o";
+        };
+        btn.onmouseout = function() {
+            btn.className = "fa fa-folder-open";
         };
         p.appendChild(btn);
         p.onmouseover = function () {
@@ -444,8 +449,6 @@ function drawStackTraces() {
         var mean = gmean([d.lifetime_score < 0.01 ? 0.01 : d.lifetime_score, d.usage_score < 0.01 ? 0.01 : d.usage_score,
             d.useful_lifetime_score < 0.01 ? 0.01 : d.useful_lifetime_score]);
         var badness_col = Math.round((1.0 - mean) * (badness_colors.length - 1));
-        console.log("mean is " + mean);
-        console.log("badness color idx is " + badness_col);
         new_svg_g.append('circle')
             .attr("transform", "translate(" + (chunk_graph_width - chunk_y_axis_space - 15) + ", 4)")
             .attr("cx", 5)
@@ -645,7 +648,6 @@ function chunkScroll() {
         var chunks = autopsy.trace_chunks(current_trace_index, current_chunk_index, 25);
         if (chunks.length > 0) {
             // there are still some to display
-            console.log("cur chunk index is " + current_chunk_index);
             var to_append = chunks.length;
             var to_remove = to_append;
             // remove from top
@@ -889,7 +891,6 @@ function drawGlobalAggregatePath() {
         .attr("id", "fg-aggregate-y-axis")
         .style("fill", "white")
         .call(yAxisRight);
-    console.log("done graphing line")
 
     fg_aggregate_graph_g.append("path")
         .datum(binned_ag)
@@ -948,7 +949,6 @@ function drawAggregatePath() {
 
     var aggregate_data = autopsy.aggregate_all();
 
-    console.log(aggregate_data)
     aggregate_max = autopsy.max_aggregate();
     var binned_ag = aggregate_data;
 
@@ -982,7 +982,6 @@ function drawAggregatePath() {
         .style("fill", "#353a41");
 
     var yaxis_height = .8 * aggregate_graph_height;
-    console.log("graphing line")
     aggregate_graph_g.append("path")
         .datum(binned_ag)
         .attr("fill", "none")
@@ -1104,7 +1103,6 @@ function drawFlameGraph() {
 
 
     tree = autopsy.stacktree();
-    console.log(tree);
     d3.select("#flame-graph-div").html("");
 
     var fg_width = window.innerWidth *0.60; // getboundingclientrect isnt working i dont understand this crap
@@ -1156,7 +1154,6 @@ function drawEverything() {
     barHeight = 8;
     chunk_graph_width = d3.select("#chunks-container").node().getBoundingClientRect().width;
     chunk_graph_height = d3.select("#chunks").node().getBoundingClientRect().height;
-    console.log("width: " + chunk_graph_width);
     chunk_y_axis_space = chunk_graph_width*0.13;  // ten percent should be enough
 
     x = d3.scaleLinear()
@@ -1169,7 +1166,6 @@ function drawEverything() {
     drawChunkXAxis();
 
     aggregate_graph_height = d3.select("#aggregate-graph").node().getBoundingClientRect().height;
-    console.log("agg graph height is " + aggregate_graph_height)
     var aggregate_graph = d3.select("#aggregate-graph")
         .append("svg")
         .attr("width", chunk_graph_width)
@@ -1232,14 +1228,11 @@ function drawEverything() {
         // redraw
         clearChunks();
 
-        console.log("drawing stacks")
         drawStackTraces();
 
-        console.log("drawing aggregate")
         drawAggregatePath();
         drawAggregateAxis();
 
-        console.log("drawing axis")
         drawChunkXAxis();
 
     });
@@ -1305,7 +1298,6 @@ function stackFilterClick() {
     showLoader();
     setTimeout(function() {
         var element = document.querySelector("#filter-form");
-        console.log("text is " + element.value);
         var filterText = element.value;
         element.value = "";
         var filterWords = filterText.split(" ");
@@ -1343,7 +1335,6 @@ function typeFilterClick() {
     showLoader();
     setTimeout(function() {
         var element = document.querySelector("#filter-form");
-        console.log("text is " + element.value);
         var filterText = element.value;
         element.value = "";
         var filterWords = filterText.split(" ");

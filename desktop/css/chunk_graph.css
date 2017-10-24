@@ -17,6 +17,20 @@
     justify-content: center;
 }
 
+#top-container {
+    margin-top: 1%;
+}
+
+#fg-top-container {
+    margin-top: 1%;
+}
+
+#title {
+    align-items: center;
+    display: flex;
+    margin-bottom: 0;
+
+}
 #tooltip {
     position: absolute;
     text-align: center;
@@ -39,6 +53,14 @@
 }
 
 #global-info {
+    height: 30vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    word-wrap:break-word;
+    margin-top:0!important;
+}
+
+#global-info-fg {
     height: 30vh;
     overflow-y: auto;
     overflow-x: hidden;

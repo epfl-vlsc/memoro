@@ -170,30 +170,30 @@ function badnessTooltip(idx) {
 function constructInferences(inef) {
     var ret = "";
     if (inef.unused)
-        ret += "-> unused chunks </br>"
+        ret += "<i class=\"fa fa-arrow-right\" aria-hidden=\"true\"></i> unused chunks </br>"
     if (!inef.unused) {
         if (inef.read_only)
-            ret += "-> read-only chunks </br>"
+            ret += "<i class=\"fa fa-arrow-right\" aria-hidden=\"true\"></i> read-only chunks </br>"
         if (inef.write_only)
-            ret += "-> write-only chunks </br>"
+            ret += "<i class=\"fa fa-arrow-right\" aria-hidden=\"true\"></i> write-only chunks </br>"
         if (inef.short_lifetime)
-            ret += "-> short lifetime chunks </br>"
+            ret += "<i class=\"fa fa-arrow-right\" aria-hidden=\"true\"></i> short lifetime chunks </br>"
         if (!inef.short_lifetime) {
             if (inef.late_free)
-                ret += "-> chunks freed late </br>"
+                ret += "<i class=\"fa fa-arrow-right\" aria-hidden=\"true\"></i> chunks freed late </br>"
             if (inef.early_alloc)
-                ret += "-> chunks allocated early </br>"
+                ret += "<i class=\"fa fa-arrow-right\" aria-hidden=\"true\"></i> chunks allocated early </br>"
         }
         if (inef.increasing_allocs)
-            ret += "-> increasing allocations </br>"
+            ret += "<i class=\"fa fa-arrow-right\" aria-hidden=\"true\"></i> increasing allocations </br>"
         if (inef.top_percentile_chunks)
-            ret += "-> in top percentile of chunks allocated </br>"
+            ret += "<i class=\"fa fa-arrow-right\" aria-hidden=\"true\"></i> in top-% chunks alloc'd </br>"
         if (inef.top_percentile_size)
-            ret += "-> in top percentile of bytes allocated </br>"
+            ret += "<i class=\"fa fa-arrow-right\" aria-hidden=\"true\"></i> in top-% bytes alloc'd </br>"
         if (inef.multi_thread)
-            ret += "-> chunks accessed by multiple threads </br>"
+            ret += "<i class=\"fa fa-arrow-right\" aria-hidden=\"true\"></i> multithread accesses </br>"
         if (inef.low_access_coverage)
-            ret += "-> chunks have low access coverage </br>"
+            ret += "<i class=\"fa fa-arrow-right\" aria-hidden=\"true\"></i> low access coverage </br>"
     }
 
     return ret;
@@ -401,7 +401,7 @@ function drawStackTraces() {
                     var info = d3.select("#inferences");
                     var inef = autopsy.inefficiencies(d.trace_index);
                     var html = constructInferences(inef);
-                    html += "Usage: " + d.usage_score.toFixed(2) + "</br>Lifetime: " + d.lifetime_score.toFixed(2)
+                    html += "</br>Usage: " + d.usage_score.toFixed(2) + "</br>Lifetime: " + d.lifetime_score.toFixed(2)
                     + "</br>Useful Lifetime: " + d.useful_lifetime_score.toFixed(2);
                     info.html(html);
 

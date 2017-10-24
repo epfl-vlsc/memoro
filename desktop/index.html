@@ -30,24 +30,27 @@
   </ul>
   <div id="myTabContent" class="tab-content">
     <div class="tab-pane fade active in" id="detailed">
-      <div class="container-fluid">
+      <div class="container-fluid" id="top-container">
         <div class="row">
           <div class="col-md-6 " id="chunks-container">
-            <div class="pull-left">
-              <p>Heap Allocations</p>
+            <div class="col-md-6 " id="title">
+              <p class="pagination-centered"><b>Heap Allocation Points</b></p>
+<!--              <p class="align-middle"><b>Heap Allocation Points</b></p>-->
             </div>
-            <div class="btn-group pull-right" id="stack-sort-btn" style="margin-right:8%;margin-top:1vh">
-              <a href="#" class="btn btn-default btn-sm dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
-                Sort
-                <span class="caret"></span>
-              </a>
-              <ul class="dropdown-menu">
-                <li><a href="#" onclick="traceSort('bytes')">Bytes</a></li>
-                <li><a href="#" onclick="traceSort('allocations')">Allocations</a></li>
-                <li><a href="#" onclick="traceSort('usage')">Usage</a></li>
-                <li><a href="#" onclick="traceSort('lifetime')">Lifetime</a></li>
-                <li><a href="#" onclick="traceSort('useful_lifetime')">Useful Lifetime</a></li>
-              </ul>
+            <div class="col-md-6 " id="sortbutton">
+              <div class="btn-group pull-right" id="stack-sort-btn" style="margin-right: 13%;">
+                <a href="#" class="btn btn-default btn-sm dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                  Sort
+                  <span class="caret"></span>
+                </a>
+                <ul class="dropdown-menu">
+                  <li><a href="#" onclick="traceSort('bytes')">Bytes</a></li>
+                  <li><a href="#" onclick="traceSort('allocations')">Allocations</a></li>
+                  <li><a href="#" onclick="traceSort('usage')">Usage</a></li>
+                  <li><a href="#" onclick="traceSort('lifetime')">Lifetime</a></li>
+                  <li><a href="#" onclick="traceSort('useful_lifetime')">Useful Lifetime</a></li>
+                </ul>
+              </div>
             </div>
             <div id="traces" style="width:100%;margin-top:2vh;">
             </div>
@@ -60,7 +63,7 @@
 
             </div>
 
-            <p>Aggregate Memory Usage</p>
+            <p><b>Aggregate Memory Usage</b></p>
             <div id="aggregate-graph">
             </div>
             <a href="#" class="btn btn-default" onclick="resetTimeClick()">Reset Time</a>
@@ -106,7 +109,7 @@
       </div>
     </div>
     <div class="tab-pane fade" id="global">
-      <div class="container-fluid">
+      <div class="container-fluid" id="fg-top-container">
         <div class="row">
           <div class="col-md-8" id="flamegraph-container">
             <div class="panel panel-default">
@@ -133,6 +136,14 @@
             <div id="fg-aggregate-graph"></div>
           </div>
           <div class="col-md-4 " id="other-container">
+
+            <div class="panel panel-default">
+              <div class="panel-heading">Global
+                <a href="#" class="btn btn-sm " onclick="globalInfoHelpClick()">?</a>
+              </div>
+              <div id="global-info-fg" class="panel-body">
+              </div>
+            </div>
           </div>
         </div>
       </div>

@@ -40,6 +40,9 @@ function typeFilterClick() {
     chunk_graph.typeFilterClick();
 }
 
+function filterExecuteClick() {
+    chunk_graph.filterExecuteClick();
+}
 function typeFilterResetClick() {
     chunk_graph.typeFilterResetClick();
 }

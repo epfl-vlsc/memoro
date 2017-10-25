@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8">
     <title>Heapologist Autopsy</title>
-    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/bootstrap.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.css">
     <link rel="stylesheet" type="text/css" href="css/chunk_graph.css">
     <link rel="stylesheet" type="text/css" href="node_modules/d3-flame-graph/dist/d3.flameGraph.css">
@@ -35,7 +35,6 @@
           <div class="col-md-6 " id="chunks-container">
             <div class="col-md-6 " id="title">
               <p class="pagination-centered"><b>Heap Allocation Points</b></p>
-<!--              <p class="align-middle"><b>Heap Allocation Points</b></p>-->
             </div>
             <div class="col-md-6 " id="sortbutton">
               <div class="btn-group pull-right" id="stack-sort-btn" style="margin-right: 13%;">
@@ -72,18 +71,41 @@
           <div id="middle-column" class="col-md-4 ">
             <div class="panel panel-default h-50">
               <div class="panel-heading">Allocation Point Stacktrace</div>
-              <div id="trace" class="panel-body">
+              <div id="trace" class="panel-body"></div>
+            </div>
+            <label class="control-label" for="filter-form">Filter Trace/Type</label>
+            <div class="input-group" style="margin-bottom: 1%;">
+              <div class="input-group-btn">
+                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" id="filter-select">Trace <span class="caret"></span></button>
+                <ul class="dropdown-menu">
+                  <li><a href="#" onclick="stackFilterClick()">Trace</a></li>
+                  <li><a href="#" onclick="typeFilterClick()">Type</a></li>
+                </ul>
+              </div><!-- /btn-group -->
+              <input type="text" class="form-control" aria-label="..." id="filter-form">
+              <span class="input-group-btn">
+                <button class="btn btn-default" type="button" onclick="filterExecuteClick()"><i class="fa fa-filter" aria-hidden="true"></i></button>
+              </span>
+            </div>
+<!--            <div class="form-group">
+              <label class="control-label" for="filter-form">Filter Trace/Type</label>
+              <div class="input-group">
+                <div class="input-group-btn">
+                  <button type="button" class="btn btn-secondary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    Filter
+                  </button>
+                  <div class="dropdown-menu">
+                    <a class="dropdown-item" href="#">Trace</a>
+                    <a class="dropdown-item" href="#">Type</a>
+                  </div>
+                </div>
+                <input type="text" class="form-control" id="filter-form">
               </div>
-            </div>
-            <div class="form-group">
-              <label class="control-label" for="filter-form">Filter Trace</label>
-              <input class="form-control input-sm" type="text" id="filter-form">
-            </div>
-            <a href="#" class="btn btn-default" onclick="stackFilterClick()" id="filter-button">Filter Trace</a>
+
+            </div>-->
             <a href="#" class="btn btn-default" onclick="stackFilterResetClick()">Reset Trace</a>
-            <a href="#" class="btn btn-default" onclick="typeFilterClick()" id="type-filter-button">Filter Type</a>
             <a href="#" class="btn btn-default" onclick="typeFilterResetClick()">Reset Type</a>
-            <a href="#" class="btn btn-default" onclick="filterHelpClick()">Help</a>
+            <a href="#" class="btn btn-default" onclick="filterHelpClick()"><i class="fa fa-info-circle" aria-hidden="true"></i></a>
 
           </div>
           <div class="col-md-2 ">
@@ -94,7 +116,7 @@
             </div>
             <div class="panel panel-default">
               <div class="panel-heading">Global
-                <a href="#" class="btn btn-sm " onclick="globalInfoHelpClick()">?</a>
+                <a href="#" class="btn btn-sm " onclick="globalInfoHelpClick()"><i class="fa fa-info-circle" aria-hidden="true"></i></a>
               </div>
               <div id="global-info" class="panel-body">
               </div>
@@ -139,7 +161,7 @@
 
             <div class="panel panel-default">
               <div class="panel-heading">Global
-                <a href="#" class="btn btn-sm " onclick="globalInfoHelpClick()">?</a>
+                <a href="#" class="btn btn-sm " onclick="globalInfoHelpClick()"><i class="fa fa-info-circle" aria-hidden="true"></i></a>
               </div>
               <div id="global-info-fg" class="panel-body">
               </div>

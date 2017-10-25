@@ -57,6 +57,7 @@
     overflow-y: auto;
     overflow-x: hidden;
     word-wrap:break-word;
+    font-size: smaller;
     margin-top:0!important;
 }
 

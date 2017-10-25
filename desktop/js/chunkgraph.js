@@ -1294,7 +1294,19 @@ function drawEverything() {
 
 }
 
+var current_filter = "trace";
+function typeFilterClick() {
+    current_filter = "type";
+    document.getElementById("filter-select").innerHTML = "Type <span class=\"caret\"></span>";
+}
+
 function stackFilterClick() {
+    console.log("stack filter click");
+    current_filter = "trace";
+    document.getElementById("filter-select").innerHTML = "Trace <span class=\"caret\"></span>";
+}
+
+function stackFilter() {
     showLoader();
     setTimeout(function() {
         var element = document.querySelector("#filter-form");
@@ -1331,7 +1343,7 @@ function stackFilterResetClick() {
     }, 100);
 }
 
-function typeFilterClick() {
+function typeFilter() {
     showLoader();
     setTimeout(function() {
         var element = document.querySelector("#filter-form");
@@ -1366,6 +1378,13 @@ function typeFilterResetClick() {
         drawAggregateAxis();
         hideLoader();
     }, 100);
+}
+
+function filterExecuteClick() {
+    if (current_filter === "trace")
+        stackFilter();
+    else
+        typeFilter();
 }
 
 function resetTimeClick() {
@@ -1429,6 +1448,7 @@ module.exports = {
     stackFilterResetClick: stackFilterResetClick,
     typeFilterClick: typeFilterClick,
     typeFilterResetClick: typeFilterResetClick,
+    filterExecuteClick: filterExecuteClick,
     chunkScroll: chunkScroll,
     resetTimeClick: resetTimeClick,
     showFilterHelp: showFilterHelp,

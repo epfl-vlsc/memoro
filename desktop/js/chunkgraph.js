@@ -108,8 +108,12 @@ function hideLoader() {
     element.parentNode.removeChild(element);
 }
 
-function showModal(title, body) {
-    $(".modal-title").text(title);
+function showModal(title, body, icon = "") {
+    $("#modal-title-text").text(" " + title);
+    var ic = $("#modal-icon");
+    ic.removeClass();
+    if (icon !== '')
+        ic.addClass("fa " + icon);
     $(".modal-body").html(body);
     $("#main-modal").modal("show")
 }
@@ -130,7 +134,7 @@ function updateData(datafile) {
         hideLoader();
         //console.log(result);
         if (!result.result) {
-            showModal("Error", "File parsing failed with error: " + result.message);
+            showModal("Error", "File parsing failed with error: " + result.message, "fa-exclamation-triangle");
         } else {
 
             // add default "main" filter?
@@ -170,30 +174,30 @@ function badnessTooltip(idx) {
 function constructInferences(inef) {
     var ret = "";
     if (inef.unused)
-        ret += "<i class=\"fa fa-arrow-right\" aria-hidden=\"true\"></i> unused chunks </br>"
+        ret += "<i class=\"fa fa-chevron-right\" aria-hidden=\"true\"></i> unused chunks </br>"
     if (!inef.unused) {
         if (inef.read_only)
-            ret += "<i class=\"fa fa-arrow-right\" aria-hidden=\"true\"></i> read-only chunks </br>"
+            ret += "<i class=\"fa fa-chevron-right\" aria-hidden=\"true\"></i> read-only chunks </br>"
         if (inef.write_only)
-            ret += "<i class=\"fa fa-arrow-right\" aria-hidden=\"true\"></i> write-only chunks </br>"
+            ret += "<i class=\"fa fa-chevron-right\" aria-hidden=\"true\"></i> write-only chunks </br>"
         if (inef.short_lifetime)
-            ret += "<i class=\"fa fa-arrow-right\" aria-hidden=\"true\"></i> short lifetime chunks </br>"
+            ret += "<i class=\"fa fa-chevron-right\" aria-hidden=\"true\"></i> short lifetime chunks </br>"
         if (!inef.short_lifetime) {
             if (inef.late_free)
-                ret += "<i class=\"fa fa-arrow-right\" aria-hidden=\"true\"></i> chunks freed late </br>"
+                ret += "<i class=\"fa fa-chevron-right\" aria-hidden=\"true\"></i> chunks freed late </br>"
             if (inef.early_alloc)
-                ret += "<i class=\"fa fa-arrow-right\" aria-hidden=\"true\"></i> chunks allocated early </br>"
+                ret += "<i class=\"fa fa-chevron-right\" aria-hidden=\"true\"></i> chunks allocated early </br>"
         }
         if (inef.increasing_allocs)
-            ret += "<i class=\"fa fa-arrow-right\" aria-hidden=\"true\"></i> increasing allocations </br>"
+            ret += "<i class=\"fa fa-chevron-right\" aria-hidden=\"true\"></i> increasing allocations </br>"
         if (inef.top_percentile_chunks)
-            ret += "<i class=\"fa fa-arrow-right\" aria-hidden=\"true\"></i> in top-% chunks alloc'd </br>"
+            ret += "<i class=\"fa fa-chevron-right\" aria-hidden=\"true\"></i> in top-% chunks alloc'd </br>"
         if (inef.top_percentile_size)
-            ret += "<i class=\"fa fa-arrow-right\" aria-hidden=\"true\"></i> in top-% bytes alloc'd </br>"
+            ret += "<i class=\"fa fa-chevron-right\" aria-hidden=\"true\"></i> in top-% bytes alloc'd </br>"
         if (inef.multi_thread)
-            ret += "<i class=\"fa fa-arrow-right\" aria-hidden=\"true\"></i> multithread accesses </br>"
+            ret += "<i class=\"fa fa-chevron-right\" aria-hidden=\"true\"></i> multithread accesses </br>"
         if (inef.low_access_coverage)
-            ret += "<i class=\"fa fa-arrow-right\" aria-hidden=\"true\"></i> low access coverage </br>"
+            ret += "<i class=\"fa fa-chevron-right\" aria-hidden=\"true\"></i> low access coverage </br>"
     }
 
     return ret;
@@ -229,7 +233,7 @@ function sortTraces(traces) {
 function generateOpenSourceCmd(file, line) {
     var editor = settings.get('editor');
     if (editor.name === "none") {
-        showModal("Error", "No editor defined, and no defaults found on system.");
+        showModal("Error", "No editor defined, and no defaults found on system.", "fa-exclamation-triangle");
         return "";
     }
     if (editor.name === "CLion") {
@@ -312,14 +316,14 @@ function generateTraceHtml(raw) {
             /*            console.log("file is " + file + ", line is " + line);
                         console.log("cmd is: " + cmd);*/
             if (!fs.existsSync(file)) {
-                showModal("Error", "Cannot locate file: " + file);
+                showModal("Error", "Cannot locate file: " + file, "fa-exclamation-triangle");
             }
             if (cmd !== "") {
                 exec(cmd, function(err, stdout, stderr) {
                     if (err) {
                         // node couldn't execute the command
                         console.log("could not open text editor " + stdout + "\n" + stderr);
-                        showModal("Error", "Open editor failed with stderr: " + stderr);
+                        showModal("Error", "Open editor failed with stderr: " + stderr, "fa-exclamation-triangle");
                     }
                 });
             }
@@ -1112,7 +1116,7 @@ function drawFlameGraph() {
         .cellHeight(17)
         .transitionDuration(400)
         .transitionEase(d3.easeCubic)
-        .minFrameSize(1)
+        .minFrameSize(0)
         .sort(true)
         //Example to sort in reverse order
         //.sort(function(a,b){ return d3.descending(a.name, b.name);})
@@ -1283,6 +1287,8 @@ function drawEverything() {
     var time_total = autopsy.max_time() - autopsy.min_time();
     var percent_alloc_time = 100.0 * alloc_time / time_total;
     var info = d3.select("#global-info");
+
+    // the \u03C3 is a sigma (variance)
     info.html("Total alloc points: " + num_traces +
         "</br>Total Allocations: " + total_chunks +
         "</br>Max Heap: " + bytesToString(aggregate_max) +
@@ -1402,15 +1408,17 @@ function resetTimeClick() {
 }
 
 function showFilterHelp() {
-    showModal("Filter Trace", "Filter stack traces (allocation points) by keyword. \
-    Enter space separated keywords. Any trace not containing those keywords will be filtered out.");
+    showModal("Filter Trace/Type", "Dropdown to the left of the input box specifies whether you want to filter stack \F\
+    traces or types by keyword. \
+    Enter space separated keywords. Any trace not containing those keywords (or not matching the specified types) will be filtered out. </br>",
+    "fa-info-circle");
 }
 
 function flameGraphHelp() {
     showModal("Flame Graph", "Several aggregate data can be displayed by the global flame graph. \
     First, the total number of allocations (#Allocations) of each allocation point in the code across total program lifetime. \
     Second, the flame graph can show bytes allocated by each allocation point at a specific point in time. Choose the \
-    specific time point by clicking on the aggregate graph below.")
+    specific time point by clicking on the aggregate graph below.", "fa-info-circle")
 }
 
 function globalInfoHelp() {
@@ -1423,7 +1431,7 @@ function globalInfoHelp() {
     1.0 is best, 0.0 is worst. See the documentation for details on how these are calculated. </br> \
     <b> Avg Lifetime</b>: The average lifetime score and variance of all allocation points. </br> \
     <b> Avg Usage</b>: The average usage score and variance of all allocation points. </br> \
-    <b> Avg Useful Life</b>: The average useful life score and variance of all allocation points. </br>")
+    <b> Avg Useful Life</b>: The average useful life score and variance of all allocation points. </br>", "fa-info-circle")
 }
 
 function setFlameGraphNumAllocs() {

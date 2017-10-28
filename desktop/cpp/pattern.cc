@@ -40,7 +40,6 @@ float LifetimeScore(std::vector<Chunk*> const& chunks, uint64_t threshold) {
 
   // we avoid `memorizing' regions right now, but may add in the future 
   // if we want to annotate in the gui
-  cout << "using threshold " << threshold << endl;
   double current_lifetime_sum = 0;
   uint32_t current_num_chunks = 0;
   uint64_t region_start_time = chunks[0]->timestamp_start;

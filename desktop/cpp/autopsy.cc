@@ -410,6 +410,8 @@ class Dataset {
       return 0;
     }
 
+    // TODO sampling will miss max values that can be pretty stark sometimes
+    // probably need to make sure that particular MAX or MIN values appear in the sample
     void SampleValues(const vector<TimeValue>& points, vector<TimeValue>& values) {
       values.clear();
       values.reserve(MAX_POINTS+2);
@@ -434,12 +436,22 @@ class Dataset {
       //cout << "max " << max << endl;
       int num_points = max - min + 1;
       if (num_points == 0 || num_points < 0) {
-        cout << "num points is fucked " << num_points <<  endl;
+        cout << "num points is buggy: num points " << num_points <<  endl;
         return;
       }
 
       if (num_points > MAX_POINTS) {
+        //float bin_size = float(num_points) / float(MAX_POINTS);
         values.push_back({filter_min_time_, points[min == 0 ? min : min-1].value});
+        /*auto sz = points.size();
+        for (uint32_t i = 0; i < num_points; i++) {
+          // find max value in interval [min + i, min + i + bin_size]
+          const TimeValue* maxval = &points[min+i];
+          for (auto x = min + i; x < min + i + bin_size && x < sz; x++)
+            if (points[x].value > maxval->value) maxval = &points[x];
+          values.push_back(*maxval);
+          i += bin_size - 1;
+        }*/
         // sample MAX POINTS points
         float interval = (float)num_points / (float)MAX_POINTS;
         int i = 0;

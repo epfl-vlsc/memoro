@@ -60,7 +60,15 @@ class StackTreeNode {
       obj->Set(String::NewFromUtf8(isolate, "value"), 
                             Number::New(isolate, value_));
 
-      if (trace_) return;
+      if (trace_) {
+        obj->Set(String::NewFromUtf8(isolate, "lifetime_score"), 
+                            Number::New(isolate, trace_->lifetime_score));
+        obj->Set(String::NewFromUtf8(isolate, "usage_score"), 
+                            Number::New(isolate, trace_->usage_score));
+        obj->Set(String::NewFromUtf8(isolate, "useful_lifetime_score"), 
+                            Number::New(isolate, trace_->useful_lifetime_score));
+        return;
+      }
 
       Local<Array> children = Array::New(isolate);
 

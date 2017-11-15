@@ -93,8 +93,8 @@ class Dataset {
         while (t.trace[pos] != ' ')
           pos--;
         string value = t.trace.substr(pos+1, pos2-pos-1);
-        //cout << "got value:" << value << endl;
-        //cout << "with mapped type: " << type_map_[value] << endl;
+        cout << "got value:" << value << endl;
+        cout << "with mapped type: " << type_map_[value] << endl;
         t.type = type_map_[value];
         traces_.push_back(t);
       }
@@ -157,8 +157,6 @@ class Dataset {
       cout << "aggregating traces ..." << endl;
       uint64_t total_alloc_time = 0;
       for (auto& t : traces_) {
-        // build the stack tree
-        stack_tree_.InsertTrace(&t);
         // aggregate data
         Aggregate(t.aggregate, t.max_aggregate, t.chunks);
         t.inefficiencies = Detect(t.chunks, pattern_params_);
@@ -171,6 +169,8 @@ class Dataset {
         t.alloc_time_total = total_alloc_time;
         global_alloc_time_ += total_alloc_time;
         total_alloc_time = 0;
+        // build the stack tree
+        stack_tree_.InsertTrace(&t);
       }
 
       CalculatePercentilesChunk(traces_, pattern_params_);
@@ -206,10 +206,10 @@ class Dataset {
         }
         infile.close();
       }
-      /*cout << "the types are: \n";
+      cout << "the types are: \n";
       for (auto& k : type_map_) {
         cout << k.first << " -> " << k.second << endl;
-      }*/
+      }
       return true;
     }
 

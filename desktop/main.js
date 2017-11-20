@@ -33,9 +33,8 @@ function createWindow () {
     var mainScreen = electron.screen.getPrimaryDisplay();
     mainWindow = new BrowserWindow({width: mainScreen.size.width, height: mainScreen.size.height,
         titleBarStyle: 'hiddenInset',
-        backgroundColor: '#424242',
         icon: path.join(__dirname, 'assets/icons/icon64.png')
-    })
+    });
 
     // and load the index.html of the app.
     mainWindow.loadURL(url.format({

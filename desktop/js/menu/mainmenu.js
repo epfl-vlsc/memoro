@@ -92,6 +92,25 @@ const template = [
             },
             {
                 role: 'togglefullscreen'
+            },
+            {
+                label: 'Theme',
+                submenu: [
+                    {
+                        label: 'Light',
+                        click: function() {
+                            var window = BrowserWindow.getFocusedWindow();
+                            window.webContents.send('theme_light');
+                        }
+                    },
+                    {
+                        label: 'Dark',
+                        click: function() {
+                            var window = BrowserWindow.getFocusedWindow();
+                            window.webContents.send('theme_dark');
+                        }
+                    }
+                ]
             }
         ]
     },

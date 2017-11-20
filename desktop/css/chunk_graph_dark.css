@@ -37,7 +37,8 @@
     padding: 2px;
     width:auto;
     font: 12px sans-serif;
-    background: #6d6d6d;
+    color: #dedede;
+    background: #171717;
     border: 0px;
     border-radius: 8px;
     pointer-events: none;
@@ -51,6 +52,19 @@
     word-wrap:break-word;
     margin-top:0!important;
 }
+
+.indicator-circle {
+    stroke: white;
+}
+
+.stack-agg-graph {
+    stroke: #dedede;
+}
+
+.stack-agg-overlay {
+    stroke: #dedede;
+}
+
 
 #global-info {
     height: 30vh;
@@ -87,6 +101,7 @@
 
 body {
     overflow-y: hidden;
+    background: #272b30;
 }
 
 #chunks {
@@ -126,6 +141,10 @@ body {
     height: 17vh;
 }
 
+.aggregate-background {
+    fill: #353a41
+}
+
 #chunks-container {
     overflow: hidden;
 }
@@ -144,7 +163,7 @@ svg.selected {
 }
 
 .line {
-    stroke: black;
+    stroke: #dedede;
 }
 
 .firstlastbars {
@@ -152,9 +171,21 @@ svg.selected {
     visibility: visible;
 }
 
+.legend-text {
+   fill: #dedede;
+}
+
 .focus-line {
     stroke: darkgrey;
+}
 
+.focus-text {
+    fill: #DEDEDE;
+    stroke: #DEDEDE;
+}
+
+.stack-text {
+    fill: #DEDEDE;
 }
 
 .background1 {
@@ -197,15 +228,17 @@ svg.selected {
 }
 .chart line {
     fill: none;
-    stroke: black;
+    stroke: #DEDEDE;
     shape-rendering: crispEdges;
 }
 
 .axis text {
     font-family: sans-serif;
     font-size: 11px;
-    fill: #eeeeee;
-    color: #eeeeee;
+/*    fill: #eeeeee;
+    color: #eeeeee;*/
+    fill: #DEDEDE;
+    color: #dedede;
 }
 
 rect.selection {
@@ -253,7 +286,8 @@ svg *::-webkit-selection {
 ::-webkit-scrollbar-thumb {
     -webkit-border-radius: 10px;
     border-radius: 10px;
-    background: #0c0d0e;
+    background: #9a9b9c;
+/*    background: #0c0d0e;*/
     -webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.5);
 }
 

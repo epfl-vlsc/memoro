@@ -57,6 +57,7 @@ var usage_var;
 var useful_life_var;
 
 var aggregate_max = 0;
+var filter_words = [];
 
 var colors = [
 "#b0c4de",
@@ -165,7 +166,7 @@ function badnessTooltip(idx) {
                 .attr("r", 5)
                 .style("fill", c);
             if (idx === i)
-                circ.style("stroke", "black");
+                circ.classed("indicator-circle", true)
         })
 
         //div.attr("width", width);
@@ -428,7 +429,7 @@ function drawStackTraces() {
                         .datum(fresh_sampled)
                         .attr("id", "stack-agg-path")
                         .attr("fill", "none")
-                        .attr("stroke", "#c8c8c8")
+                        .classed("stack-agg-graph", true)
                         .attr("stroke-width", 1.0)
                         .attr("transform", "translate(0, 5)")
                         .attr("d", agg_line);
@@ -481,7 +482,7 @@ function drawStackTraces() {
 
         new_svg_g.append("text")
             .style("font-size", "small")
-		    .style("fill", "white")
+            .classed("stack-text", true)
             .attr("x", 5)
             .attr("y", "15")
             .text("Chunks: " + (d.num_chunks) + ", Peak Bytes: " + bytesToString(peak) + " Type: "
@@ -506,7 +507,7 @@ function drawStackTraces() {
         new_svg_g.append("path")
             .datum(sampled)
             .attr("fill", "none")
-            .attr("stroke", "#c8c8c8")
+            .classed("stack-agg-overlay", true)
             .attr("stroke-width", 1.0)
             .attr("transform", "translate(0, 20)")
             .attr("d", line);
@@ -542,12 +543,12 @@ function tooltip(chunk) {
             .duration(200)
             .style("opacity", .9);
         div .html(bytesToString(chunk["size"]) + "</br> Reads: " + chunk["num_reads"]
-            + "</br>Writes: " + chunk["num_writes"] + "</br>Coverage Ratio: " +
+            + "</br>Writes: " + chunk["num_writes"] + "</br>Access Ratio: " +
             ((chunk.access_interval_high - chunk.access_interval_low) / chunk.size).toFixed(1)
-            + "</br>Coverage Interval: [" + chunk.access_interval_low + "," + chunk.access_interval_high
+            + "</br>Access Interval: [" + chunk.access_interval_low + "," + chunk.access_interval_high
             + "]</br>MultiThread: " + chunk.multi_thread + "</br>")
             .style("left", (d3.event.pageX) + "px")
-            .style("top", (d3.event.pageY - 28) + "px");
+            .style("top", (d3.event.pageY - 100) + "px");
         div.append("svg")
             .attr("width", 10)
             .attr("height", 10)
@@ -587,25 +588,25 @@ function renderChunkSvg(chunk, text, bottom) {
                 .duration(500)
                 .style("opacity", 0);
         });
-    new_svg_g.append("text")
+    /*new_svg_g.append("text")
         .attr("x", (chunk_graph_width - 130))
         .attr("y", 6)
         .text(text.toString())
-        .classed("chunk_text", true);
+        .classed("chunk_text", true);*/
 
     new_svg_g.append("line")
         .attr("y1", 0)
         .attr("y2", barHeight)
         .attr("x1", x(chunk["ts_first"]))
         .attr("x2", x(chunk["ts_first"]))
-        .style("stroke", "#65DC4C")
+        .style("stroke-width", 2)
         .attr("display", chunk["ts_first"] === 0 ? "none" : null)
         .classed("firstlastbars", true);
 
     var next = 0;
     if (x(chunk["ts_last"]) - x(chunk["ts_first"]) < 1)
     {
-        next = x(chunk["ts_first"]) + 2;
+        next = x(chunk["ts_first"]) + 3;
     } else {
         next = x(chunk["ts_last"]);
     }
@@ -615,7 +616,7 @@ function renderChunkSvg(chunk, text, bottom) {
         .attr("x1", next)
         .attr("x2", next)
         .attr("display", chunk["ts_first"] === 0 ? "none" : null)
-        .style("stroke", "#65DC4C")
+        .style("stroke-width", 2)
         .classed("firstlastbars", true);
 }
 
@@ -738,7 +739,7 @@ function drawChunks(trace) {
     legend_g.append("text")
         .attr("x", 15)
         .attr("y", function(d, i) { return elem_height*i + elem_height/1.5; })
-        .style("fill", "#ffffff")
+        .classed("legend-text", true)
         .text(function(d, i) { return bytesToStringNoDecimal(d)})
         .style("font-size", "10px");
 }
@@ -875,7 +876,7 @@ function drawGlobalAggregatePath() {
     fg_aggregate_graph_g.append("rect")
         .attr("width", fg_width-chunk_y_axis_space + 2)
         .attr("height", aggregate_graph_height)
-        .style("fill", "#353a41");
+        .classed("aggregate-background", true);
 
 
     var yaxis_height = .8 * aggregate_graph_height;
@@ -919,12 +920,13 @@ function drawGlobalAggregatePath() {
         .attr("y0", 0).attr("y1", yaxis_height-5)
         .attr("x0", 0).attr("x1", 0);
     var text = focus_g.append("text")
-        .style("fill", "lightgray")
         .attr("x", 20)
         .attr("y", "30");
     text.append("tspan")
+        .classed("focus-text", true)
         .attr("id", "time");
     text.append("tspan")
+        .classed("focus-text", true)
         .attr("id", "value");
 
     // display on mouseover
@@ -983,7 +985,8 @@ function drawAggregatePath() {
     aggregate_graph_g.append("rect")
         .attr("width", chunk_graph_width-chunk_y_axis_space + 2)
         .attr("height", aggregate_graph_height)
-        .style("fill", "#353a41");
+        //.style("fill", "#353a41")
+        .classed("aggregate-background", true);
 
     var yaxis_height = .8 * aggregate_graph_height;
     aggregate_graph_g.append("path")
@@ -1025,7 +1028,7 @@ function drawAggregatePath() {
         .attr("y0", 0).attr("y1", yaxis_height-5)
         .attr("x0", 0).attr("x1", 0);
     var text = focus_g.append("text")
-        .style("fill", "lightgray")
+        .classed("focus-text", true)
         .attr("x", 20)
         .attr("y", "30");
     text.append("tspan")
@@ -1092,8 +1095,51 @@ function name(d) {
 }
 
 var colorMapper = function(d) {
+    if ('lifetime_score' in d.data) {
+        var mean = gmean([d.data.lifetime_score < 0.01 ? 0.01 : d.data.lifetime_score, d.data.usage_score < 0.01 ? 0.01 : d.data.usage_score,
+            d.data.useful_lifetime_score < 0.01 ? 0.01 : d.data.useful_lifetime_score]);
+        console.log(mean);
+        var badness_col = Math.round((1.0 - mean) * (badness_colors.length - 1));
+        console.log(badness_col);
+        return badness_colors[badness_col];
+    }
     return d.highlight ? "#E600E6" : colorHash(name(d));
 };
+
+function filterTree(tree) {
+
+    if (filter_words.length === 0)
+        return false;
+
+    for (var w in filter_words) {
+        if (tree.name.indexOf(filter_words[w]) !== -1) {
+            // found, node has keyword so keep all descendants
+            console.log("found " + filter_words[w] + " in " + tree.name);
+            return false;
+        }
+    }
+
+    if ('children' in tree) {
+        for (var i = tree.children.length - 1; i >= 0; i--) {
+            var value = tree.children[i].value;
+            var remove = filterTree(tree.children[i]);
+            if (remove) {
+                console.log("deleting child");
+                tree.value -= value;
+                tree.children.splice(i, 1);
+            }
+        }
+    }
+
+    if ('children' in tree && tree.children.length === 0) {
+        delete tree.children;
+        return true;
+    } else if (!('children' in tree))
+        return true;
+    else return false;
+
+
+}
 
 function drawFlameGraph() {
 
@@ -1107,6 +1153,8 @@ function drawFlameGraph() {
 
 
     tree = autopsy.stacktree();
+    filterTree(tree); // it just seems easier to filter this here ...
+    console.log(tree);
     d3.select("#flame-graph-div").html("");
 
     var fg_width = window.innerWidth *0.60; // getboundingclientrect isnt working i dont understand this crap
@@ -1131,10 +1179,17 @@ function drawFlameGraph() {
         .offset([8, 0])
         .attr('class', 'd3-flame-graph-tip')
         .html(function(d) {
+            var ret = "";
             if (current_fg_type === "num_allocs")
-                return d.data.name + ", NumAllocs: " + d.data.value;
+                ret = d.data.name + ", NumAllocs: " + d.data.value;
             else
-                return d.data.name + ", bytes: " + bytesToString(d.data.value, 2);
+                ret = d.data.name + ", bytes: " + bytesToString(d.data.value, 2);
+
+            if ('lifetime_score' in d.data) {
+               ret += "</br>Lifetime: " + d.data.lifetime_score.toFixed(2) + " Usage: " + d.data.usage_score.toFixed(2)
+                + " Useful Life: " + d.data.useful_lifetime_score.toFixed(2);
+            }
+            return ret;
 
         });
 
@@ -1155,7 +1210,7 @@ function drawEverything() {
     d3.selectAll("g > *").remove();
     d3.selectAll("svg").remove();
 
-    barHeight = 8;
+    barHeight = 12;
     chunk_graph_width = d3.select("#chunks-container").node().getBoundingClientRect().width;
     chunk_graph_height = d3.select("#chunks").node().getBoundingClientRect().height;
     chunk_y_axis_space = chunk_graph_width*0.13;  // ten percent should be enough
@@ -1225,8 +1280,7 @@ function drawEverything() {
         var t1 = x.invert(x1);
         var t2 = x.invert(x2);
         selection.remove();
-        // set a new filter
-        // TODO use autopsy lib filters
+        // set time filter
         autopsy.set_filter_minmax(t1, t2);
 
         // redraw
@@ -1238,6 +1292,7 @@ function drawEverything() {
         drawAggregateAxis();
 
         drawChunkXAxis();
+        setGlobalInfo();
 
     });
 
@@ -1283,6 +1338,45 @@ function drawEverything() {
 
     drawStackTraces();
 
+    setGlobalInfo();
+}
+
+function setGlobalInfo() {
+    var traces = autopsy.traces();
+    num_traces = traces.length;
+    total_chunks = 0;
+
+    var total_usage = 0;
+    var total_lifetime = 0;
+    var total_useful_lifetime = 0;
+
+    traces.forEach(function (d) {
+
+        total_usage += d.usage_score;
+        total_lifetime += d.lifetime_score;
+        total_useful_lifetime += d.useful_lifetime_score;
+
+        total_chunks += d.num_chunks;
+    });
+
+    avg_lifetime = total_lifetime / traces.length;
+    avg_usage = total_usage / traces.length;
+    avg_useful_life = total_useful_lifetime / traces.length;
+
+    var lifetime_var_total = 0;
+    var usage_var_total = 0;
+    var useful_lifetime_var_total = 0;
+
+    traces.forEach(function(t) {
+        lifetime_var_total += Math.pow(t.lifetime_score - avg_lifetime, 2);
+        usage_var_total += Math.pow(t.usage_score - avg_usage, 2);
+        useful_lifetime_var_total += Math.pow(t.useful_lifetime_score - avg_useful_life, 2);
+    });
+
+    lifetime_var = lifetime_var_total / traces.length;
+    usage_var = usage_var_total / traces.length;
+    useful_life_var = useful_lifetime_var_total / traces.length;
+
     var alloc_time = autopsy.global_alloc_time();
     var time_total = autopsy.max_time() - autopsy.min_time();
     var percent_alloc_time = 100.0 * alloc_time / time_total;
@@ -1299,7 +1393,6 @@ function drawEverything() {
         "</br>Avg Useful Life: " + avg_useful_life.toFixed(2) + " \u03C3 " + useful_life_var.toFixed(2));
 
 }
-
 var current_filter = "trace";
 function typeFilterClick() {
     current_filter = "type";
@@ -1321,6 +1414,7 @@ function stackFilter() {
         var filterWords = filterText.split(" ");
 
         for (var w in filterWords) {
+            filter_words.push(filterWords[w]);
             console.log("setting filter " + filterWords[w]);
             autopsy.set_trace_keyword(filterWords[w]);
         }
@@ -1330,13 +1424,16 @@ function stackFilter() {
 
         drawAggregatePath();
         drawAggregateAxis();
+        drawFlameGraph();
         hideLoader();
+        setGlobalInfo();
     }, 100);
 }
 
 function stackFilterResetClick() {
     //drawChunks();
     showLoader();
+    filter_words = [];
     setTimeout(function() {
         autopsy.trace_filter_reset();
         clearChunks();
@@ -1346,6 +1443,7 @@ function stackFilterResetClick() {
         drawAggregatePath();
         drawAggregateAxis();
         hideLoader();
+        setGlobalInfo();
     }, 100);
 }
 
@@ -1368,6 +1466,7 @@ function typeFilter() {
         drawAggregatePath();
         drawAggregateAxis();
         hideLoader();
+        setGlobalInfo();
     }, 100);
 }
 
@@ -1383,6 +1482,7 @@ function typeFilterResetClick() {
         drawAggregatePath();
         drawAggregateAxis();
         hideLoader();
+        setGlobalInfo();
     }, 100);
 }
 
@@ -1404,6 +1504,7 @@ function resetTimeClick() {
         drawAggregatePath();
         drawAggregateAxis();
         hideLoader();
+        setGlobalInfo();
     }, 100);
 }
 

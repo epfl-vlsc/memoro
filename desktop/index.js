@@ -1,5 +1,6 @@
 var remote = require("electron").remote;
 const {ipcRenderer} = require('electron')
+const settings = require('electron').remote.require('electron-settings');
 //var Menu = remote.require('menu');
 
 var chunk_graph = require("./js/chunkgraph");
@@ -18,6 +19,15 @@ function initApp() {
     // add div
     var element = document.querySelector("#overlay");
     element.style.visibility = "visible";
+
+    if (!settings.has('theme')) {
+        // a default
+        settings.set('theme', 'light')
+    }
+    if (settings.get('theme') === 'light') {
+        $('head link#bootstrapSheet').attr('href', 'css/light.css');
+        $('head link#colorSheet').attr('href', 'css/chunk_graph_light.css');
+    }
 }
 
 function resetTimeClick() {
@@ -84,5 +94,19 @@ function addAppEventListeners() {
     ipcRenderer.on('open_file', function(emitter, file_path) {
         console.log(file_path[0]);
         chunk_graph.updateData(file_path[0]);
+    });
+
+    ipcRenderer.on('theme_light', function(emitter) {
+        console.log("changing theme to light!!");
+        $('head link#bootstrapSheet').attr('href', 'css/light.css');
+        $('head link#colorSheet').attr('href', 'css/chunk_graph_light.css');
+        settings.set('theme', 'light')
+    });
+
+    ipcRenderer.on('theme_dark', function(emitter) {
+        console.log("changing theme to dark!!");
+        $('head link#bootstrapSheet').attr('href', 'css/slate.css');
+        $('head link#colorSheet').attr('href', 'css/chunk_graph_dark.css');
+        settings.set('theme', 'dark')
     });
 }

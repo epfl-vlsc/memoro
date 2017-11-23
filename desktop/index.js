@@ -22,11 +22,15 @@ function initApp() {
 
     if (!settings.has('theme')) {
         // a default
+        console.log("did not have a theme in settings");
         settings.set('theme', 'light')
     }
     if (settings.get('theme') === 'light') {
         $('head link#bootstrapSheet').attr('href', 'css/light.css');
         $('head link#colorSheet').attr('href', 'css/chunk_graph_light.css');
+    } else {
+        $('head link#bootstrapSheet').attr('href', 'css/slate.css');
+        $('head link#colorSheet').attr('href', 'css/chunk_graph_dark.css');
     }
 }
 

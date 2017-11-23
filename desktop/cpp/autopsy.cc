@@ -94,8 +94,21 @@ class Dataset {
           pos--;
         string value = t.trace.substr(pos+1, pos2-pos-1);
         cout << "got value:" << value << endl;
-        cout << "with mapped type: " << type_map_[value] << endl;
-        t.type = type_map_[value];
+        cout << "with mapped types: " << endl;
+        auto range = type_map_.equal_range(value);
+        int position = 1000000000; // should be max_int?
+        t.type = "";
+        for (auto ty = range.first; ty != range.second; ty++) {
+          cout << "(" << ty->second.first << ", " << ty->second.second << ")\n";
+          if (int p = t.trace.find(ty->second.first) != string::npos)
+            if (p < position) {
+              position = p;
+              t.type = ty->second.second;
+            }
+        }
+
+        /*auto ty = type_map_.find(value);
+        t.type = ty == type_map_.end() ? string("") : ty->second.second;*/
         traces_.push_back(t);
       }
       fclose(trace_fd);
@@ -195,20 +208,33 @@ class Dataset {
       for (auto& f : files) {
         if (f == "." || f == "..")
           continue;
+
         infile.open(dir + f);
+          
+        //.Users.byma.projects.bamtools.src.third_party.jsoncpp.json_value.cpp.types
+        auto final_dot = f.find_last_of('.');
+        auto first_dot = f.find_last_of('.', final_dot - 1);
+        first_dot = f.find_last_of('.', first_dot - 1);
+        if (first_dot == string::npos) first_dot = 0;
+        string module = f.substr(first_dot, final_dot);
+        cout << "module is " << module << endl;
         while (getline(infile, line)) {
           size_t pos = line.find_first_of("|");
           if (pos == string::npos) {
             msg = "detected incorrect formatting in line " + line + "\n";
             return false;
           }
-          type_map_[line.substr(0, pos)] = line.substr(pos+1, line.size() - 1);
+          auto location = line.substr(0, pos); // equiv to last line of stack trace
+          // module is needed to differentiate locations in headers that may be included in multiple files
+          auto type_value = make_pair(module, line.substr(pos+1, line.size() - 1)); // (module, type) pair
+          type_map_.insert(make_pair(location, type_value));
+          //type_map_[line.substr(0, pos)] = std::make_pair(module, line.substr(pos+1, line.size() - 1));
         }
         infile.close();
       }
       cout << "the types are: \n";
       for (auto& k : type_map_) {
-        cout << k.first << " -> " << k.second << endl;
+        cout << k.first << " -> " << "(" << k.second.first << ", " << k.second.second << ")" << endl;
       }
       return true;
     }
@@ -382,7 +408,7 @@ class Dataset {
     uint64_t filter_min_time_;
     uint64_t global_alloc_time_ = 0;
     PatternParams pattern_params_;
-    unordered_map<string, string> type_map_;
+    unordered_multimap<string, std::pair<string, string>> type_map_;
 
     StackTree stack_tree_;
 

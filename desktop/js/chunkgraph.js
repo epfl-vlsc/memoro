@@ -836,7 +836,7 @@ function drawGlobalAggregatePath() {
     y = d3.scaleLinear()
         .range([100, 0]);
 
-    var fg_width = window.innerWidth *0.68;
+    var fg_width = window.innerWidth *0.75;
     global_x = d3.scaleLinear()
         .range([0, fg_width - chunk_y_axis_space]);
 
@@ -1157,7 +1157,7 @@ function drawFlameGraph() {
     console.log(tree);
     d3.select("#flame-graph-div").html("");
 
-    var fg_width = window.innerWidth *0.60; // getboundingclientrect isnt working i dont understand this crap
+    var fg_width = window.innerWidth *0.70; // getboundingclientrect isnt working i dont understand this crap
     var fgg = d3.flameGraph()
         .width(fg_width)
         .height(window.innerHeight*0.65)
@@ -1303,7 +1303,8 @@ function drawEverything() {
     trace.html("Select an allocation point under \"Heap Allocations\"");
 
     drawFlameGraph();
-    var fg_width = window.innerWidth *0.68; // getboundingclientrect isnt working i dont understand this crap
+
+    var fg_width = window.innerWidth *0.75; // getboundingclientrect isnt working i dont understand this crap
 
     var fg_aggregate_graph = d3.select("#fg-aggregate-graph")
         .append("svg")
@@ -1383,32 +1384,39 @@ function setGlobalInfo() {
     var info = d3.select("#global-info");
 
     // the \u03C3 is a sigma (variance)
-    info.html("Total alloc points: " + num_traces +
+    var html = "Total alloc points: " + num_traces +
         "</br>Total Allocations: " + total_chunks +
         "</br>Max Heap: " + bytesToString(aggregate_max) +
         "</br>Global alloc time: " + alloc_time +
         "</br>which is " + percent_alloc_time.toFixed(2) + "% of program time." +
         "</br>Avg Lifetime: " + avg_lifetime.toFixed(2) + " \u03C3 " + lifetime_var.toFixed(2) +
         "</br>Avg Usage: " + avg_usage.toFixed(2) + " \u03C3 " + usage_var.toFixed(2) +
-        "</br>Avg Useful Life: " + avg_useful_life.toFixed(2) + " \u03C3 " + useful_life_var.toFixed(2));
+        "</br>Avg Useful Life: " + avg_useful_life.toFixed(2) + " \u03C3 " + useful_life_var.toFixed(2);
+    info.html(html);
+    var fg_info = d3.select("#global-info-fg");
+    fg_info.html(html);
 
 }
 var current_filter = "trace";
 function typeFilterClick() {
     current_filter = "type";
     document.getElementById("filter-select").innerHTML = "Type <span class=\"caret\"></span>";
+    document.getElementById("filter-select-fg").innerHTML = "Type <span class=\"caret\"></span>";
 }
 
 function stackFilterClick() {
     console.log("stack filter click");
     current_filter = "trace";
     document.getElementById("filter-select").innerHTML = "Trace <span class=\"caret\"></span>";
+    document.getElementById("filter-select-fg").innerHTML = "Type <span class=\"caret\"></span>";
 }
 
 function stackFilter() {
     showLoader();
     setTimeout(function() {
         var element = document.querySelector("#filter-form");
+        if (element.value === "")
+            element = document.querySelector("#filter-form-fg");
         var filterText = element.value;
         element.value = "";
         var filterWords = filterText.split(" ");
@@ -1442,6 +1450,7 @@ function stackFilterResetClick() {
 
         drawAggregatePath();
         drawAggregateAxis();
+        drawFlameGraph();
         hideLoader();
         setGlobalInfo();
     }, 100);
@@ -1465,6 +1474,7 @@ function typeFilter() {
 
         drawAggregatePath();
         drawAggregateAxis();
+        drawFlameGraph();
         hideLoader();
         setGlobalInfo();
     }, 100);
@@ -1481,6 +1491,7 @@ function typeFilterResetClick() {
 
         drawAggregatePath();
         drawAggregateAxis();
+        drawFlameGraph();
         hideLoader();
         setGlobalInfo();
     }, 100);
@@ -1558,6 +1569,7 @@ module.exports = {
     typeFilterClick: typeFilterClick,
     typeFilterResetClick: typeFilterResetClick,
     filterExecuteClick: filterExecuteClick,
+    filterFgExecuteClick: filterExecuteClick,
     chunkScroll: chunkScroll,
     resetTimeClick: resetTimeClick,
     showFilterHelp: showFilterHelp,

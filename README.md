@@ -1,2 +1,4 @@
-# autopsy
-heapologist visualizer
+# Memoro Visualizer
+
+A tool to visualize Memoro profiling data.
+

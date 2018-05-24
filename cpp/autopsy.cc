@@ -113,6 +113,7 @@ class Dataset {
       }
       fclose(trace_fd);
 
+      cout << "done reading\n";
       // for some reason I can't mmap the file so we open and copy ...
       FILE* chunk_fd = fopen(chunk_file.c_str(), "r");
       // file size produced by sanitizer is buggy and adds a bunch 0 data to 

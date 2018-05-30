@@ -480,13 +480,13 @@ function drawStackTraces() {
 
         //sampled = autopsy.aggregate_trace(d.trace_index);
 
-        new_svg_g.append("text")
-            .style("font-size", "small")
+        var t = new_svg_g.append("text");
+            t.style("font-size", "small")
             .classed("stack-text", true)
             .attr("x", 5)
             .attr("y", "15")
-            .text("Chunks: " + (d.num_chunks) + ", Peak Bytes: " + bytesToString(peak) + " Type: "
-                + d.type);
+            .text("Chunks: " + (d.num_chunks) + ", Peak Bytes: " + bytesToString(peak) + " Type: " + d.type);
+
 
         var stack_y = d3.scaleLinear()
             .range([rectHeight-25, 0]);
@@ -1205,14 +1205,35 @@ function drawFlameGraph() {
         .call(fgg);
 }
 
+function tabSwitchClick() {
+
+    // doing this because when you start on global tab,
+    // stuff is hidden and i dont know how to get these values
+    // when the detailed tab is hidden
+    // fucking javascript
+    if (chunk_graph_width === 0) {
+        chunk_graph_width = d3.select("#chunks-container").node().getBoundingClientRect().width;
+        chunk_graph_height = d3.select("#chunks").node().getBoundingClientRect().height;
+        console.log("width is now " + chunk_graph_width);
+
+        clearChunks();
+        drawStackTraces();
+        drawChunkXAxis();
+
+        drawAggregatePath();
+        drawAggregateAxis();
+    }
+}
+
 function drawEverything() {
 
     d3.selectAll("g > *").remove();
     d3.selectAll("svg").remove();
 
     barHeight = 12;
-    chunk_graph_width = d3.select("#chunks-container").node().getBoundingClientRect().width;
+    chunk_graph_width = window.innerWidth / 2;
     chunk_graph_height = d3.select("#chunks").node().getBoundingClientRect().height;
+    console.log("chunk graph height " + chunk_graph_height + " width " + chunk_graph_width);
     chunk_y_axis_space = chunk_graph_width*0.13;  // ten percent should be enough
 
     x = d3.scaleLinear()
@@ -1225,6 +1246,11 @@ function drawEverything() {
     drawChunkXAxis();
 
     aggregate_graph_height = d3.select("#aggregate-graph").node().getBoundingClientRect().height;
+    if (aggregate_graph_height === 0) {
+        aggregate_graph_height = d3.select("#fg-aggregate-graph").node().getBoundingClientRect().height;
+    }
+    console.log("agg graph height is " + aggregate_graph_height);
+
     var aggregate_graph = d3.select("#aggregate-graph")
         .append("svg")
         .attr("width", chunk_graph_width)
@@ -1577,5 +1603,6 @@ module.exports = {
     setFlameGraphNumAllocs: setFlameGraphNumAllocs,
     flameGraphHelp: flameGraphHelp,
     traceSort: traceSort,
-    globalInfoHelp: globalInfoHelp
+    globalInfoHelp: globalInfoHelp,
+    tabSwitchClick: tabSwitchClick
 };

@@ -366,6 +366,7 @@ class Dataset {
       if (bound > t.chunks.size())
         bound = t.chunks.size();
       for (int i = chunk_index; i < bound; i++) {
+        cout << "interval low:" << t.chunks[i]->access_interval_low << "\n";
         chunks.push_back(t.chunks[i]);
       }
     }

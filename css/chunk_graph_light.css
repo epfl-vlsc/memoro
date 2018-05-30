@@ -138,6 +138,10 @@ body {
     height: 17vh;
 }
 
+#fg-aggregate-graph {
+    height: 17vh;
+}
+
 .aggregate-background {
     fill: #ffffff;
     /*fille: #353a41*/

@@ -27,11 +27,11 @@
   </div>
 
   <ul class="nav nav-tabs">
-    <li class="active"><a href="#detailed" data-toggle="tab" aria-expanded="true">Detailed</a></li>
-    <li class=""><a href="#global" data-toggle="tab" aria-expanded="false">Global</a></li>
+    <li class=""><a href="#detailed" data-toggle="tab" onclick="tabSwitchClick()">Detailed</a></li>
+    <li class="active"><a href="#global" data-toggle="tab">Global</a></li>
   </ul>
   <div id="myTabContent" class="tab-content">
-    <div class="tab-pane fade active in" id="detailed">
+    <div class="tab-pane fade" id="detailed">
       <div class="container-fluid" id="top-container">
         <div class="row">
           <div class="col-md-6 " id="chunks-container">
@@ -116,7 +116,7 @@
 
       </div>
     </div>
-    <div class="tab-pane fade" id="global">
+    <div class="tab-pane fade active in" id="global">
       <div class="container-fluid" id="fg-top-container">
         <div class="row">
           <div class="col-md-9" id="flamegraph-container">

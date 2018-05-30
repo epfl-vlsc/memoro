@@ -89,6 +89,12 @@ function globalInfoHelpClick() {
     chunk_graph.globalInfoHelp();
 }
 
+function tabSwitchClick() {
+
+    console.log("tab switch click");
+    chunk_graph.tabSwitchClick();
+}
+
 function traceSort(pred) {
     chunk_graph.traceSort(pred);
 }

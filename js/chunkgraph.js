@@ -1,3 +1,27 @@
+//===-- chunkgraph.js ------------------------------------------------===//
+//
+//                     Memoro
+//
+// This file is distributed under the MIT License. 
+// See LICENSE for details.
+//
+//===----------------------------------------------------------------------===//
+//
+// This file is a part of Memoro.
+// Stuart Byma, EPFL.
+//
+//===----------------------------------------------------------------------===//
+
+
+
+
+
+// bear in mind that I don't _really_ do javascript
+
+
+
+
+
 global.d3 = require("d3");
 const exec = require('child_process').exec;
 require("../node_modules/d3-flame-graph/dist/d3.flameGraph");
@@ -19,7 +43,6 @@ function bytesToString(bytes,decimals) {
 }
 
 var bytesToStringNoDecimal = function (bytes) {
-    // One way to write it, not the prettiest way to write it.
 
     var fmt = d3.format('.0f');
     if (bytes < 1024) {

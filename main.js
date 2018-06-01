@@ -1,3 +1,17 @@
+//===-- main.js ------------------------------------------------===//
+//
+//                     Memoro
+//
+// This file is distributed under the MIT License. 
+// See LICENSE for details.
+//
+//===----------------------------------------------------------------------===//
+//
+// This file is a part of Memoro.
+// Stuart Byma, EPFL.
+//
+//===----------------------------------------------------------------------===//
+
 const electron = require('electron');
 const app = electron.app;
 const BrowserWindow = electron.BrowserWindow;

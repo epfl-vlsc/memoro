@@ -1,3 +1,18 @@
+
+//===-- index.js ------------------------------------------------===//
+//
+//                     Memoro
+//
+// This file is distributed under the MIT License. 
+// See LICENSE for details.
+//
+//===----------------------------------------------------------------------===//
+//
+// This file is a part of Memoro.
+// Stuart Byma, EPFL.
+//
+//===----------------------------------------------------------------------===//
+
 var remote = require("electron").remote;
 const {ipcRenderer} = require('electron')
 const settings = require('electron').remote.require('electron-settings');

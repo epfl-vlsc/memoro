@@ -2,6 +2,7 @@
   "name": "memoro",
   "productName": "Memoro",
   "version": "1.0.0",
+  "private": true,
   "description": "A visualizer for Memoro traces",
   "main": "main.js",
   "scripts": {
@@ -14,6 +15,7 @@
   "devDependencies": {
     "electron": "^1.8.4"
   },
+  "license": "MIT",
   "dependencies": {
     "async": "^2.6.0",
     "bootstrap": "^3.3.7",

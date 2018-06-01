@@ -1,4 +1,18 @@
 
+//===-- memoro.cc ------------------------------------------------===//
+//
+//                     Memoro
+//
+// This file is distributed under the MIT License. 
+// See LICENSE for details.
+//
+//===----------------------------------------------------------------------===//
+//
+// This file is a part of Memoro.
+// Stuart Byma, EPFL.
+//
+//===----------------------------------------------------------------------===//
+
 #include "memoro.h"
 #include "stacktree.h"
 #include "pattern.h"

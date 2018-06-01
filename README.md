@@ -1,4 +1,4 @@
-# Memoro Visualizer
+# Memoro 
 
 Memoro is a highly detailed heap profiler. 
 
@@ -10,6 +10,7 @@ Memoro includes a visualizer application that distills all this information into
 
 ![alt text](assets/memoro_screen.png)
 
+For more detailed information about how Memoro works, see [here]()
 
 # Build & Install
 
@@ -19,7 +20,7 @@ First, you will need to build a local version of LLVM/Clang so you can compile y
 Pre-built releases are not yet available, but if enough people bug me perhaps I will host here. 
 
 Follow the LLVM/Clang build instructions [here](https://releases.llvm.org/4.0.1/docs/GettingStarted.html), but use the specific repositories listed below.
-Memoro is not yet in the LLVM/Clang dev branch. 
+Memoro is not yet in the LLVM/Clang dev branch.
 
 It's recommended to use the git mirror repositories instead of SVN. 
 For the main LLVM repo, the Clang repo, and the CompilerRT repo, use the Memoro versions:

@@ -6,7 +6,7 @@ const path = require('path');
 const url = require('url');
 var process = require('process');
 const settings = require('electron-settings');
-var commandExists = require('command-exists').sync;
+var commandExists = require('command-exists');
 var fs = require('fs');
 
 // Keep a global reference of the window object, if you don't, the window will
@@ -15,10 +15,12 @@ var mainWindow;
 
 function getDefaultEditorForPlatform() {
     if (process.platform === "darwin") {
-        if (fs.existsSync('/Applications/CLion.app')) {
-            return { name: "CLion", cmd: "/Applications/CLion.app/Contents/MacOS/clion" }
-        } else if (commandExists('xed')) {
+        if (commandExists('xed')) {
+            console.log('returning xed');
             return { name: "xed", cmd: "xed"}
+        } else if (fs.existsSync('/Applications/CLion.app')) {
+            console.log('returning xed');
+            return { name: "CLion", cmd: "/Applications/CLion.app/Contents/MacOS/clion" }
         }
     } else if (process.platform === "win32") {
         // TODO define some default crap for windows

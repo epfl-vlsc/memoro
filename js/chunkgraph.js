@@ -2,7 +2,7 @@ global.d3 = require("d3");
 const exec = require('child_process').exec;
 require("../node_modules/d3-flame-graph/dist/d3.flameGraph");
 require("../node_modules/d3-tip/index");
-var autopsy = require('../cpp/build/Release/autopsy.node');
+var memoro = require('../cpp/build/Release/memoro.node');
 var path = require('path');
 var fs = require("fs");
 var gmean = require('compute-gmean');
@@ -131,7 +131,7 @@ function updateData(datafile) {
     var chunk_path = folder + "/" + name + ".chunks";
     console.log("trace " + trace_path + " chunk path " + chunk_path);
     // set dataset is async, because it can take some time with large trace files
-    autopsy.set_dataset(folder+'/', trace_path, chunk_path, function(result) {
+    memoro.set_dataset(folder+'/', trace_path, chunk_path, function(result) {
         hideLoader();
         //console.log(result);
         if (!result.result) {
@@ -359,12 +359,12 @@ function drawStackTraces() {
     d3.select("#inferences").html("");
 
     //var max_x = xMax();
-    var max_x = autopsy.filter_max_time();
-    var min_x = autopsy.filter_min_time();
+    var max_x = memoro.filter_max_time();
+    var min_x = memoro.filter_min_time();
 
     x.domain([min_x, max_x]);
 
-    var traces = autopsy.traces();
+    var traces = memoro.traces();
     sortTraces(traces);
     num_traces = traces.length;
     total_chunks = 0;
@@ -380,7 +380,7 @@ function drawStackTraces() {
         total_lifetime += d.lifetime_score;
         total_useful_lifetime += d.useful_lifetime_score;
 
-        var sampled = autopsy.aggregate_trace(d.trace_index);
+        var sampled = memoro.aggregate_trace(d.trace_index);
         var peak = d.max_aggregate
         total_chunks += d.num_chunks;
         var rectHeight = 55;
@@ -409,13 +409,13 @@ function drawStackTraces() {
                     d3.select(this).classed("selected", true);
                     drawChunks(d);
                     var info = d3.select("#inferences");
-                    var inef = autopsy.inefficiencies(d.trace_index);
+                    var inef = memoro.inefficiencies(d.trace_index);
                     var html = constructInferences(inef);
                     html += "</br>Usage: " + d.usage_score.toFixed(2) + "</br>Lifetime: " + d.lifetime_score.toFixed(2)
                     + "</br>Useful Lifetime: " + d.useful_lifetime_score.toFixed(2);
                     info.html(html);
 
-                    var fresh_sampled = autopsy.aggregate_trace(d.trace_index);
+                    var fresh_sampled = memoro.aggregate_trace(d.trace_index);
                     var agg_line = d3.line()
                         .x(function(v) {
                             return x(v["ts"]);
@@ -478,7 +478,7 @@ function drawStackTraces() {
             .style("display", "none")
             .classed("select-rect", true);
 
-        //sampled = autopsy.aggregate_trace(d.trace_index);
+        //sampled = memoro.aggregate_trace(d.trace_index);
 
         var t = new_svg_g.append("text");
             t.style("font-size", "small")
@@ -561,7 +561,7 @@ function tooltip(chunk) {
 }
 
 function renderChunkSvg(chunk, text, bottom) {
-    var min_x = autopsy.filter_min_time()
+    var min_x = memoro.filter_min_time()
 
 
     var chunk_div = d3.select("#chunks");
@@ -650,7 +650,7 @@ function chunkScroll() {
     var element = document.querySelector("#chunks");
     var percent = 100 * element.scrollTop / (element.scrollHeight - element.clientHeight);
     if (percent > load_threshold) {
-        var chunks = autopsy.trace_chunks(current_trace_index, current_chunk_index, 25);
+        var chunks = memoro.trace_chunks(current_trace_index, current_chunk_index, 25);
         if (chunks.length > 0) {
             // there are still some to display
             var to_append = chunks.length;
@@ -666,7 +666,7 @@ function chunkScroll() {
         }
     } else if (percent < (100 - load_threshold)) {
         if (current_chunk_index_low > 0) {
-            var chunks = autopsy.trace_chunks(current_trace_index, Math.max(current_chunk_index_low-25, 0), Math.min(25, current_chunk_index_low));
+            var chunks = memoro.trace_chunks(current_trace_index, Math.max(current_chunk_index_low-25, 0), Math.min(25, current_chunk_index_low));
             if (chunks.length === 0)
                 console.log("oh fuck chunks is 0");
             var to_prepend = chunks.length;
@@ -704,15 +704,15 @@ function drawChunks(trace) {
 
     chunk_div.selectAll("div").remove();
 
-    var max_x = autopsy.filter_max_time();
-    var min_x = autopsy.filter_min_time();
+    var max_x = memoro.filter_max_time();
+    var min_x = memoro.filter_min_time();
     //console.log("min x " + min_x + " max x " + max_x)
 
     x.domain([min_x, max_x]);
 
     current_chunk_index_low = trace.chunk_index;
     current_chunk_index = Math.min(trace.num_chunks, 200);
-    chunks  = autopsy.trace_chunks(trace.trace_index, current_chunk_index_low, current_chunk_index);
+    chunks  = memoro.trace_chunks(trace.trace_index, current_chunk_index_low, current_chunk_index);
 
     for (var i = 0; i < chunks.length; i++) {
         renderChunkSvg(chunks[i], current_chunk_index_low + i, true);
@@ -746,7 +746,7 @@ function drawChunks(trace) {
 
 function xMax() {
     // find the max TS value
-    return autopsy.filter_max_time();
+    return memoro.filter_max_time();
 }
 
 function drawChunkXAxis() {
@@ -761,8 +761,8 @@ function drawChunkXAxis() {
         .ticks(7)
         //.orient("bottom");
 
-    var max_x = autopsy.filter_max_time();
-    var min_x = autopsy.filter_min_time();
+    var max_x = memoro.filter_max_time();
+    var min_x = memoro.filter_min_time();
 
     x.domain([min_x, max_x]);
 
@@ -791,8 +791,8 @@ function drawAggregateAxis() {
         .ticks(7)
         .tickSizeInner(-120);
 
-    var max_x = autopsy.filter_max_time();
-    var min_x = autopsy.filter_min_time();
+    var max_x = memoro.filter_max_time();
+    var min_x = memoro.filter_min_time();
 
     x.domain([min_x, max_x]);
 
@@ -834,7 +834,7 @@ function drawGlobalAggregateAxis() {
 function drawGlobalAggregatePath() {
 
     y = d3.scaleLinear()
-        .range([100, 0]);
+        .range([aggregate_graph_height*.8 - 10, 0]);
 
     var fg_width = window.innerWidth *0.75;
     global_x = d3.scaleLinear()
@@ -844,9 +844,9 @@ function drawGlobalAggregatePath() {
     max_x = xMax();
     global_x.domain([0, max_x]);
 
-    var aggregate_data = autopsy.aggregate_all();
+    var aggregate_data = memoro.aggregate_all();
 
-    aggregate_max = autopsy.max_aggregate();
+    aggregate_max = memoro.max_aggregate();
     var binned_ag = aggregate_data;
 
     y.domain(d3.extent(binned_ag, function(v) { return v["value"]; }));
@@ -879,7 +879,8 @@ function drawGlobalAggregatePath() {
         .classed("aggregate-background", true);
 
 
-    var yaxis_height = .8 * aggregate_graph_height;
+    var yaxis_height = aggregate_graph_height;
+    console.log("y axis height is " + aggregate_graph_height)
 
     fg_aggregate_graph_g.append("path")
         .datum(binned_ag)
@@ -887,12 +888,13 @@ function drawGlobalAggregatePath() {
         .attr("stroke", "steelblue")
         .attr("stroke-width", 1.5)
         .attr("transform", "translate(0, 5)")
+        .attr("height", yaxis_height)
         .attr("id", "fg-aggregate-path")
         .attr("d", line);
     d3.select("#fg-aggregate-group").append("g")
         .attr("class", "y axis")
         .attr("transform", "translate(" + (fg_width - chunk_y_axis_space + 3) + ", 5)")
-        //.attr("height", yaxis_height)
+        .attr("height", yaxis_height)
         .attr("id", "fg-aggregate-y-axis")
         .style("fill", "white")
         .call(yAxisRight);
@@ -949,13 +951,13 @@ function drawGlobalAggregatePath() {
 function drawAggregatePath() {
 
     y = d3.scaleLinear()
-        .range([100, 0]);
+        .range([aggregate_graph_height*.8 - 10, 0]);
 
     max_x = xMax();
 
-    var aggregate_data = autopsy.aggregate_all();
+    var aggregate_data = memoro.aggregate_all();
 
-    aggregate_max = autopsy.max_aggregate();
+    aggregate_max = memoro.max_aggregate();
     var binned_ag = aggregate_data;
 
     y.domain(d3.extent(binned_ag, function(v) { return v["value"]; }));
@@ -1145,14 +1147,14 @@ function drawFlameGraph() {
 
     var tree;
     if (current_fg_type === "num_allocs")
-        autopsy.stacktree_by_numallocs();
+        memoro.stacktree_by_numallocs();
     else if (current_fg_type === "bytes_time")
-        autopsy.stacktree_by_bytes(current_fg_time);
+        memoro.stacktree_by_bytes(current_fg_time);
     else
-        autopsy.stacktree_by_numallocs();
+        memoro.stacktree_by_numallocs();
 
 
-    tree = autopsy.stacktree();
+    tree = memoro.stacktree();
     filterTree(tree); // it just seems easier to filter this here ...
     console.log(tree);
     d3.select("#flame-graph-div").html("");
@@ -1265,7 +1267,7 @@ function drawEverything() {
             .attr("ry", 6)
             .attr("x", p[0])
             .attr("y", 0)
-            .attr("height", 110)
+            .attr("height", aggregate_graph_height*.8 - 5)
             .attr("width", 0)
             .classed("selection", true)
             .attr("id", "select-rect")
@@ -1307,7 +1309,7 @@ function drawEverything() {
         var t2 = x.invert(x2);
         selection.remove();
         // set time filter
-        autopsy.set_filter_minmax(t1, t2);
+        memoro.set_filter_minmax(t1, t2);
 
         // redraw
         clearChunks();
@@ -1369,7 +1371,7 @@ function drawEverything() {
 }
 
 function setGlobalInfo() {
-    var traces = autopsy.traces();
+    var traces = memoro.traces();
     num_traces = traces.length;
     total_chunks = 0;
 
@@ -1404,8 +1406,8 @@ function setGlobalInfo() {
     usage_var = usage_var_total / traces.length;
     useful_life_var = useful_lifetime_var_total / traces.length;
 
-    var alloc_time = autopsy.global_alloc_time();
-    var time_total = autopsy.max_time() - autopsy.min_time();
+    var alloc_time = memoro.global_alloc_time();
+    var time_total = memoro.max_time() - memoro.min_time();
     var percent_alloc_time = 100.0 * alloc_time / time_total;
     var info = d3.select("#global-info");
 
@@ -1450,7 +1452,7 @@ function stackFilter() {
         for (var w in filterWords) {
             filter_words.push(filterWords[w]);
             console.log("setting filter " + filterWords[w]);
-            autopsy.set_trace_keyword(filterWords[w]);
+            memoro.set_trace_keyword(filterWords[w]);
         }
         clearChunks();
         drawStackTraces();
@@ -1458,6 +1460,8 @@ function stackFilter() {
 
         drawAggregatePath();
         drawAggregateAxis();
+        drawGlobalAggregatePath();
+        drawGlobalAggregateAxis();
         drawFlameGraph();
         hideLoader();
         setGlobalInfo();
@@ -1469,13 +1473,15 @@ function stackFilterResetClick() {
     showLoader();
     filter_words = [];
     setTimeout(function() {
-        autopsy.trace_filter_reset();
+        memoro.trace_filter_reset();
         clearChunks();
         drawStackTraces();
         drawChunkXAxis();
 
         drawAggregatePath();
         drawAggregateAxis();
+        drawGlobalAggregatePath();
+        drawGlobalAggregateAxis();
         drawFlameGraph();
         hideLoader();
         setGlobalInfo();
@@ -1492,7 +1498,7 @@ function typeFilter() {
 
         for (var w in filterWords) {
             console.log("setting filter " + filterWords[w]);
-            autopsy.set_type_keyword(filterWords[w]);
+            memoro.set_type_keyword(filterWords[w]);
         }
         clearChunks();
         drawStackTraces();
@@ -1500,6 +1506,8 @@ function typeFilter() {
 
         drawAggregatePath();
         drawAggregateAxis();
+        drawGlobalAggregatePath();
+        drawGlobalAggregateAxis();
         drawFlameGraph();
         hideLoader();
         setGlobalInfo();
@@ -1510,13 +1518,15 @@ function typeFilterResetClick() {
     //drawChunks();
     showLoader();
     setTimeout(function() {
-        autopsy.type_filter_reset();
+        memoro.type_filter_reset();
         clearChunks();
         drawStackTraces();
         drawChunkXAxis();
 
         drawAggregatePath();
         drawAggregateAxis();
+        drawGlobalAggregatePath();
+        drawGlobalAggregateAxis();
         drawFlameGraph();
         hideLoader();
         setGlobalInfo();
@@ -1533,7 +1543,7 @@ function filterExecuteClick() {
 function resetTimeClick() {
     showLoader();
     setTimeout(function() {
-        autopsy.filter_minmax_reset();
+        memoro.filter_minmax_reset();
         clearChunks();
         drawStackTraces();
         drawChunkXAxis();

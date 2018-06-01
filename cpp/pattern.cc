@@ -3,7 +3,7 @@
 #include <vector>
 #include <iostream>
 
-namespace autopsy {
+namespace memoro {
 
 using namespace std;
 /*Unused = 0x1,

@@ -1,12 +1,12 @@
 
 #pragma once
 
-#include "autopsy.h"
+#include "memoro.h"
 #include <tuple>
 #include <functional>
 #include <v8.h>
 
-namespace autopsy {
+namespace memoro {
 
 class StackTreeNode;
 

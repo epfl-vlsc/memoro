@@ -1,6 +1,5 @@
 
-#ifndef AUTOPSY_H
-#define AUTOPSY_H
+#pragma once
 
 #include <string>
 #include <cstdint>
@@ -8,7 +7,7 @@
 #include <functional>
 #include <v8.h>
 
-namespace autopsy {
+namespace memoro {
 
 enum LoadingState : uint32_t {
   LoadData = 0,
@@ -120,7 +119,4 @@ void StackTreeObject(const v8::FunctionCallbackInfo<v8::Value> & args);
 void StackTreeAggregate(std::function<double (const Trace* t)> f);
 
 } // namespace
-
-#endif
-
 

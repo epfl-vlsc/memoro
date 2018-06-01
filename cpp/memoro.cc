@@ -1,5 +1,5 @@
 
-#include "autopsy.h"
+#include "memoro.h"
 #include "stacktree.h"
 #include "pattern.h"
 #include <sys/stat.h>
@@ -14,7 +14,7 @@
 #include <algorithm>
 #include <unordered_map>
 
-namespace autopsy {
+namespace memoro {
 
 using namespace std;
 

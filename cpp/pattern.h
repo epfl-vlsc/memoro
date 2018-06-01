@@ -1,10 +1,10 @@
 
 #pragma once 
 
-#include "autopsy.h"
+#include "memoro.h"
 #include <vector>
 
-namespace autopsy {
+namespace memoro {
 
 enum Inefficiency : uint64_t {
   Unused = 0x1,

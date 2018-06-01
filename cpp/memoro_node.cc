@@ -4,15 +4,15 @@
 #include <uv.h>
 #include <iostream>
 #include <algorithm>
-#include "autopsy.h" 
+#include "memoro.h" 
 #include "pattern.h"
 
 using namespace v8;
-using namespace autopsy;
+using namespace memoro;
 
 // primary interface to node/JS here
 // technique / org lifted from https://github.com/freezer333/nodecpp-demo
-// more or less the interface just converts to/from in memory data structures (autopsy.h/cc)
+// more or less the interface just converts to/from in memory data structures (memoro.h/cc)
 // to V8 JS objects that are passed back to the JS gui layer
 
 struct LoadDatasetWork {
@@ -59,7 +59,7 @@ static void LoadDatasetAsyncComplete(uv_work_t *req,int status)
     delete work;
 }
 
-void Autopsy_SetDataset(const v8::FunctionCallbackInfo<v8::Value> & args) {
+void Memoro_SetDataset(const v8::FunctionCallbackInfo<v8::Value> & args) {
   Isolate* isolate = args.GetIsolate();
 
   v8::String::Utf8Value s(args[0]);
@@ -87,7 +87,7 @@ void Autopsy_SetDataset(const v8::FunctionCallbackInfo<v8::Value> & args) {
   args.GetReturnValue().Set(Undefined(isolate));
 }
 
-void Autopsy_AggregateAll(const v8::FunctionCallbackInfo<v8::Value> & args) {
+void Memoro_AggregateAll(const v8::FunctionCallbackInfo<v8::Value> & args) {
   Isolate* isolate = args.GetIsolate();
   std::vector<TimeValue> values;
   AggregateAll(values);
@@ -105,7 +105,7 @@ void Autopsy_AggregateAll(const v8::FunctionCallbackInfo<v8::Value> & args) {
   args.GetReturnValue().Set(result_list);
 }
 
-void Autopsy_AggregateTrace(const v8::FunctionCallbackInfo<v8::Value> & args) {
+void Memoro_AggregateTrace(const v8::FunctionCallbackInfo<v8::Value> & args) {
   Isolate* isolate = args.GetIsolate();
   static std::vector<TimeValue> values;
   values.clear();
@@ -127,7 +127,7 @@ void Autopsy_AggregateTrace(const v8::FunctionCallbackInfo<v8::Value> & args) {
   args.GetReturnValue().Set(result_list);
 }
 
-void Autopsy_TraceChunks(const v8::FunctionCallbackInfo<v8::Value> & args) {
+void Memoro_TraceChunks(const v8::FunctionCallbackInfo<v8::Value> & args) {
   Isolate* isolate = args.GetIsolate();
   static std::vector<Chunk*> chunks;
   chunks.clear();
@@ -169,7 +169,7 @@ void Autopsy_TraceChunks(const v8::FunctionCallbackInfo<v8::Value> & args) {
   args.GetReturnValue().Set(result_list);
 }
 
-void Autopsy_Traces(const v8::FunctionCallbackInfo<v8::Value> & args) {
+void Memoro_Traces(const v8::FunctionCallbackInfo<v8::Value> & args) {
   Isolate* isolate = args.GetIsolate();
   static std::vector<TraceValue> traces; // just reuse this
   traces.clear();
@@ -204,7 +204,7 @@ void Autopsy_Traces(const v8::FunctionCallbackInfo<v8::Value> & args) {
   args.GetReturnValue().Set(result_list);
 }
 
-void Autopsy_MaxTime(const v8::FunctionCallbackInfo<v8::Value> & args) {
+void Memoro_MaxTime(const v8::FunctionCallbackInfo<v8::Value> & args) {
   Isolate* isolate = args.GetIsolate();
 
   Local<Number> retval = v8::Number::New(isolate, MaxTime());
@@ -212,7 +212,7 @@ void Autopsy_MaxTime(const v8::FunctionCallbackInfo<v8::Value> & args) {
   args.GetReturnValue().Set(retval);
 }
 
-void Autopsy_MinTime(const v8::FunctionCallbackInfo<v8::Value> & args) {
+void Memoro_MinTime(const v8::FunctionCallbackInfo<v8::Value> & args) {
   Isolate* isolate = args.GetIsolate();
 
   Local<Number> retval = v8::Number::New(isolate, MinTime());
@@ -220,7 +220,7 @@ void Autopsy_MinTime(const v8::FunctionCallbackInfo<v8::Value> & args) {
   args.GetReturnValue().Set(retval);
 }
 
-void Autopsy_FilterMaxTime(const v8::FunctionCallbackInfo<v8::Value> & args) {
+void Memoro_FilterMaxTime(const v8::FunctionCallbackInfo<v8::Value> & args) {
   Isolate* isolate = args.GetIsolate();
 
   Local<Number> retval = v8::Number::New(isolate, FilterMaxTime());
@@ -228,7 +228,7 @@ void Autopsy_FilterMaxTime(const v8::FunctionCallbackInfo<v8::Value> & args) {
   args.GetReturnValue().Set(retval);
 }
 
-void Autopsy_FilterMinTime(const v8::FunctionCallbackInfo<v8::Value> & args) {
+void Memoro_FilterMinTime(const v8::FunctionCallbackInfo<v8::Value> & args) {
   Isolate* isolate = args.GetIsolate();
 
   Local<Number> retval = v8::Number::New(isolate, FilterMinTime());
@@ -236,7 +236,7 @@ void Autopsy_FilterMinTime(const v8::FunctionCallbackInfo<v8::Value> & args) {
   args.GetReturnValue().Set(retval);
 }
 
-void Autopsy_MaxAggregate(const v8::FunctionCallbackInfo<v8::Value> & args) {
+void Memoro_MaxAggregate(const v8::FunctionCallbackInfo<v8::Value> & args) {
   Isolate* isolate = args.GetIsolate();
 
   Local<Number> retval = v8::Number::New(isolate, MaxAggregate());
@@ -244,7 +244,7 @@ void Autopsy_MaxAggregate(const v8::FunctionCallbackInfo<v8::Value> & args) {
   args.GetReturnValue().Set(retval);
 }
 
-void Autopsy_GlobalAllocTime(const v8::FunctionCallbackInfo<v8::Value> & args) {
+void Memoro_GlobalAllocTime(const v8::FunctionCallbackInfo<v8::Value> & args) {
   Isolate* isolate = args.GetIsolate();
 
   Local<Number> retval = v8::Number::New(isolate, GlobalAllocTime());
@@ -252,7 +252,7 @@ void Autopsy_GlobalAllocTime(const v8::FunctionCallbackInfo<v8::Value> & args) {
   args.GetReturnValue().Set(retval);
 }
 
-void Autopsy_SetTraceKeyword(const v8::FunctionCallbackInfo<v8::Value> & args) {
+void Memoro_SetTraceKeyword(const v8::FunctionCallbackInfo<v8::Value> & args) {
 
   v8::String::Utf8Value s(args[0]);
   std::string keyword(*s);
@@ -260,7 +260,7 @@ void Autopsy_SetTraceKeyword(const v8::FunctionCallbackInfo<v8::Value> & args) {
   SetTraceKeyword(keyword);
 }
 
-void Autopsy_SetTypeKeyword(const v8::FunctionCallbackInfo<v8::Value> & args) {
+void Memoro_SetTypeKeyword(const v8::FunctionCallbackInfo<v8::Value> & args) {
 
   v8::String::Utf8Value s(args[0]);
   std::string keyword(*s);
@@ -268,7 +268,7 @@ void Autopsy_SetTypeKeyword(const v8::FunctionCallbackInfo<v8::Value> & args) {
   SetTypeKeyword(keyword);
 }
 
-void Autopsy_SetFilterMinMax(const v8::FunctionCallbackInfo<v8::Value> & args) {
+void Memoro_SetFilterMinMax(const v8::FunctionCallbackInfo<v8::Value> & args) {
 
   uint64_t t1 = args[0]->NumberValue();
   uint64_t t2 = args[1]->NumberValue();
@@ -276,19 +276,19 @@ void Autopsy_SetFilterMinMax(const v8::FunctionCallbackInfo<v8::Value> & args) {
 
 }
 
-void Autopsy_TraceFilterReset(const v8::FunctionCallbackInfo<v8::Value> & args) {
+void Memoro_TraceFilterReset(const v8::FunctionCallbackInfo<v8::Value> & args) {
   TraceFilterReset();
 }
 
-void Autopsy_TypeFilterReset(const v8::FunctionCallbackInfo<v8::Value> & args) {
+void Memoro_TypeFilterReset(const v8::FunctionCallbackInfo<v8::Value> & args) {
   TypeFilterReset();
 }
 
-void Autopsy_FilterMinMaxReset(const v8::FunctionCallbackInfo<v8::Value> & args) {
+void Memoro_FilterMinMaxReset(const v8::FunctionCallbackInfo<v8::Value> & args) {
   FilterMinMaxReset();
 }
 
-void Autopsy_Inefficiencies(const v8::FunctionCallbackInfo<v8::Value> & args) {
+void Memoro_Inefficiencies(const v8::FunctionCallbackInfo<v8::Value> & args) {
   Isolate* isolate = args.GetIsolate();
 
   int trace_index = args[0]->NumberValue();
@@ -322,12 +322,12 @@ void Autopsy_Inefficiencies(const v8::FunctionCallbackInfo<v8::Value> & args) {
   args.GetReturnValue().Set(result);
 }
 
-void Autopsy_StackTree(const v8::FunctionCallbackInfo<v8::Value> & args) {
+void Memoro_StackTree(const v8::FunctionCallbackInfo<v8::Value> & args) {
   // was hoping to keep all the V8 stuff in this file, oh well ..
   StackTreeObject(args);
 }
 
-void Autopsy_StackTreeByBytes(const v8::FunctionCallbackInfo<v8::Value> & args) {
+void Memoro_StackTreeByBytes(const v8::FunctionCallbackInfo<v8::Value> & args) {
 
   uint64_t time = args[0]->NumberValue();
 
@@ -349,7 +349,7 @@ void Autopsy_StackTreeByBytes(const v8::FunctionCallbackInfo<v8::Value> & args) 
 
 }
 
-void Autopsy_StackTreeByNumAllocs(const v8::FunctionCallbackInfo<v8::Value> & args) {
+void Memoro_StackTreeByNumAllocs(const v8::FunctionCallbackInfo<v8::Value> & args) {
 
   StackTreeAggregate([](const Trace* t) -> double {
       return (double) t->chunks.size();
@@ -357,28 +357,28 @@ void Autopsy_StackTreeByNumAllocs(const v8::FunctionCallbackInfo<v8::Value> & ar
 }
 
 void init(Handle <Object> exports, Handle<Object> module) {
-  NODE_SET_METHOD(exports, "set_dataset", Autopsy_SetDataset);
-  NODE_SET_METHOD(exports, "aggregate_all", Autopsy_AggregateAll);
-  NODE_SET_METHOD(exports, "max_time", Autopsy_MaxTime);
-  NODE_SET_METHOD(exports, "min_time", Autopsy_MinTime);
-  NODE_SET_METHOD(exports, "filter_max_time", Autopsy_FilterMaxTime);
-  NODE_SET_METHOD(exports, "filter_min_time", Autopsy_FilterMinTime);
-  NODE_SET_METHOD(exports, "max_aggregate", Autopsy_MaxAggregate);
-  NODE_SET_METHOD(exports, "set_trace_keyword", Autopsy_SetTraceKeyword);
-  NODE_SET_METHOD(exports, "set_type_keyword", Autopsy_SetTypeKeyword);
-  NODE_SET_METHOD(exports, "traces", Autopsy_Traces);
-  NODE_SET_METHOD(exports, "aggregate_trace", Autopsy_AggregateTrace);
-  NODE_SET_METHOD(exports, "trace_chunks", Autopsy_TraceChunks);
-  NODE_SET_METHOD(exports, "set_filter_minmax", Autopsy_SetFilterMinMax);
-  NODE_SET_METHOD(exports, "trace_filter_reset", Autopsy_TraceFilterReset);
-  NODE_SET_METHOD(exports, "type_filter_reset", Autopsy_TypeFilterReset);
-  NODE_SET_METHOD(exports, "filter_minmax_reset", Autopsy_FilterMinMaxReset);
-  NODE_SET_METHOD(exports, "inefficiencies", Autopsy_Inefficiencies);
-  NODE_SET_METHOD(exports, "global_alloc_time", Autopsy_GlobalAllocTime);
-  NODE_SET_METHOD(exports, "stacktree", Autopsy_StackTree);
-  NODE_SET_METHOD(exports, "stacktree_by_bytes", Autopsy_StackTreeByBytes);
-  NODE_SET_METHOD(exports, "stacktree_by_numallocs", Autopsy_StackTreeByNumAllocs);
+  NODE_SET_METHOD(exports, "set_dataset", Memoro_SetDataset);
+  NODE_SET_METHOD(exports, "aggregate_all", Memoro_AggregateAll);
+  NODE_SET_METHOD(exports, "max_time", Memoro_MaxTime);
+  NODE_SET_METHOD(exports, "min_time", Memoro_MinTime);
+  NODE_SET_METHOD(exports, "filter_max_time", Memoro_FilterMaxTime);
+  NODE_SET_METHOD(exports, "filter_min_time", Memoro_FilterMinTime);
+  NODE_SET_METHOD(exports, "max_aggregate", Memoro_MaxAggregate);
+  NODE_SET_METHOD(exports, "set_trace_keyword", Memoro_SetTraceKeyword);
+  NODE_SET_METHOD(exports, "set_type_keyword", Memoro_SetTypeKeyword);
+  NODE_SET_METHOD(exports, "traces", Memoro_Traces);
+  NODE_SET_METHOD(exports, "aggregate_trace", Memoro_AggregateTrace);
+  NODE_SET_METHOD(exports, "trace_chunks", Memoro_TraceChunks);
+  NODE_SET_METHOD(exports, "set_filter_minmax", Memoro_SetFilterMinMax);
+  NODE_SET_METHOD(exports, "trace_filter_reset", Memoro_TraceFilterReset);
+  NODE_SET_METHOD(exports, "type_filter_reset", Memoro_TypeFilterReset);
+  NODE_SET_METHOD(exports, "filter_minmax_reset", Memoro_FilterMinMaxReset);
+  NODE_SET_METHOD(exports, "inefficiencies", Memoro_Inefficiencies);
+  NODE_SET_METHOD(exports, "global_alloc_time", Memoro_GlobalAllocTime);
+  NODE_SET_METHOD(exports, "stacktree", Memoro_StackTree);
+  NODE_SET_METHOD(exports, "stacktree_by_bytes", Memoro_StackTreeByBytes);
+  NODE_SET_METHOD(exports, "stacktree_by_numallocs", Memoro_StackTreeByNumAllocs);
 }
 
-NODE_MODULE(autopsy, init)
+NODE_MODULE(memoro, init)
 

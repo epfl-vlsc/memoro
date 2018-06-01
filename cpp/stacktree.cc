@@ -4,7 +4,7 @@
 #include <algorithm>
 #include "stacktree.h"
 
-namespace autopsy {
+namespace memoro {
 
 using namespace std;
 using namespace v8;

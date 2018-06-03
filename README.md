@@ -42,7 +42,7 @@ Enter the directory.
 
 `$ cd memoro`
 
-Run `npm update` to make sure all JS dependencies are present. 
+Run `npm install` to make sure all JS dependencies are present. 
 You will then need to build the C++ data processing addon. 
 To do this, you may first need to install `node-gyp` (`npm install -g node-gyp`)
 Then, 

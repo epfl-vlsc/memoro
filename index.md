@@ -6,8 +6,6 @@ layout: default
 overview: true
 ---
 
-# Memoro 
-
 Memoro is a highly detailed heap profiler. 
 
 Memoro not only shows you where and when your program makes heap allocations, but will show you _how_ your program actually used that memory.
@@ -18,7 +16,7 @@ Memoro includes a visualizer application that distills all this information into
 
 ![alt text](assets/memoro_screen.png)
 
-For more detailed information about how Memoro works, see [here]()
+For more detailed information about how Memoro works, see [here](https://github.com/epfl-vlsc/memoro/blob/master/docs/memoro_ismm.pdf)
 
 # Build & Install
 

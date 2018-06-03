@@ -14,7 +14,7 @@ Memoro collects detailed information on accesses to the heap, including reads an
 
 Memoro includes a visualizer application that distills all this information into scores and indicators to help you pinpoint problem areas. 
 
-![alt text](assets/memoro_screen.png)
+![useful image]({{ site.url }}/assets/memoro_screen.png)
 
 For more detailed information about how Memoro works, see [here](https://github.com/epfl-vlsc/memoro/blob/master/docs/memoro_ismm.pdf)
 

@@ -10,7 +10,7 @@ Memoro includes a visualizer application that distills all this information into
 
 ![alt text](assets/memoro_screen.png)
 
-For more detailed information about how Memoro works, see [here]()
+For more detailed information about how Memoro works, see [here](https://github.com/epfl-vlsc/memoro/blob/master/docs/memoro_ismm.pdf)
 
 # Build & Install
 

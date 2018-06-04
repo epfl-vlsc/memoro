@@ -3,7 +3,7 @@
 //
 //                     Memoro
 //
-// This file is distributed under the MIT License. 
+// This file is distributed under the MIT License.
 // See LICENSE for details.
 //
 //===----------------------------------------------------------------------===//
@@ -13,10 +13,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#pragma once 
+#pragma once
 
-#include "memoro.h"
 #include <vector>
+#include "memoro.h"
 
 namespace memoro {
 
@@ -26,7 +26,7 @@ enum Inefficiency : uint64_t {
   ReadOnly = 1 << 2,
   ShortLifetime = 1 << 3,
   LateFree = 1 << 4,
-  EarlyAlloc =  1 << 5,
+  EarlyAlloc = 1 << 5,
   IncreasingReallocs = 1 << 6,
   TopPercentileChunks = 1 << 7,
   TopPercentileSize = 1 << 8,
@@ -35,7 +35,7 @@ enum Inefficiency : uint64_t {
 };
 
 struct PatternParams {
-  unsigned int short_lifetime = 1000000; // in ns currently
+  unsigned int short_lifetime = 1000000;  // in ns currently
   unsigned int alloc_min_run = 4;
   float percentile = 0.9f;
   float access_coverage = 0.5f;
@@ -53,9 +53,11 @@ uint64_t Detect(std::vector<Chunk*> const& chunks, PatternParams& params);
 
 // mutates traces vector elements
 // requires sorted traces by num chunks
-void CalculatePercentilesChunk(std::vector<Trace>& traces, PatternParams& params);
+void CalculatePercentilesChunk(std::vector<Trace>& traces,
+                               PatternParams& params);
 
 // requires sorted traces by max agg
-void CalculatePercentilesSize(std::vector<Trace>& traces, PatternParams& params);
+void CalculatePercentilesSize(std::vector<Trace>& traces,
+                              PatternParams& params);
 
-}
+}  // namespace memoro

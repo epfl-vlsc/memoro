@@ -3,7 +3,7 @@
 //
 //                     Memoro
 //
-// This file is distributed under the MIT License. 
+// This file is distributed under the MIT License.
 // See LICENSE for details.
 //
 //===----------------------------------------------------------------------===//
@@ -15,11 +15,11 @@
 
 #pragma once
 
-#include <string>
-#include <cstdint>
-#include <vector>
-#include <functional>
 #include <v8.h>
+#include <cstdint>
+#include <functional>
+#include <string>
+#include <vector>
 
 namespace memoro {
 
@@ -37,7 +37,7 @@ struct __attribute__((packed)) Chunk {
   uint8_t num_writes = 0;
   uint8_t allocated = 0;
   uint8_t multi_thread;
-  uint32_t stack_index = 0; // used for file writer
+  uint32_t stack_index = 0;  // used for file writer
   uint64_t size = 0;
   uint64_t timestamp_start = 0;
   uint64_t timestamp_end = 0;
@@ -79,15 +79,16 @@ struct TraceValue {
   int num_chunks;
   uint64_t alloc_time_total;
   uint64_t max_aggregate;
-  
+
   float usage_score;
   float lifetime_score;
   float useful_lifetime_score;
 };
 
-// set the current dataset file, returns dataset stats (num traces, min/max times)
-bool SetDataset(std::string& file_path, std::string& trace_file, 
-    std::string& chunk_file, std::string& msg);
+// set the current dataset file, returns dataset stats (num traces, min/max
+// times)
+bool SetDataset(std::string& file_path, std::string& trace_file,
+                std::string& chunk_file, std::string& msg);
 
 // add a timestamp interval filter
 void SetMinMaxTime(uint64_t max, uint64_t min);
@@ -111,7 +112,8 @@ void AggregateTrace(std::vector<TimeValue>& values, int trace_index);
 
 // get the specified number of chunks starting at the specified indexes
 // respects filters, returns empty if all filtered
-void TraceChunks(std::vector<Chunk*>& chunks, int trace_index, int chunk_index, int num_chunks);
+void TraceChunks(std::vector<Chunk*>& chunks, int trace_index, int chunk_index,
+                 int num_chunks);
 
 // return list of traces
 void Traces(std::vector<TraceValue>& traces);
@@ -129,8 +131,7 @@ uint64_t Inefficiencies(int trace_index);
 
 uint64_t MaxAggregate();
 
-void StackTreeObject(const v8::FunctionCallbackInfo<v8::Value> & args);
-void StackTreeAggregate(std::function<double (const Trace* t)> f);
+void StackTreeObject(const v8::FunctionCallbackInfo<v8::Value>& args);
+void StackTreeAggregate(std::function<double(const Trace* t)> f);
 
-} // namespace
-
+}  // namespace memoro

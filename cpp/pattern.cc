@@ -29,17 +29,21 @@ using namespace std;
   IncreasingReallocs = 1 << 6,
   TopPercentile = 1 << 7*/
 
-bool HasInefficiency(uint64_t bitvec, Inefficiency i) { return bitvec & i; }
+bool HasInefficiency(uint64_t bitvec, Inefficiency i) { return bool(bitvec & i); }
 
 float UsageScore(std::vector<Chunk*> const& chunks) {
   double sum = 0;
   uint64_t total_bytes = 0;
   for (auto chunk : chunks) {
-    if (chunk->num_writes == 0 && chunk->num_reads == 0) continue;
+    if (chunk->num_writes == 0 && chunk->num_reads == 0) { 
+      continue;
+    }
     sum += double(chunk->access_interval_high - chunk->access_interval_low);
     total_bytes += chunk->size;
   }
-  if (sum == 0) return 0;
+  if (sum == 0){
+    return 0;
+  }
   return float(sum) / float(total_bytes);
 }
 
@@ -57,10 +61,11 @@ float LifetimeScore(std::vector<Chunk*> const& chunks, uint64_t threshold) {
   uint32_t num_regions = 0;
   Chunk* prev = nullptr;
   for (auto chunk : chunks) {
-    if (prev && chunk->timestamp_start - prev->timestamp_start > threshold) {
+    if (prev != nullptr && chunk->timestamp_start - prev->timestamp_start > threshold) {
       // finish this region
-      if (prev->timestamp_end > region_end_time)
+      if (prev->timestamp_end > region_end_time) {
         region_end_time = prev->timestamp_end;
+      }
       uint64_t region_lifetime = region_end_time - region_start_time;
       double chunk_avg_lifetime =
           current_lifetime_sum / double(current_num_chunks);
@@ -75,14 +80,16 @@ float LifetimeScore(std::vector<Chunk*> const& chunks, uint64_t threshold) {
     }
     current_lifetime_sum += chunk->timestamp_end - chunk->timestamp_start;
     current_num_chunks++;
-    if (chunk->timestamp_end > region_end_time)
+    if (chunk->timestamp_end > region_end_time) {
       region_end_time = chunk->timestamp_end;
+    }
     prev = chunk;
   }
 
   // finish up last region
-  if (prev->timestamp_end > region_end_time)
+  if (prev->timestamp_end > region_end_time) {
     region_end_time = prev->timestamp_end;
+  }
   uint64_t region_lifetime = region_end_time - region_start_time;
   double chunk_avg_lifetime = current_lifetime_sum / double(current_num_chunks);
   region_score_total += chunk_avg_lifetime / double(region_lifetime);
@@ -123,7 +130,7 @@ float ReallocScore(std::vector<Chunk*> const& chunks) {
   return 0.0f;
 }
 
-uint64_t Detect(std::vector<Chunk*> const& chunks, PatternParams& params) {
+uint64_t Detect(std::vector<Chunk*> const& chunks, const PatternParams& params) {
   uint64_t min_lifetime = UINT64_MAX;
   unsigned int total_reads = 0, total_writes = 0;
   bool has_early_alloc = false, has_late_free = false;
@@ -135,7 +142,9 @@ uint64_t Detect(std::vector<Chunk*> const& chunks, PatternParams& params) {
   for (auto chunk : chunks) {
     // min lifetime
     uint64_t diff = chunk->timestamp_end - chunk->timestamp_start;
-    if (diff < min_lifetime) min_lifetime = diff;
+    if (diff < min_lifetime) {
+      min_lifetime = diff;
+    }
 
     // total reads, writes
     total_reads += chunk->num_reads;
@@ -143,13 +152,15 @@ uint64_t Detect(std::vector<Chunk*> const& chunks, PatternParams& params) {
 
     // late free
     if (chunk->timestamp_first_access - chunk->timestamp_start >
-        (chunk->timestamp_end - chunk->timestamp_start) / 2)
+        (chunk->timestamp_end - chunk->timestamp_start) / 2) {
       has_early_alloc = true;
+    }
 
     // early alloc
     if (chunk->timestamp_end - chunk->timestamp_last_access >
-        (chunk->timestamp_end - chunk->timestamp_start) / 2)
+        (chunk->timestamp_end - chunk->timestamp_start) / 2) {
       has_late_free = true;
+    }
 
     // increasing alloc sizes
     if (last_size == 0) {
@@ -166,16 +177,21 @@ uint64_t Detect(std::vector<Chunk*> const& chunks, PatternParams& params) {
       }
     }
     // multithread
-    if (chunk->multi_thread) has_multi_thread = true;
+    if (bool(chunk->multi_thread)) {
+      has_multi_thread = true;
+    }
 
     if (float(chunk->access_interval_high - chunk->access_interval_low) /
             float(chunk->size) <
-        params.access_coverage)
+        params.access_coverage) {
       has_low_access_coverage = true;
+    }
   }
 
   uint64_t i = 0;
-  if (min_lifetime <= params.short_lifetime) i |= Inefficiency::ShortLifetime;
+  if (min_lifetime <= params.short_lifetime) {
+    i |= Inefficiency::ShortLifetime;
+  }
   if (total_reads == 0 || total_writes == 0) {
     if (total_writes > 0) {
       i |= Inefficiency::WriteOnly;
@@ -207,29 +223,29 @@ uint64_t Detect(std::vector<Chunk*> const& chunks, PatternParams& params) {
 }
 
 void CalculatePercentilesChunk(std::vector<Trace>& traces,
-                               PatternParams& params) {
+                               const PatternParams& params) {
   float percentile = params.percentile;
-  int index = int(percentile * traces.size());
+  auto index = int(percentile * traces.size());
   for (unsigned int i = index; i < traces.size(); i++) {
     traces[i].inefficiencies |= Inefficiency::TopPercentileChunks;
   }
 }
 
 void CalculatePercentilesSize(std::vector<Trace>& traces,
-                              PatternParams& params) {
+                              const PatternParams& params) {
   // we need a different sort order but cannot mutate traces like this
   // since it will invalidate chunk parent indexes
-  typedef pair<uint64_t, unsigned int> TVal;
+  using TVal = pair<uint64_t, unsigned int> ;
   vector<TVal> t;
   t.reserve(traces.size());
   for (int i = 0; i < traces.size(); i++) {
-    t.push_back({traces[i].max_aggregate, i});
+    t.emplace_back(traces[i].max_aggregate, i);
   }
   std::sort(t.begin(), t.end(),
             [](TVal const& a, TVal const& b) { return a.first < b.first; });
 
   float percentile = params.percentile;
-  int index = int(percentile * traces.size());
+  auto index = int(percentile * traces.size());
   for (unsigned int i = index; i < t.size(); i++) {
     traces[t[i].second].inefficiencies |= Inefficiency::TopPercentileSize;
   }

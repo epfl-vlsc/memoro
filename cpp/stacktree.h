@@ -1,4 +1,3 @@
-
 //===-- stacktree.h ------------------------------------------------===//
 //
 //                     Memoro
@@ -17,7 +16,7 @@
 
 #include <v8.h>
 #include <functional>
-#include <tuple>
+//#include <tuple>
 #include "memoro.h"
 
 namespace memoro {
@@ -27,7 +26,7 @@ class StackTreeNode;
 class StackTree {
  public:
   bool InsertTrace(const Trace* t);
-  void Aggregate(std::function<double(const Trace* t)> f);
+  void Aggregate(const std::function<double(const Trace* t)>& f);
 
   // set args return value to object heirarchy representing tree
   // suitable for the calling JS process

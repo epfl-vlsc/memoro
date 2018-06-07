@@ -1,4 +1,3 @@
-
 //===-- stacktree.h ------------------------------------------------===//
 //
 //                     Memoro
@@ -23,7 +22,7 @@ namespace memoro {
 using namespace std;
 using namespace v8;
 
-typedef vector<pair<string, uint64_t>> NameIDs;
+using NameIDs = vector<pair<string, uint64_t>>;
 
 class StackTreeNode {
  public:
@@ -33,11 +32,12 @@ class StackTreeNode {
   bool Insert(const Trace* t, NameIDs::const_iterator pos,
               const NameIDs& name_ids) {
     // auto next = pos+1;
+    bool ret = false;
     if (pos == name_ids.end()) {
       // its the last one and will have no children
       // e.g. this is a malloc/new call
       trace_ = t;
-      return true;
+      ret = true;
     } else {
       auto it = find_if(children_.begin(), children_.end(),
                         [pos](const StackTreeNode& a) {
@@ -46,26 +46,31 @@ class StackTreeNode {
 
       if (it != children_.end()) {
         // exists, advance
-        return it->Insert(t, pos + 1, name_ids);
+        ret = it->Insert(t, pos + 1, name_ids);
       } else {
         // create new
         StackTreeNode n(pos->second, pos->first, nullptr);
         children_.push_back(n);
-        return children_[children_.size() - 1].Insert(t, pos + 1, name_ids);
+        ret = children_[children_.size() - 1].Insert(t, pos + 1, name_ids);
       }
     }
+    return ret;
   }
 
-  double Aggregate(std::function<double(const Trace* t)> f) {
-    if (trace_) {
+  double Aggregate(const std::function<double(const Trace* t)>& f) {
+    double ret = 0;
+    if (trace_ != nullptr) {
       value_ = f(trace_);
-      return value_;
+      ret = value_;
     } else {
-      double sum = 0;
-      for (auto& child : children_) sum += child.Aggregate(f);
-      value_ = sum;
-      return sum;
+      //double sum = 0;
+      for (auto& child : children_) {
+        ret += child.Aggregate(f);
+      }
+      value_ = ret;
+      //return sum;
     }
+    return ret;
   }
 
   void Objectify(Isolate* isolate, Local<Object>& obj) {
@@ -75,7 +80,7 @@ class StackTreeNode {
     obj->Set(String::NewFromUtf8(isolate, "value"),
              Number::New(isolate, value_));
 
-    if (trace_) {
+    if (trace_ != nullptr) {
       obj->Set(String::NewFromUtf8(isolate, "lifetime_score"),
                Number::New(isolate, trace_->lifetime_score));
       obj->Set(String::NewFromUtf8(isolate, "usage_score"),
@@ -96,7 +101,6 @@ class StackTreeNode {
     }
 
     obj->Set(String::NewFromUtf8(isolate, "children"), children);
-    return;
   }
 
  private:
@@ -191,7 +195,7 @@ void StackTree::V8Objectify(const v8::FunctionCallbackInfo<v8::Value>& args) {
   args.GetReturnValue().Set(root);
 }
 
-void StackTree::Aggregate(std::function<double(const Trace* t)> f) {
+void StackTree::Aggregate(const std::function<double(const Trace* t)>& f) {
   value_ = 0;
   for (auto& root : roots_) {
     value_ += root->Aggregate(f);

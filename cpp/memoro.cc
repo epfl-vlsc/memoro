@@ -13,8 +13,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "memoro.h"
 #include <dirent.h>
+#include "memoro.h"
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -40,8 +40,8 @@ struct __attribute__((packed)) Header {
   uint8_t version_major = 0;
   uint8_t version_minor = 1;
   uint8_t compression_type = 0;
-  uint16_t segment_start;
-  uint32_t index_size;
+  uint16_t segment_start = 0;
+  uint32_t index_size = 0;
 };
 
 bool operator<(const TimeValue& a, const TimeValue& b) {
@@ -50,10 +50,10 @@ bool operator<(const TimeValue& a, const TimeValue& b) {
 
 class Dataset {
  public:
-  Dataset() {}
-  bool Reset(string& dir_path, string& trace_file, string& chunk_file,
+  Dataset() = default;
+  bool Reset(const string& dir_path, const string& trace_file, const string& chunk_file,
              string& msg) {
-    if (chunk_ptr_) delete[] chunk_ptr_;
+    if (chunk_ptr_ != nullptr) delete[] chunk_ptr_;
     traces_.clear();
     min_time_ = UINT64_MAX;
     aggregates_.clear();
@@ -210,7 +210,7 @@ class Dataset {
     return true;
   }
 
-  bool InitTypeData(string& dir_path, string& msg) {
+  bool InitTypeData(const string& dir_path, string& msg) {
     string dir(dir_path + "typefiles/");
     vector<string> files;
     if (GetFiles(dir, files) != 0) {
@@ -288,9 +288,12 @@ class Dataset {
   uint64_t FilterMinTime() { return filter_min_time_; }
   uint64_t GlobalAllocTime() { return global_alloc_time_; }
 
-  void SetTraceFilter(string const& str) {
-    for (auto& s : trace_filters_)
-      if (s == str) return;
+  void SetTraceFilter(const string & str) {
+    for (auto& s : trace_filters_) {
+      if (s == str) {
+        return;
+      }
+    }
     trace_filters_.push_back(str);
     bool filtered = false;
     for (auto& trace : traces_) {
@@ -631,7 +634,7 @@ class Dataset {
 // its just easier this way ...
 static Dataset theDataset;
 
-bool SetDataset(std::string& dir_path, string& trace_file, string& chunk_file,
+bool SetDataset(const std::string& dir_path, const string& trace_file, const string& chunk_file,
                 string& msg) {
   return theDataset.Reset(dir_path, trace_file, chunk_file, msg);
 }
@@ -651,12 +654,12 @@ uint64_t FilterMaxTime() { return theDataset.FilterMaxTime(); }
 
 uint64_t FilterMinTime() { return theDataset.FilterMinTime(); }
 
-void SetTraceKeyword(std::string& keyword) {
+void SetTraceKeyword(const std::string& keyword) {
   // will only include traces that contain this keyword
   theDataset.SetTraceFilter(keyword);
 }
 
-void SetTypeKeyword(std::string& keyword) {
+void SetTypeKeyword(const std::string& keyword) {
   // will only include traces that contain this keyword
   theDataset.SetTypeFilter(keyword);
 }

@@ -15,8 +15,8 @@
 
 #pragma once
 
-#include <vector>
 #include "memoro.h"
+#include <vector>
 
 namespace memoro {
 
@@ -34,6 +34,7 @@ enum Inefficiency : uint64_t {
   LowAccessCoverage = 1 << 10
 };
 
+// TODO bubble these parameters to the JS API and UI
 struct PatternParams {
   unsigned int short_lifetime = 1000000;  // in ns currently
   unsigned int alloc_min_run = 4;
@@ -49,15 +50,15 @@ float LifetimeScore(std::vector<Chunk*> const& chunks, uint64_t threshold);
 float UsefulLifetimeScore(std::vector<Chunk*> const& chunks);
 
 // returns bit vector of inefficiency
-uint64_t Detect(std::vector<Chunk*> const& chunks, PatternParams& params);
+uint64_t Detect(std::vector<Chunk*> const& chunks, const PatternParams& params);
 
 // mutates traces vector elements
 // requires sorted traces by num chunks
 void CalculatePercentilesChunk(std::vector<Trace>& traces,
-                               PatternParams& params);
+                               const PatternParams& params);
 
 // requires sorted traces by max agg
 void CalculatePercentilesSize(std::vector<Trace>& traces,
-                              PatternParams& params);
+                              const PatternParams& params);
 
 }  // namespace memoro

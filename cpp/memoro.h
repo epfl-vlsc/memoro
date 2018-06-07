@@ -21,6 +21,10 @@
 #include <string>
 #include <vector>
 
+
+// honestly this entire API and inteface to JS needs to be 
+// redesigned. 
+
 namespace memoro {
 
 enum LoadingState : uint32_t {
@@ -36,7 +40,7 @@ struct __attribute__((packed)) Chunk {
   uint8_t num_reads = 0;
   uint8_t num_writes = 0;
   uint8_t allocated = 0;
-  uint8_t multi_thread;
+  uint8_t multi_thread = 0;
   uint32_t stack_index = 0;  // used for file writer
   uint64_t size = 0;
   uint64_t timestamp_start = 0;
@@ -87,8 +91,8 @@ struct TraceValue {
 
 // set the current dataset file, returns dataset stats (num traces, min/max
 // times)
-bool SetDataset(std::string& file_path, std::string& trace_file,
-                std::string& chunk_file, std::string& msg);
+bool SetDataset(const std::string& file_path, const std::string& trace_file,
+                const std::string& chunk_file, std::string& msg);
 
 // add a timestamp interval filter
 void SetMinMaxTime(uint64_t max, uint64_t min);
@@ -96,11 +100,11 @@ void RemoveMinMaxTime();
 
 // add a trace keyword filter, filtering traces not containing the keyword
 // returns new number of active traces
-void SetTraceKeyword(std::string& keyword);
-void RemoveTraceKeyword(std::string& keyword);
+void SetTraceKeyword(const std::string& keyword);
+void RemoveTraceKeyword(const std::string& keyword);
 void TraceFilterReset();
 
-void SetTypeKeyword(std::string& keyword);
+void SetTypeKeyword(const std::string& keyword);
 void TypeFilterReset();
 
 // fill times and values with 1000 aggregate data points from whole dataset
@@ -115,7 +119,7 @@ void AggregateTrace(std::vector<TimeValue>& values, int trace_index);
 void TraceChunks(std::vector<Chunk*>& chunks, int trace_index, int chunk_index,
                  int num_chunks);
 
-// return list of traces
+// build list of traces
 void Traces(std::vector<TraceValue>& traces);
 
 void SetFilterMinMax(uint64_t min, uint64_t max);

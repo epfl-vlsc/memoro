@@ -3,3 +3,5 @@ theme: jekyll-theme-slate
 title: Memoro
 description: A Detailed Heap Profiler
 show_downloads: true
+plugins:
+  - jekyll-seo-tag

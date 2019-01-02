@@ -16,6 +16,7 @@
 #include "pattern.h"
 #include <iostream>
 #include <vector>
+#include <algorithm>
 
 namespace memoro {
 

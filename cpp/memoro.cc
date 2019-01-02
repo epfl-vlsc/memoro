@@ -27,6 +27,8 @@
 #include <vector>
 #include "pattern.h"
 #include "stacktree.h"
+#include <string.h>
+#include <string>
 
 namespace memoro {
 

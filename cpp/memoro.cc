@@ -104,6 +104,11 @@ class Dataset {
       // and more robust code
       size_t pos = t.trace.find_first_of("|");
       size_t pos2 = t.trace.find_first_of("|", pos + 1);
+      if (pos == string::npos || pos2 == string::npos) {
+          cerr << "unable to find marker '|' in trace: " << t.trace << endl;
+          cerr << "skipping this trace..." << endl;
+          continue;
+      }
       pos = pos2;
       while (t.trace[pos] != ' ') pos--;
       string value = t.trace.substr(pos + 1, pos2 - pos - 1);

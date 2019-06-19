@@ -108,13 +108,14 @@ void Memoro_AggregateAll(const v8::FunctionCallbackInfo<v8::Value>& args) {
   std::vector<TimeValue> values;
   AggregateAll(values);
 
+  auto kTs = String::NewFromUtf8(isolate, "ts");
+  auto kValue = String::NewFromUtf8(isolate, "value");
+
   Local<Array> result_list = Array::New(isolate);
   for (unsigned int i = 0; i < values.size(); i++) {
     Local<Object> result = Object::New(isolate);
-    result->Set(String::NewFromUtf8(isolate, "ts"),
-                Number::New(isolate, values[i].time));
-    result->Set(String::NewFromUtf8(isolate, "value"),
-                Number::New(isolate, values[i].value));
+    result->Set(kTs, Number::New(isolate, values[i].time));
+    result->Set(kValue, Number::New(isolate, values[i].value));
     result_list->Set(i, result);
   }
 
@@ -130,13 +131,14 @@ void Memoro_AggregateTrace(const v8::FunctionCallbackInfo<v8::Value>& args) {
 
   AggregateTrace(values, trace_index);
 
+  auto kTs = String::NewFromUtf8(isolate, "ts");
+  auto kValue = String::NewFromUtf8(isolate, "value");
+
   Local<Array> result_list = Array::New(isolate);
   for (unsigned int i = 0; i < values.size(); i++) {
     Local<Object> result = Object::New(isolate);
-    result->Set(String::NewFromUtf8(isolate, "ts"),
-                Number::New(isolate, values[i].time));
-    result->Set(String::NewFromUtf8(isolate, "value"),
-                Number::New(isolate, values[i].value));
+    result->Set(kTs, Number::New(isolate, values[i].time));
+    result->Set(kValue, Number::New(isolate, values[i].value));
     result_list->Set(i, result);
   }
 
@@ -154,31 +156,32 @@ void Memoro_TraceChunks(const v8::FunctionCallbackInfo<v8::Value>& args) {
 
   TraceChunks(chunks, trace_index, chunk_index, num_chunks);
 
+  auto kNumReads      = String::NewFromUtf8(isolate, "num_reads");
+  auto kNumWrites     = String::NewFromUtf8(isolate, "num_writes");
+  auto kSize          = String::NewFromUtf8(isolate, "size");
+  auto kTsStart       = String::NewFromUtf8(isolate, "ts_start");
+  auto kTsEnd         = String::NewFromUtf8(isolate, "ts_end");
+  auto kTsFirst       = String::NewFromUtf8(isolate, "ts_first");
+  auto kTsLast        = String::NewFromUtf8(isolate, "ts_last");
+  auto kAllocCallTime = String::NewFromUtf8(isolate, "alloc_call_time");
+  auto kMultiThread   = String::NewFromUtf8(isolate, "multiThread");
+  auto kAccessLow     = String::NewFromUtf8(isolate, "access_interval_low");
+  auto kAccessHigh    = String::NewFromUtf8(isolate, "access_interval_high");
+
   Local<Array> result_list = Array::New(isolate);
   for (unsigned int i = 0; i < chunks.size(); i++) {
     Local<Object> result = Object::New(isolate);
-    result->Set(String::NewFromUtf8(isolate, "num_reads"),
-                Number::New(isolate, chunks[i]->num_reads));
-    result->Set(String::NewFromUtf8(isolate, "num_writes"),
-                Number::New(isolate, chunks[i]->num_writes));
-    result->Set(String::NewFromUtf8(isolate, "size"),
-                Number::New(isolate, chunks[i]->size));
-    result->Set(String::NewFromUtf8(isolate, "ts_start"),
-                Number::New(isolate, chunks[i]->timestamp_start));
-    result->Set(String::NewFromUtf8(isolate, "ts_end"),
-                Number::New(isolate, chunks[i]->timestamp_end));
-    result->Set(String::NewFromUtf8(isolate, "ts_first"),
-                Number::New(isolate, chunks[i]->timestamp_first_access));
-    result->Set(String::NewFromUtf8(isolate, "ts_last"),
-                Number::New(isolate, chunks[i]->timestamp_last_access));
-    result->Set(String::NewFromUtf8(isolate, "alloc_call_time"),
-                Number::New(isolate, chunks[i]->alloc_call_time));
-    result->Set(String::NewFromUtf8(isolate, "multi_thread"),
-                Boolean::New(isolate, chunks[i]->multi_thread));
-    result->Set(String::NewFromUtf8(isolate, "access_interval_low"),
-                Number::New(isolate, chunks[i]->access_interval_low));
-    result->Set(String::NewFromUtf8(isolate, "access_interval_high"),
-                Number::New(isolate, chunks[i]->access_interval_high));
+    result->Set(kNumReads, Number::New(isolate, chunks[i]->num_reads));
+    result->Set(kNumWrites, Number::New(isolate, chunks[i]->num_writes));
+    result->Set(kSize, Number::New(isolate, chunks[i]->size));
+    result->Set(kTsStart, Number::New(isolate, chunks[i]->timestamp_start));
+    result->Set(kTsEnd, Number::New(isolate, chunks[i]->timestamp_end));
+    result->Set(kTsFirst, Number::New(isolate, chunks[i]->timestamp_first_access));
+    result->Set(kTsLast, Number::New(isolate, chunks[i]->timestamp_last_access));
+    result->Set(kAllocCallTime, Number::New(isolate, chunks[i]->alloc_call_time));
+    result->Set(kMultiThread, Boolean::New(isolate, chunks[i]->multi_thread));
+    result->Set(kAccessLow, Number::New(isolate, chunks[i]->access_interval_low));
+    result->Set(kAccessHigh, Number::New(isolate, chunks[i]->access_interval_high));
     result_list->Set(i, result);
   }
 
@@ -191,29 +194,30 @@ void Memoro_Traces(const v8::FunctionCallbackInfo<v8::Value>& args) {
   traces.clear();
   Traces(traces);
 
+  auto kTrace          = String::NewFromUtf8(isolate, "trace");
+  auto kType           = String::NewFromUtf8(isolate, "type");
+  auto kTraceIndex     = String::NewFromUtf8(isolate, "trace_index");
+  auto kNumChunks      = String::NewFromUtf8(isolate, "num_chunks");
+  auto kChunkIndex     = String::NewFromUtf8(isolate, "chunk_index");
+  auto kMaxAggregate   = String::NewFromUtf8(isolate, "max_aggregate");
+  auto kAllocTimeTotal = String::NewFromUtf8(isolate, "alloc_time_total");
+  auto kUsage          = String::NewFromUtf8(isolate, "usage_score");
+  auto kLifetime       = String::NewFromUtf8(isolate, "lifetime_score");
+  auto kUsefulLifetime = String::NewFromUtf8(isolate, "useful_lifetime_score");
+
   Local<Array> result_list = Array::New(isolate);
   for (unsigned int i = 0; i < traces.size(); i++) {
     Local<Object> result = Object::New(isolate);
-    result->Set(String::NewFromUtf8(isolate, "trace"),
-                String::NewFromUtf8(isolate, traces[i].trace->c_str()));
-    result->Set(String::NewFromUtf8(isolate, "type"),
-                String::NewFromUtf8(isolate, traces[i].type->c_str()));
-    result->Set(String::NewFromUtf8(isolate, "trace_index"),
-                Number::New(isolate, traces[i].trace_index));
-    result->Set(String::NewFromUtf8(isolate, "num_chunks"),
-                Number::New(isolate, traces[i].num_chunks));
-    result->Set(String::NewFromUtf8(isolate, "chunk_index"),
-                Number::New(isolate, traces[i].chunk_index));
-    result->Set(String::NewFromUtf8(isolate, "max_aggregate"),
-                Number::New(isolate, traces[i].max_aggregate));
-    result->Set(String::NewFromUtf8(isolate, "alloc_time_total"),
-                Number::New(isolate, traces[i].alloc_time_total));
-    result->Set(String::NewFromUtf8(isolate, "usage_score"),
-                Number::New(isolate, traces[i].usage_score));
-    result->Set(String::NewFromUtf8(isolate, "lifetime_score"),
-                Number::New(isolate, traces[i].lifetime_score));
-    result->Set(String::NewFromUtf8(isolate, "useful_lifetime_score"),
-                Number::New(isolate, traces[i].useful_lifetime_score));
+    result->Set(kTrace, String::NewFromUtf8(isolate, traces[i].trace->c_str()));
+    result->Set(kType, String::NewFromUtf8(isolate, traces[i].type->c_str()));
+    result->Set(kTraceIndex, Number::New(isolate, traces[i].trace_index));
+    result->Set(kNumChunks, Number::New(isolate, traces[i].num_chunks));
+    result->Set(kChunkIndex, Number::New(isolate, traces[i].chunk_index));
+    result->Set(kMaxAggregate, Number::New(isolate, traces[i].max_aggregate));
+    result->Set(kAllocTimeTotal, Number::New(isolate, traces[i].alloc_time_total));
+    result->Set(kUsage, Number::New(isolate, traces[i].usage_score));
+    result->Set(kLifetime, Number::New(isolate, traces[i].lifetime_score));
+    result->Set(kUsefulLifetime, Number::New(isolate, traces[i].useful_lifetime_score));
     result_list->Set(i, result);
   }
 

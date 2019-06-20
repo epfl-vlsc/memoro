@@ -90,6 +90,11 @@ function fgBytesTimeClick() {
     chunk_graph.setFlameGraphBytesTime();
 }
 
+function fgBytesTotalClick() {
+    console.log("bytes total click")
+    chunk_graph.setFlameGraphBytesTotal();
+}
+
 function fgMostActiveClick() {
     console.log("most active click")
 }

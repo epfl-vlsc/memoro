@@ -1167,17 +1167,19 @@ function filterTree(tree) {
 }
 
 function drawFlameGraph() {
-
-    var tree;
-    if (current_fg_type === "num_allocs")
-        memoro.stacktree_by_numallocs();
-    else if (current_fg_type === "bytes_time")
+    switch (current_fg_type) {
+      case "bytes_time":
         memoro.stacktree_by_bytes(current_fg_time);
-    else
+        break;
+      case "bytes_total":
+        memoro.stacktree_by_bytes_total(current_fg_time);
+        break;
+      case "num_allocs":
+      default:
         memoro.stacktree_by_numallocs();
+    }
 
-
-    tree = memoro.stacktree();
+    var tree = memoro.stacktree();
     filterTree(tree); // it just seems easier to filter this here ...
     console.log(tree);
     d3.select("#flame-graph-div").html("");
@@ -1606,13 +1608,24 @@ function globalInfoHelp() {
 }
 
 function setFlameGraphNumAllocs() {
-    current_fg_type = "num_allocs";
-    drawFlameGraph();
+    if (current_fg_type != "num_allocs") {
+        current_fg_type = "num_allocs";
+        drawFlameGraph();
+    }
 }
 
 function setFlameGraphBytesTime() {
-    current_fg_type = "bytes_time";
-    drawFlameGraph();
+    if (current_fg_type != "bytes_time") {
+        current_fg_type = "bytes_time";
+        drawFlameGraph();
+    }
+}
+
+function setFlameGraphBytesTotal() {
+  if (current_fg_type != "bytes_total") {
+      current_fg_type = "bytes_total";
+      drawFlameGraph();
+  }
 }
 
 function traceSort(pred) {
@@ -1633,6 +1646,7 @@ module.exports = {
     resetTimeClick: resetTimeClick,
     showFilterHelp: showFilterHelp,
     setFlameGraphBytesTime: setFlameGraphBytesTime,
+    setFlameGraphBytesTotal: setFlameGraphBytesTotal,
     setFlameGraphNumAllocs: setFlameGraphNumAllocs,
     flameGraphHelp: flameGraphHelp,
     traceSort: traceSort,

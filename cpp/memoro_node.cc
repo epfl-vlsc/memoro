@@ -17,6 +17,7 @@
 #include <uv.h>
 #include <v8.h>
 #include <algorithm>
+#include <numeric>
 #include <iostream>
 #include "memoro.h"
 #include "pattern.h"
@@ -372,6 +373,14 @@ void Memoro_StackTreeByBytes(const v8::FunctionCallbackInfo<v8::Value>& args) {
   });
 }
 
+void Memoro_StackTreeByBytesTotal(const v8::FunctionCallbackInfo<v8::Value>& args) {
+  StackTreeAggregate(
+      [](const Trace* t) -> double {
+        return accumulate(t->chunks.begin(), t->chunks.end(), 0.0,
+          [](double sum, const Chunk* c) { return sum + c->size; });
+      });
+}
+
 void Memoro_StackTreeByNumAllocs(
     const v8::FunctionCallbackInfo<v8::Value>& args) {
   StackTreeAggregate(
@@ -399,6 +408,7 @@ void init(Handle<Object> exports, Handle<Object> module) {
   NODE_SET_METHOD(exports, "global_alloc_time", Memoro_GlobalAllocTime);
   NODE_SET_METHOD(exports, "stacktree", Memoro_StackTree);
   NODE_SET_METHOD(exports, "stacktree_by_bytes", Memoro_StackTreeByBytes);
+  NODE_SET_METHOD(exports, "stacktree_by_bytes_total", Memoro_StackTreeByBytesTotal);
   NODE_SET_METHOD(exports, "stacktree_by_numallocs",
                   Memoro_StackTreeByNumAllocs);
 }

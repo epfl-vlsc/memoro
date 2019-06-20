@@ -27,13 +27,18 @@ using NameIDs = std::vector<std::pair<std::string, uint64_t>>;
 
 struct isolatedKeys;
 
+struct TraceAndValue {
+  Trace* trace;
+  double value;
+};
+
 class StackTreeNode {
  public:
   StackTreeNode(uint64_t id, std::string name, const Trace* trace)
       : id_(id), name_(name), trace_(trace) {}
 
-  bool Insert(const Trace*, NameIDs::const_iterator, const NameIDs&);
-  double Aggregate(const std::function<double(const Trace* t)>&);
+  bool Insert(const TraceAndValue&, NameIDs::const_iterator, const NameIDs&);
+  double Aggregate();
   void Objectify(v8::Isolate*, v8::Local<v8::Object>&, const isolatedKeys&) const;
 
  private:
@@ -60,13 +65,8 @@ class StackTree {
   // and a recursive helper in StackTreeNode
 
  private:
-  bool InsertTrace(const Trace* t);
+  bool InsertTrace(const TraceAndValue& tv);
   void BuildTree();
-
-  struct TraceAndValue {
-    Trace* trace;
-    double value;
-  };
 
   // multiple roots are possible because
   // not all traces start in ``main'' for example,

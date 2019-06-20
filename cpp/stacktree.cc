@@ -28,14 +28,15 @@ struct isolatedKeys {
   Local<String> kLifetime, kUsage, kUsefulLifetime;
 };
 
-bool StackTreeNode::Insert(const Trace* t, NameIDs::const_iterator pos,
+bool StackTreeNode::Insert(const TraceAndValue& tv, NameIDs::const_iterator pos,
     const NameIDs& name_ids) {
   // auto next = pos+1;
   bool ret = false;
   if (pos == name_ids.end()) {
     // its the last one and will have no children
     // e.g. this is a malloc/new call
-    trace_ = t;
+    trace_ = tv.trace;
+    value_ = tv.value;
     ret = true;
   } else {
     auto it = find_if(children_.begin(), children_.end(),
@@ -45,31 +46,25 @@ bool StackTreeNode::Insert(const Trace* t, NameIDs::const_iterator pos,
 
     if (it != children_.end()) {
       // exists, advance
-      ret = it->Insert(t, pos + 1, name_ids);
+      ret = it->Insert(tv, pos + 1, name_ids);
     } else {
       // create new
-      StackTreeNode n(pos->second, pos->first, nullptr);
-      children_.push_back(n);
-      ret = children_[children_.size() - 1].Insert(t, pos + 1, name_ids);
+      children_.emplace_back(pos->second, pos->first, nullptr);
+      ret = children_.back().Insert(tv, pos + 1, name_ids);
     }
   }
   return ret;
 }
 
-double StackTreeNode::Aggregate(const std::function<double(const Trace* t)>& f) {
+double StackTreeNode::Aggregate() {
+  if (trace_ != nullptr)
+    return value_;
+
   double ret = 0;
-  if (trace_ != nullptr) {
-    value_ = f(trace_);
-    ret = value_;
-  } else {
-    //double sum = 0;
-    for (auto& child : children_) {
-      ret += child.Aggregate(f);
-    }
-    value_ = ret;
-    //return sum;
-  }
-  return ret;
+  for (auto& child : children_)
+    ret += child.Aggregate();
+
+  return value_ = ret;
 }
 
 void StackTreeNode::Objectify(Isolate* isolate, Local<Object>& obj, const isolatedKeys& keys) const {
@@ -102,11 +97,11 @@ void StackTreeNode::Objectify(Isolate* isolate, Local<Object>& obj, const isolat
   obj->Set(keys.kChildren, children);
 }
 
-bool StackTree::InsertTrace(const Trace* t) {
+bool StackTree::InsertTrace(const TraceAndValue& tv) {
   // assuming stacktrace of form
   // #1 0x10be26858 in main test.cpp:57
 
-  const string& trace = t->trace;
+  const string& trace = tv.trace->trace;
   NameIDs name_ids;
   stringstream ss;
   string name;
@@ -147,12 +142,12 @@ bool StackTree::InsertTrace(const Trace* t) {
 
   if (it != roots_.end()) {
     // exists, proceed with insert
-    return (*it).Insert(t, name_ids.begin() + 1, name_ids);
+    return (*it).Insert(tv, name_ids.begin() + 1, name_ids);
   } else {
     // create new root (recall these are entry points, e.g. main,
     // pthread_create, etc. )
     roots_.emplace_back(name_ids[0].second, name_ids[0].first, nullptr);
-    return roots_.back().Insert(t, name_ids.begin() + 1, name_ids);
+    return roots_.back().Insert(tv, name_ids.begin() + 1, name_ids);
   }
 }
 
@@ -162,7 +157,7 @@ void StackTree::BuildTree() {
 
   roots_.clear();
   for (auto it = traces_.cbegin(); it != max_it; it++)
-    InsertTrace((*it).trace);
+    InsertTrace(*it);
 }
 
 void StackTree::SetTraces(std::vector<Trace>& traces) {
@@ -217,7 +212,7 @@ void StackTree::Aggregate(const std::function<double(const Trace* t)>& f) {
 
   value_ = 0;
   for (auto& root : roots_) {
-    value_ += root.Aggregate(f);
+    value_ += root.Aggregate();
   }
 }
 

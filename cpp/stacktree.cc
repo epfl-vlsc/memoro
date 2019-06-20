@@ -162,16 +162,14 @@ void StackTree::BuildTree() {
 
   roots_.clear();
   for (auto it = traces_.cbegin(); it != max_it; it++)
-    InsertTrace(*it);
+    InsertTrace((*it).trace);
 }
 
 void StackTree::SetTraces(std::vector<Trace>& traces) {
   traces_.clear();
   traces_.reserve(traces.size());
   for (Trace& t: traces)
-    traces_.push_back(&t);
-
-  BuildTree();
+    traces_.push_back({ &t, 0.0 });
 }
 
 void StackTree::V8Objectify(const v8::FunctionCallbackInfo<v8::Value>& args) {
@@ -208,6 +206,15 @@ void StackTree::V8Objectify(const v8::FunctionCallbackInfo<v8::Value>& args) {
 }
 
 void StackTree::Aggregate(const std::function<double(const Trace* t)>& f) {
+  for (auto& tv: traces_)
+    tv.value = f(tv.trace);
+
+  sort(traces_.begin(), traces_.end(),
+      [](const TraceAndValue& a, const TraceAndValue& b) {
+        return a.value > b.value; });
+
+  BuildTree();
+
   value_ = 0;
   for (auto& root : roots_) {
     value_ += root.Aggregate(f);

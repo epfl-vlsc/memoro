@@ -21,7 +21,7 @@
 
 namespace memoro {
 
-#define MAX_TRACES 10000ul
+#define MAX_TRACES 1000ul
 
 using NameIDs = std::vector<std::pair<std::string, uint64_t>>;
 
@@ -63,11 +63,16 @@ class StackTree {
   bool InsertTrace(const Trace* t);
   void BuildTree();
 
+  struct TraceAndValue {
+    Trace* trace;
+    double value;
+  };
+
   // multiple roots are possible because
   // not all traces start in ``main'' for example,
   // some may start in pthread_create() or equivalent
   std::vector<StackTreeNode> roots_;
-  std::vector<Trace*> traces_;
+  std::vector<TraceAndValue> traces_;
   double value_ = 0;  // the sum total of all root aggregate values
 };
 

@@ -21,6 +21,8 @@
 
 namespace memoro {
 
+#define MAX_TRACES 10000ul
+
 using NameIDs = std::vector<std::pair<std::string, uint64_t>>;
 
 struct isolatedKeys;

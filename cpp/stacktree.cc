@@ -157,9 +157,12 @@ bool StackTree::InsertTrace(const Trace* t) {
 }
 
 void StackTree::BuildTree() {
+  // Cap the number of node at MAX_TRACES
+  auto max_it = traces_.cbegin() + min(MAX_TRACES, traces_.size());
+
   roots_.clear();
-  for (const Trace* t: traces_)
-    InsertTrace(t);
+  for (auto it = traces_.cbegin(); it != max_it; it++)
+    InsertTrace(*it);
 }
 
 void StackTree::SetTraces(std::vector<Trace>& traces) {

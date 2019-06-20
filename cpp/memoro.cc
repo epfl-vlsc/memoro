@@ -207,8 +207,9 @@ class Dataset {
       global_alloc_time_ += total_alloc_time;
       total_alloc_time = 0;
       // build the stack tree
-      stack_tree_.InsertTrace(&t);
     }
+
+    stack_tree_.SetTraces(traces_);
 
     CalculatePercentilesChunk(traces_, pattern_params_);
     CalculatePercentilesSize(traces_, pattern_params_);

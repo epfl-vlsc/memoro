@@ -156,6 +156,21 @@ bool StackTree::InsertTrace(const Trace* t) {
   }
 }
 
+void StackTree::BuildTree() {
+  roots_.clear();
+  for (const Trace* t: traces_)
+    InsertTrace(t);
+}
+
+void StackTree::SetTraces(std::vector<Trace>& traces) {
+  traces_.clear();
+  traces_.reserve(traces.size());
+  for (Trace& t: traces)
+    traces_.push_back(&t);
+
+  BuildTree();
+}
+
 void StackTree::V8Objectify(const v8::FunctionCallbackInfo<v8::Value>& args) {
   Isolate* isolate = args.GetIsolate();
   const isolatedKeys keys = {

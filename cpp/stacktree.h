@@ -47,7 +47,7 @@ class StackTreeNode {
 
 class StackTree {
  public:
-  bool InsertTrace(const Trace* t);
+  void SetTraces(std::vector<Trace>&);
   void Aggregate(const std::function<double(const Trace* t)>& f);
 
   // set args return value to object heirarchy representing tree
@@ -58,10 +58,14 @@ class StackTree {
   // and a recursive helper in StackTreeNode
 
  private:
+  bool InsertTrace(const Trace* t);
+  void BuildTree();
+
   // multiple roots are possible because
   // not all traces start in ``main'' for example,
   // some may start in pthread_create() or equivalent
   std::vector<StackTreeNode> roots_;
+  std::vector<Trace*> traces_;
   double value_ = 0;  // the sum total of all root aggregate values
 };
 

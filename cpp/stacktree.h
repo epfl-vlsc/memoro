@@ -41,7 +41,7 @@ class StackTreeNode {
   double Aggregate();
   void Objectify(v8::Isolate*, v8::Local<v8::Object>&, const isolatedKeys&) const;
 
- private:
+ protected:
   friend class StackTree;
   uint64_t id_;
   std::string name_;  // string_view would be better
@@ -50,6 +50,18 @@ class StackTreeNode {
   const Trace* trace_ = nullptr;
   std::vector<StackTreeNode> children_;
   double value_ = 0;
+};
+
+class StackTreeNodeHide : public StackTreeNode {
+  public:
+    StackTreeNodeHide() : StackTreeNode(-1, "Hide", nullptr) {};
+
+    bool Insert(const TraceAndValue&, NameIDs::const_iterator, const NameIDs&);
+    double Aggregate();
+    void Objectify(v8::Isolate*, v8::Local<v8::Object>&, const isolatedKeys&) const;
+
+  private:
+    std::unique_ptr<StackTreeNodeHide> next_ = nullptr;
 };
 
 class StackTree {
@@ -71,9 +83,11 @@ class StackTree {
   // multiple roots are possible because
   // not all traces start in ``main'' for example,
   // some may start in pthread_create() or equivalent
+  std::unique_ptr<StackTreeNodeHide> hide_;
   std::vector<StackTreeNode> roots_;
   std::vector<TraceAndValue> traces_;
   double value_ = 0;  // the sum total of all root aggregate values
+  size_t node_count_ = 0;
 };
 
 }  // namespace memoro

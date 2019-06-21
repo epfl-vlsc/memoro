@@ -97,6 +97,44 @@ void StackTreeNode::Objectify(Isolate* isolate, Local<Object>& obj, const isolat
   obj->Set(keys.kChildren, children);
 }
 
+bool StackTreeNodeHide::Insert(const TraceAndValue& tv, NameIDs::const_iterator pos, const NameIDs& nameIds) {
+  if (children_.size() < MAX_TRACES) {
+    return StackTreeNode::Insert(tv, pos, nameIds);
+  } else {
+    if (next_ == nullptr)
+      next_ = std::make_unique<StackTreeNodeHide>();
+
+    return next_->Insert(tv, pos, nameIds);
+  }
+}
+
+double StackTreeNodeHide::Aggregate() {
+  value_ = StackTreeNode::Aggregate();
+
+  if (next_)
+    value_ += next_->Aggregate();
+
+  return value_;
+}
+
+void StackTreeNodeHide::Objectify(Isolate* isolate, Local<Object>& obj, const isolatedKeys& keys) const {
+  // put myself in this object
+  obj->Set(keys.kName,
+      String::NewFromUtf8(isolate, name_.c_str()));
+  obj->Set(keys.kValue,
+      Number::New(isolate, value_));
+
+  if (next_) {
+    Local<Array> children = Array::New(isolate);
+
+    Local<Object> next_obj = Object::New(isolate);
+    next_->Objectify(isolate, next_obj, keys);
+    children->Set(0, next_obj);
+
+    obj->Set(keys.kChildren, children);
+  }
+}
+
 bool StackTree::InsertTrace(const TraceAndValue& tv) {
   // assuming stacktrace of form
   // #1 0x10be26858 in main test.cpp:57
@@ -132,6 +170,14 @@ bool StackTree::InsertTrace(const TraceAndValue& tv) {
     position = find(position + 1, trace.rend(), '#');
   }
 
+  // Cap the number of node at MAX_TRACES and hide the rest
+  if (node_count_++ >= MAX_TRACES) {
+    if (hide_ == nullptr)
+      hide_ = std::make_unique<StackTreeNodeHide>();
+
+    return hide_->Insert(tv, name_ids.begin() + 1, name_ids);
+  }
+
   // now we have a list of function name, ID (address) pairs from
   // `main' to malloc, so to speak ... insert into the stack tree
   auto& first = name_ids[0];
@@ -152,12 +198,13 @@ bool StackTree::InsertTrace(const TraceAndValue& tv) {
 }
 
 void StackTree::BuildTree() {
-  // Cap the number of node at MAX_TRACES
-  auto max_it = traces_.cbegin() + min(MAX_TRACES, traces_.size());
-
+  node_count_ = 0;
   roots_.clear();
-  for (auto it = traces_.cbegin(); it != max_it; it++)
+  hide_.reset(nullptr);
+  for (auto it = traces_.cbegin(); it != traces_.cend(); it++) {
+    (*it).trace->filtered = node_count_ >= MAX_TRACES;
     InsertTrace(*it);
+  }
 }
 
 void StackTree::SetTraces(std::vector<Trace>& traces) {
@@ -195,6 +242,14 @@ void StackTree::V8Objectify(const v8::FunctionCallbackInfo<v8::Value>& args) {
     children->Set(i, child_obj);
   }
 
+  if (hide_) {
+    Local<Object> hide_obj = Object::New(isolate);
+
+    hide_->Objectify(isolate, hide_obj, keys);  // recursively
+
+    children->Set(roots_.size(), hide_obj);
+  }
+
   root->Set(keys.kChildren, children);
 
   args.GetReturnValue().Set(root);
@@ -214,6 +269,9 @@ void StackTree::Aggregate(const std::function<double(const Trace* t)>& f) {
   for (auto& root : roots_) {
     value_ += root.Aggregate();
   }
+
+  if (hide_)
+    value_ += hide_->Aggregate();
 }
 
 }  // namespace memoro

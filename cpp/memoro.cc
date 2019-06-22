@@ -88,6 +88,8 @@ class Dataset {
     index.resize(header.index_size);
     fread(&index[0], 2, header.index_size, trace_fd);
 
+    cout << "reading " << header.index_size << " traces" << endl;
+
     traces_.reserve(header.index_size);
     Trace t;
     vector<char> trace_buf;  // used as a resizable buffer
@@ -104,26 +106,23 @@ class Dataset {
       // and more robust code
       size_t pos = t.trace.find_first_of("|");
       size_t pos2 = t.trace.find_first_of("|", pos + 1);
-      if (pos == string::npos || pos2 == string::npos) {
-          cerr << "unable to find marker '|' in trace: " << t.trace << endl;
-          cerr << "skipping this trace..." << endl;
-          continue;
-      }
-      pos = pos2;
-      while (t.trace[pos] != ' ') pos--;
-      string value = t.trace.substr(pos + 1, pos2 - pos - 1);
-      cout << "got value:" << value << endl;
-      cout << "with mapped types: " << endl;
-      auto range = type_map_.equal_range(value);
-      int position = 1000000000;  // should be max_int?
-      t.type = "";
-      for (auto ty = range.first; ty != range.second; ty++) {
-        cout << "(" << ty->second.first << ", " << ty->second.second << ")\n";
-        if (int p = t.trace.find(ty->second.first) != string::npos)
-          if (p < position) {
-            position = p;
-            t.type = ty->second.second;
-          }
+      if (pos != string::npos && pos2 != string::npos) {
+        pos = pos2;
+        while (t.trace[pos] != ' ') pos--;
+        string value = t.trace.substr(pos + 1, pos2 - pos - 1);
+        /* cout << "got value:" << value << endl; */
+        /* cout << "with mapped types: " << endl; */
+        auto range = type_map_.equal_range(value);
+        int position = 1000000000;  // should be max_int?
+        t.type = "";
+        for (auto ty = range.first; ty != range.second; ty++) {
+          cout << "(" << ty->second.first << ", " << ty->second.second << ")\n";
+          if (int p = t.trace.find(ty->second.first) != string::npos)
+            if (p < position) {
+              position = p;
+              t.type = ty->second.second;
+            }
+        }
       }
 
       /*auto ty = type_map_.find(value);
@@ -132,7 +131,6 @@ class Dataset {
     }
     fclose(trace_fd);
 
-    cout << "done reading\n";
     // for some reason I can't mmap the file so we open and copy ...
     FILE* chunk_fd = fopen(chunk_file.c_str(), "r");
     // file size produced by sanitizer is buggy and adds a bunch 0 data to
@@ -156,6 +154,8 @@ class Dataset {
       return false;
     }
 
+    cout << "reading " << header.index_size << " chunks" << endl;
+
     index.resize(header.index_size);
     fread(&index[0], 2, header.index_size, chunk_fd);
 
@@ -168,6 +168,7 @@ class Dataset {
     // we can do this because all the fields are the same size (structs)
     chunks_ = (Chunk*)(chunk_ptr_);
     fclose(chunk_fd);
+    cout << "done reading\n";
 
     // sort the chunks makes bin/aggregate easier
     cout << "sorting chunks..." << endl;

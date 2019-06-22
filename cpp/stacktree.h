@@ -38,7 +38,6 @@ class StackTreeNode {
       : id_(id), name_(name), trace_(trace) {}
 
   bool Insert(const TraceAndValue&, NameIDs::const_iterator, const NameIDs&);
-  double Aggregate();
   void Objectify(v8::Isolate*, v8::Local<v8::Object>&, const isolatedKeys&) const;
 
  protected:
@@ -57,7 +56,6 @@ class StackTreeNodeHide : public StackTreeNode {
     StackTreeNodeHide() : StackTreeNode(-1, "Hide", nullptr) {};
 
     bool Insert(const TraceAndValue&, NameIDs::const_iterator, const NameIDs&);
-    double Aggregate();
     void Objectify(v8::Isolate*, v8::Local<v8::Object>&, const isolatedKeys&) const;
 
   private:

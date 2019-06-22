@@ -39,6 +39,8 @@ bool StackTreeNode::Insert(const TraceAndValue& tv, NameIDs::const_iterator pos,
     value_ = tv.value;
     ret = true;
   } else {
+    value_ += tv.value;
+
     auto it = find_if(children_.begin(), children_.end(),
         [pos](const StackTreeNode& a) {
         return a.name_ == pos->first && a.id_ == pos->second;
@@ -54,17 +56,6 @@ bool StackTreeNode::Insert(const TraceAndValue& tv, NameIDs::const_iterator pos,
     }
   }
   return ret;
-}
-
-double StackTreeNode::Aggregate() {
-  if (trace_ != nullptr)
-    return value_;
-
-  double ret = 0;
-  for (auto& child : children_)
-    ret += child.Aggregate();
-
-  return value_ = ret;
 }
 
 void StackTreeNode::Objectify(Isolate* isolate, Local<Object>& obj, const isolatedKeys& keys) const {
@@ -104,17 +95,11 @@ bool StackTreeNodeHide::Insert(const TraceAndValue& tv, NameIDs::const_iterator 
     if (next_ == nullptr)
       next_ = std::make_unique<StackTreeNodeHide>();
 
+    // Already taken care of by StackTreeNode::Insert() for if (true) { … }
+    value_ += tv.value;
+
     return next_->Insert(tv, pos, nameIds);
   }
-}
-
-double StackTreeNodeHide::Aggregate() {
-  value_ = StackTreeNode::Aggregate();
-
-  if (next_)
-    value_ += next_->Aggregate();
-
-  return value_;
 }
 
 void StackTreeNodeHide::Objectify(Isolate* isolate, Local<Object>& obj, const isolatedKeys& keys) const {
@@ -170,6 +155,8 @@ bool StackTree::InsertTrace(const TraceAndValue& tv) {
     position = find(position + 1, trace.rend(), '#');
   }
 
+  value_ += tv.value;
+
   // Cap the number of node at MAX_TRACES and hide the rest
   if (node_count_++ >= MAX_TRACES) {
     if (hide_ == nullptr)
@@ -198,6 +185,7 @@ bool StackTree::InsertTrace(const TraceAndValue& tv) {
 }
 
 void StackTree::BuildTree() {
+  value_ = 0;
   node_count_ = 0;
   roots_.clear();
   hide_.reset(nullptr);
@@ -264,14 +252,6 @@ void StackTree::Aggregate(const std::function<double(const Trace* t)>& f) {
         return a.value > b.value; });
 
   BuildTree();
-
-  value_ = 0;
-  for (auto& root : roots_) {
-    value_ += root.Aggregate();
-  }
-
-  if (hide_)
-    value_ += hide_->Aggregate();
 }
 
 }  // namespace memoro

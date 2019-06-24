@@ -189,11 +189,37 @@ void Memoro_TraceChunks(const v8::FunctionCallbackInfo<v8::Value>& args) {
   args.GetReturnValue().Set(result_list);
 }
 
-void Memoro_Traces(const v8::FunctionCallbackInfo<v8::Value>& args) {
-  Isolate* isolate = args.GetIsolate();
-  static std::vector<TraceValue> traces;  // just reuse this
+static std::vector<TraceValue> traces;  // just reuse this
+void Memoro_SortTraces(const v8::FunctionCallbackInfo<v8::Value>& args) {
   traces.clear();
   Traces(traces);
+
+  v8::String::Utf8Value sortByV8(args[0]);
+  std::string sortBy(*sortByV8, sortByV8.length());
+
+  if (sortBy == "bytes") {
+    sort(traces.begin(), traces.end(), [](const TraceValue& a, const TraceValue&b) {
+        return b.max_aggregate < a.max_aggregate; });
+  } else if (sortBy == "allocations") {
+    sort(traces.begin(), traces.end(), [](const TraceValue& a, const TraceValue&b) {
+        return b.num_chunks < a.num_chunks; });
+  } else if (sortBy == "usage") {
+    sort(traces.begin(), traces.end(), [](const TraceValue& a, const TraceValue&b) {
+        return b.usage_score < a.usage_score; });
+  } else if (sortBy == "lifetime") {
+    sort(traces.begin(), traces.end(), [](const TraceValue& a, const TraceValue&b) {
+        return b.lifetime_score < a.lifetime_score; });
+  } else if (sortBy == "useful_lifetime") {
+    sort(traces.begin(), traces.end(), [](const TraceValue& a, const TraceValue&b) {
+        return b.useful_lifetime_score < a.useful_lifetime_score; });
+  }
+}
+
+void Memoro_Traces(const v8::FunctionCallbackInfo<v8::Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+
+  size_t offset = args[0]->IntegerValue();
+  size_t count = std::min((size_t)args[1]->IntegerValue(), traces.size() - offset);
 
   auto kTrace          = String::NewFromUtf8(isolate, "trace");
   auto kType           = String::NewFromUtf8(isolate, "type");
@@ -207,18 +233,21 @@ void Memoro_Traces(const v8::FunctionCallbackInfo<v8::Value>& args) {
   auto kUsefulLifetime = String::NewFromUtf8(isolate, "useful_lifetime_score");
 
   Local<Array> result_list = Array::New(isolate);
-  for (unsigned int i = 0; i < traces.size(); i++) {
+  for (size_t i = 0; i < count; i++) {
+    const TraceValue& t = traces[i + offset];
+
     Local<Object> result = Object::New(isolate);
-    result->Set(kTrace, String::NewFromUtf8(isolate, traces[i].trace->c_str()));
-    result->Set(kType, String::NewFromUtf8(isolate, traces[i].type->c_str()));
-    result->Set(kTraceIndex, Number::New(isolate, traces[i].trace_index));
-    result->Set(kNumChunks, Number::New(isolate, traces[i].num_chunks));
-    result->Set(kChunkIndex, Number::New(isolate, traces[i].chunk_index));
-    result->Set(kMaxAggregate, Number::New(isolate, traces[i].max_aggregate));
-    result->Set(kAllocTimeTotal, Number::New(isolate, traces[i].alloc_time_total));
-    result->Set(kUsage, Number::New(isolate, traces[i].usage_score));
-    result->Set(kLifetime, Number::New(isolate, traces[i].lifetime_score));
-    result->Set(kUsefulLifetime, Number::New(isolate, traces[i].useful_lifetime_score));
+    result->Set(kTrace, String::NewFromUtf8(isolate, t.trace->c_str()));
+    result->Set(kType, String::NewFromUtf8(isolate, t.type->c_str()));
+    result->Set(kTraceIndex, Number::New(isolate, t.trace_index));
+    result->Set(kNumChunks, Number::New(isolate, t.num_chunks));
+    result->Set(kChunkIndex, Number::New(isolate, t.chunk_index));
+    result->Set(kMaxAggregate, Number::New(isolate, t.max_aggregate));
+    result->Set(kAllocTimeTotal, Number::New(isolate, t.alloc_time_total));
+    result->Set(kUsage, Number::New(isolate, t.usage_score));
+    result->Set(kLifetime, Number::New(isolate, t.lifetime_score));
+    result->Set(kUsefulLifetime, Number::New(isolate, t.useful_lifetime_score));
+
     result_list->Set(i, result);
   }
 
@@ -397,6 +426,7 @@ void init(Handle<Object> exports, Handle<Object> module) {
   NODE_SET_METHOD(exports, "max_aggregate", Memoro_MaxAggregate);
   NODE_SET_METHOD(exports, "set_trace_keyword", Memoro_SetTraceKeyword);
   NODE_SET_METHOD(exports, "set_type_keyword", Memoro_SetTypeKeyword);
+  NODE_SET_METHOD(exports, "sort_traces", Memoro_SortTraces);
   NODE_SET_METHOD(exports, "traces", Memoro_Traces);
   NODE_SET_METHOD(exports, "aggregate_trace", Memoro_AggregateTrace);
   NODE_SET_METHOD(exports, "trace_chunks", Memoro_TraceChunks);

@@ -228,30 +228,8 @@ function constructInferences(inef) {
 }
 
 var current_sort_order = 'bytes';
-function sortTraces(traces) {
-
-    if (current_sort_order === 'bytes') {
-        traces.sort(function (a, b) {
-            return b.max_aggregate - a.max_aggregate;
-        });
-    } else if (current_sort_order === 'allocations') {
-        traces.sort(function (a, b) {
-            return b.num_chunks - a.num_chunks;
-        });
-    } else if (current_sort_order === 'usage') {
-        traces.sort(function (a, b) {
-            return a.usage_score - b.usage_score;
-        });
-    } else if (current_sort_order === 'lifetime') {
-        traces.sort(function (a, b) {
-            return a.lifetime_score - b.lifetime_score;
-        });
-    } else if (current_sort_order === 'useful_lifetime') {
-        traces.sort(function (a, b) {
-            return a.useful_lifetime_score - b.useful_lifetime_score;
-        });
-    }
-
+function sortTraces() {
+    memoro.sort_traces(current_sort_order);
 }
 
 function generateOpenSourceCmd(file, line) {
@@ -387,8 +365,7 @@ function drawStackTraces() {
 
     x.domain([min_x, max_x]);
 
-    var traces = memoro.traces();
-    sortTraces(traces);
+    var traces = memoro.traces(0, 150);
     num_traces = traces.length;
     total_chunks = 0;
 
@@ -1390,6 +1367,7 @@ function drawEverything() {
     drawGlobalAggregateAxis();
     drawAggregateAxis();
 
+    sortTraces()
     drawStackTraces();
 
     setGlobalInfo();
@@ -1630,6 +1608,7 @@ function setFlameGraphBytesTotal() {
 
 function traceSort(pred) {
     current_sort_order = pred;
+    sortTraces();
     drawStackTraces();
 }
 

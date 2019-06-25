@@ -189,10 +189,8 @@ void StackTree::BuildTree() {
   node_count_ = 0;
   roots_.clear();
   hide_.reset(nullptr);
-  for (auto it = traces_.cbegin(); it != traces_.cend(); it++) {
-    (*it).trace->filtered = node_count_ >= MAX_TRACES;
+  for (auto it = traces_.cbegin(); it != traces_.cend(); it++)
     InsertTrace(*it);
-  }
 }
 
 void StackTree::SetTraces(std::vector<Trace>& traces) {

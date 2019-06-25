@@ -57,6 +57,10 @@ function chunkScroll() {
     chunk_graph.chunkScroll();
 }
 
+function traceScroll() {
+    chunk_graph.traceScroll();
+}
+
 function stackFilterClick() {
     chunk_graph.stackFilterClick();
 }

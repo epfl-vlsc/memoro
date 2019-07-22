@@ -24,6 +24,12 @@ using namespace v8;
 
 using NameIDs = vector<pair<string, uint64_t>>;
 
+struct isolatedKeys {
+  Local<String> kName, kProcess, kValue;
+  Local<String> kChildren;
+  Local<String> kLifetime, kUsage, kUsefulLifetime;
+};
+
 class StackTreeNode {
  public:
   StackTreeNode(uint64_t id, std::string name, const Trace* trace)
@@ -73,19 +79,19 @@ class StackTreeNode {
     return ret;
   }
 
-  void Objectify(Isolate* isolate, Local<Object>& obj) {
+  void Objectify(Isolate* isolate, Local<Object>& obj, const isolatedKeys& keys) const {
     // put myself in this object
-    obj->Set(String::NewFromUtf8(isolate, "name"),
+    obj->Set(keys.kName,
              String::NewFromUtf8(isolate, name_.c_str()));
-    obj->Set(String::NewFromUtf8(isolate, "value"),
+    obj->Set(keys.kValue,
              Number::New(isolate, value_));
 
     if (trace_ != nullptr) {
-      obj->Set(String::NewFromUtf8(isolate, "lifetime_score"),
+      obj->Set(keys.kLifetime,
                Number::New(isolate, trace_->lifetime_score));
-      obj->Set(String::NewFromUtf8(isolate, "usage_score"),
+      obj->Set(keys.kUsage,
                Number::New(isolate, trace_->usage_score));
-      obj->Set(String::NewFromUtf8(isolate, "useful_lifetime_score"),
+      obj->Set(keys.kUsefulLifetime,
                Number::New(isolate, trace_->useful_lifetime_score));
       return;
     }
@@ -95,12 +101,12 @@ class StackTreeNode {
     for (size_t i = 0; i < children_.size(); i++) {
       auto& child = children_[i];
       Local<Object> child_obj = Object::New(isolate);
-      child.Objectify(isolate, child_obj);
+      child.Objectify(isolate, child_obj, keys);
 
       children->Set(i, child_obj);
     }
 
-    obj->Set(String::NewFromUtf8(isolate, "children"), children);
+    obj->Set(keys.kChildren, children);
   }
 
  private:
@@ -172,25 +178,33 @@ bool StackTree::InsertTrace(const Trace* t) {
 
 void StackTree::V8Objectify(const v8::FunctionCallbackInfo<v8::Value>& args) {
   Isolate* isolate = args.GetIsolate();
+  const isolatedKeys keys = {
+    String::NewFromUtf8(isolate, "name"),
+    String::NewFromUtf8(isolate, "process"),
+    String::NewFromUtf8(isolate, "value"),
+    String::NewFromUtf8(isolate, "children"),
+
+    String::NewFromUtf8(isolate, "lifetime_score"),
+    String::NewFromUtf8(isolate, "usage_score"),
+    String::NewFromUtf8(isolate, "useful_lifetime_score"),
+  };
 
   Local<Object> root = Object::New(isolate);
-  root->Set(String::NewFromUtf8(isolate, "name"),
-            String::NewFromUtf8(isolate, "process"));
-  root->Set(String::NewFromUtf8(isolate, "value"),
-            Number::New(isolate, value_));
+  root->Set(keys.kName, keys.kProcess);
+  root->Set(keys.kValue, Number::New(isolate, value_));
 
   Local<Array> children = Array::New(isolate);
 
   for (size_t i = 0; i < roots_.size(); i++) {
-    auto& root = roots_[i];
+    const auto* root = roots_[i];
     Local<Object> child_obj = Object::New(isolate);
 
-    root->Objectify(isolate, child_obj);  // recursively
+    root->Objectify(isolate, child_obj, keys);  // recursively
 
     children->Set(i, child_obj);
   }
 
-  root->Set(String::NewFromUtf8(isolate, "children"), children);
+  root->Set(keys.kChildren, children);
 
   args.GetReturnValue().Set(root);
 }

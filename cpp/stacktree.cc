@@ -22,109 +22,109 @@ namespace memoro {
 using namespace std;
 using namespace v8;
 
-using NameIDs = vector<pair<string, uint64_t>>;
-
 struct isolatedKeys {
   Local<String> kName, kProcess, kValue;
   Local<String> kChildren;
   Local<String> kLifetime, kUsage, kUsefulLifetime;
 };
 
-class StackTreeNode {
- public:
-  StackTreeNode(uint64_t id, std::string name, const Trace* trace)
-      : id_(id), name_(name), trace_(trace) {}
+bool StackTreeNode::Insert(const TraceAndValue& tv, NameIDs::const_iterator pos,
+    const NameIDs& name_ids) {
+  // auto next = pos+1;
+  bool ret = false;
+  if (pos == name_ids.end()) {
+    // its the last one and will have no children
+    // e.g. this is a malloc/new call
+    trace_ = tv.trace;
+    value_ = tv.value;
+    ret = true;
+  } else {
+    value_ += tv.value;
 
-  bool Insert(const Trace* t, NameIDs::const_iterator pos,
-              const NameIDs& name_ids) {
-    // auto next = pos+1;
-    bool ret = false;
-    if (pos == name_ids.end()) {
-      // its the last one and will have no children
-      // e.g. this is a malloc/new call
-      trace_ = t;
-      ret = true;
+    auto it = find_if(children_.begin(), children_.end(),
+        [pos](const StackTreeNode& a) {
+        return a.name_ == pos->first && a.id_ == pos->second;
+        });
+
+    if (it != children_.end()) {
+      // exists, advance
+      ret = it->Insert(tv, pos + 1, name_ids);
     } else {
-      auto it = find_if(children_.begin(), children_.end(),
-                        [pos](const StackTreeNode& a) {
-                          return a.name_ == pos->first && a.id_ == pos->second;
-                        });
-
-      if (it != children_.end()) {
-        // exists, advance
-        ret = it->Insert(t, pos + 1, name_ids);
-      } else {
-        // create new
-        StackTreeNode n(pos->second, pos->first, nullptr);
-        children_.push_back(n);
-        ret = children_[children_.size() - 1].Insert(t, pos + 1, name_ids);
-      }
+      // create new
+      children_.emplace_back(pos->second, pos->first, nullptr);
+      ret = children_.back().Insert(tv, pos + 1, name_ids);
     }
-    return ret;
+  }
+  return ret;
+}
+
+void StackTreeNode::Objectify(Isolate* isolate, Local<Object>& obj, const isolatedKeys& keys) const {
+  // put myself in this object
+  obj->Set(keys.kName,
+      String::NewFromUtf8(isolate, name_.c_str()));
+  obj->Set(keys.kValue,
+      Number::New(isolate, value_));
+
+  if (trace_ != nullptr) {
+    obj->Set(keys.kLifetime,
+        Number::New(isolate, trace_->lifetime_score));
+    obj->Set(keys.kUsage,
+        Number::New(isolate, trace_->usage_score));
+    obj->Set(keys.kUsefulLifetime,
+        Number::New(isolate, trace_->useful_lifetime_score));
+    return;
   }
 
-  double Aggregate(const std::function<double(const Trace* t)>& f) {
-    double ret = 0;
-    if (trace_ != nullptr) {
-      value_ = f(trace_);
-      ret = value_;
-    } else {
-      //double sum = 0;
-      for (auto& child : children_) {
-        ret += child.Aggregate(f);
-      }
-      value_ = ret;
-      //return sum;
-    }
-    return ret;
+  Local<Array> children = Array::New(isolate);
+
+  for (size_t i = 0; i < children_.size(); i++) {
+    auto& child = children_[i];
+    Local<Object> child_obj = Object::New(isolate);
+    child.Objectify(isolate, child_obj, keys);
+
+    children->Set(i, child_obj);
   }
 
-  void Objectify(Isolate* isolate, Local<Object>& obj, const isolatedKeys& keys) const {
-    // put myself in this object
-    obj->Set(keys.kName,
-             String::NewFromUtf8(isolate, name_.c_str()));
-    obj->Set(keys.kValue,
-             Number::New(isolate, value_));
+  obj->Set(keys.kChildren, children);
+}
 
-    if (trace_ != nullptr) {
-      obj->Set(keys.kLifetime,
-               Number::New(isolate, trace_->lifetime_score));
-      obj->Set(keys.kUsage,
-               Number::New(isolate, trace_->usage_score));
-      obj->Set(keys.kUsefulLifetime,
-               Number::New(isolate, trace_->useful_lifetime_score));
-      return;
-    }
+bool StackTreeNodeHide::Insert(const TraceAndValue& tv, NameIDs::const_iterator pos, const NameIDs& nameIds) {
+  if (children_.size() < MAX_TRACES) {
+    return StackTreeNode::Insert(tv, pos, nameIds);
+  } else {
+    if (next_ == nullptr)
+      next_ = std::make_unique<StackTreeNodeHide>();
 
+    // Already taken care of by StackTreeNode::Insert() for if (true) { … }
+    value_ += tv.value;
+
+    return next_->Insert(tv, pos, nameIds);
+  }
+}
+
+void StackTreeNodeHide::Objectify(Isolate* isolate, Local<Object>& obj, const isolatedKeys& keys) const {
+  // put myself in this object
+  obj->Set(keys.kName,
+      String::NewFromUtf8(isolate, name_.c_str()));
+  obj->Set(keys.kValue,
+      Number::New(isolate, value_));
+
+  if (next_) {
     Local<Array> children = Array::New(isolate);
 
-    for (size_t i = 0; i < children_.size(); i++) {
-      auto& child = children_[i];
-      Local<Object> child_obj = Object::New(isolate);
-      child.Objectify(isolate, child_obj, keys);
-
-      children->Set(i, child_obj);
-    }
+    Local<Object> next_obj = Object::New(isolate);
+    next_->Objectify(isolate, next_obj, keys);
+    children->Set(0, next_obj);
 
     obj->Set(keys.kChildren, children);
   }
+}
 
- private:
-  friend class StackTree;
-  uint64_t id_;
-  std::string name_;  // string_view would be better
-
-  // if trace is not nullptr, there can be no children
-  const Trace* trace_ = nullptr;
-  std::vector<StackTreeNode> children_;
-  double value_ = 0;
-};
-
-bool StackTree::InsertTrace(const Trace* t) {
+bool StackTree::InsertTrace(const TraceAndValue& tv) {
   // assuming stacktrace of form
   // #1 0x10be26858 in main test.cpp:57
 
-  const string& trace = t->trace;
+  const string& trace = tv.trace->trace;
   NameIDs name_ids;
   stringstream ss;
   string name;
@@ -155,25 +155,49 @@ bool StackTree::InsertTrace(const Trace* t) {
     position = find(position + 1, trace.rend(), '#');
   }
 
+  value_ += tv.value;
+
+  // Cap the number of node at MAX_TRACES and hide the rest
+  if (node_count_++ >= MAX_TRACES) {
+    if (hide_ == nullptr)
+      hide_ = std::make_unique<StackTreeNodeHide>();
+
+    return hide_->Insert(tv, name_ids.begin() + 1, name_ids);
+  }
+
   // now we have a list of function name, ID (address) pairs from
   // `main' to malloc, so to speak ... insert into the stack tree
   auto& first = name_ids[0];
   auto it =
-      find_if(roots_.begin(), roots_.end(), [first](const StackTreeNode* a) {
-        return a->name_ == first.first && a->id_ == first.second;
+      find_if(roots_.begin(), roots_.end(), [first](const StackTreeNode& a) {
+        return a.name_ == first.first && a.id_ == first.second;
       });
 
   if (it != roots_.end()) {
     // exists, proceed with insert
-    return (*it)->Insert(t, name_ids.begin() + 1, name_ids);
+    return (*it).Insert(tv, name_ids.begin() + 1, name_ids);
   } else {
     // create new root (recall these are entry points, e.g. main,
     // pthread_create, etc. )
-    StackTreeNode* n =
-        new StackTreeNode(name_ids[0].second, name_ids[0].first, nullptr);
-    roots_.push_back(n);
-    return roots_[roots_.size() - 1]->Insert(t, name_ids.begin() + 1, name_ids);
+    roots_.emplace_back(name_ids[0].second, name_ids[0].first, nullptr);
+    return roots_.back().Insert(tv, name_ids.begin() + 1, name_ids);
   }
+}
+
+void StackTree::BuildTree() {
+  value_ = 0;
+  node_count_ = 0;
+  roots_.clear();
+  hide_.reset(nullptr);
+  for (auto it = traces_.cbegin(); it != traces_.cend(); it++)
+    InsertTrace(*it);
+}
+
+void StackTree::SetTraces(std::vector<Trace>& traces) {
+  traces_.clear();
+  traces_.reserve(traces.size());
+  for (Trace& t: traces)
+    traces_.push_back({ &t, 0.0 });
 }
 
 void StackTree::V8Objectify(const v8::FunctionCallbackInfo<v8::Value>& args) {
@@ -196,12 +220,20 @@ void StackTree::V8Objectify(const v8::FunctionCallbackInfo<v8::Value>& args) {
   Local<Array> children = Array::New(isolate);
 
   for (size_t i = 0; i < roots_.size(); i++) {
-    const auto* root = roots_[i];
+    const auto& root = roots_[i];
     Local<Object> child_obj = Object::New(isolate);
 
-    root->Objectify(isolate, child_obj, keys);  // recursively
+    root.Objectify(isolate, child_obj, keys);  // recursively
 
     children->Set(i, child_obj);
+  }
+
+  if (hide_) {
+    Local<Object> hide_obj = Object::New(isolate);
+
+    hide_->Objectify(isolate, hide_obj, keys);  // recursively
+
+    children->Set(roots_.size(), hide_obj);
   }
 
   root->Set(keys.kChildren, children);
@@ -210,10 +242,14 @@ void StackTree::V8Objectify(const v8::FunctionCallbackInfo<v8::Value>& args) {
 }
 
 void StackTree::Aggregate(const std::function<double(const Trace* t)>& f) {
-  value_ = 0;
-  for (auto& root : roots_) {
-    value_ += root->Aggregate(f);
-  }
+  for (auto& tv: traces_)
+    tv.value = f(tv.trace);
+
+  sort(traces_.begin(), traces_.end(),
+      [](const TraceAndValue& a, const TraceAndValue& b) {
+        return a.value > b.value; });
+
+  BuildTree();
 }
 
 }  // namespace memoro

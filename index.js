@@ -57,6 +57,10 @@ function chunkScroll() {
     chunk_graph.chunkScroll();
 }
 
+function traceScroll() {
+    chunk_graph.traceScroll();
+}
+
 function stackFilterClick() {
     chunk_graph.stackFilterClick();
 }
@@ -88,6 +92,11 @@ function fgAllocationsClick() {
 function fgBytesTimeClick() {
     console.log("bytes time click")
     chunk_graph.setFlameGraphBytesTime();
+}
+
+function fgBytesTotalClick() {
+    console.log("bytes total click")
+    chunk_graph.setFlameGraphBytesTotal();
 }
 
 function fgMostActiveClick() {

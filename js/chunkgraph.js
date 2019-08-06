@@ -228,30 +228,8 @@ function constructInferences(inef) {
 }
 
 var current_sort_order = 'bytes';
-function sortTraces(traces) {
-
-    if (current_sort_order === 'bytes') {
-        traces.sort(function (a, b) {
-            return b.max_aggregate - a.max_aggregate;
-        });
-    } else if (current_sort_order === 'allocations') {
-        traces.sort(function (a, b) {
-            return b.num_chunks - a.num_chunks;
-        });
-    } else if (current_sort_order === 'usage') {
-        traces.sort(function (a, b) {
-            return a.usage_score - b.usage_score;
-        });
-    } else if (current_sort_order === 'lifetime') {
-        traces.sort(function (a, b) {
-            return a.lifetime_score - b.lifetime_score;
-        });
-    } else if (current_sort_order === 'useful_lifetime') {
-        traces.sort(function (a, b) {
-            return a.useful_lifetime_score - b.useful_lifetime_score;
-        });
-    }
-
+function sortTraces() {
+    memoro.sort_traces(current_sort_order);
 }
 
 function generateOpenSourceCmd(file, line) {
@@ -373,11 +351,215 @@ function generateTraceHtml(raw) {
     })
 }
 
+var load_threshold = 90;
+let stacktraces_count = 20;
+var current_stacktrace_index = stacktraces_count;
+var current_stacktrace_index_low = 0;
+
+function removeStackTracesTop(num) {
+    var svgs = d3.select('#traces').selectAll('svg')._groups[0];
+    for (i = 0; i < num; i++)
+        svgs[i].remove();
+}
+
+function removeStackTracesBottom(num) {
+    var svgs = d3.select('#traces').selectAll('svg')._groups[0];
+    var end = svgs.length;
+
+    for (i = end - num; i < end; i++)
+        svgs[i].remove();
+}
+
+function traceScroll() {
+    var element = document.querySelector("#traces");
+    var percent = 100 * element.scrollTop / (element.scrollHeight - element.clientHeight);
+    if (percent > load_threshold) {
+        var traces = memoro.traces(current_stacktrace_index, stacktraces_count);
+        if (traces.length > 0) {
+            // there are still some to display
+            var to_append = traces.length;
+            var to_remove = to_append;
+            // remove from top
+            for (var i = 0; i < to_append; i++) {
+                var sampled = memoro.aggregate_trace(traces[i].trace_index);
+                renderStackTraceSvg(traces[i], i, sampled, true);
+            }
+            current_stacktrace_index += to_append;
+            current_stacktrace_index_low += to_append;
+
+            removeStackTracesTop(to_remove);
+        }
+    } else if (percent < (100 - load_threshold)) {
+        if (current_stacktrace_index_low > 0) {
+            var traces = memoro.traces(
+                Math.max(current_stacktrace_index_low - stacktraces_count, 0), // Don't go <0
+                Math.min(stacktraces_count, current_stacktrace_index_low)); // Don't ask <0
+            if (traces.length === 0)
+                console.log("oh fuck traces is 0");
+            var to_prepend = traces.length;
+            var to_remove = to_prepend;
+
+            for (i = traces.length-1; i >= 0; i--) {
+                var sampled = memoro.aggregate_trace(traces[i].trace_index);
+                renderStackTraceSvg(traces[i], i, sampled, false);
+            }
+            current_stacktrace_index -= to_prepend;
+            current_stacktrace_index_low -= to_prepend;
+
+            removeStackTracesBottom(to_remove);
+        }
+    }
+}
+
+function renderStackTraceSvg(d, i, sampled, bottom) {
+    var trace = d3.select("#trace");
+    var traces_div = d3.select("#traces");
+    var peak = d.max_aggregate
+    var rectHeight = 55;
+
+    var new_svg_g;
+    if (bottom)
+        new_svg_g = traces_div.append("svg");
+    else
+        new_svg_g = traces_div.insert("svg", ":first-child");
+
+    new_svg_g
+        .attr("width", chunk_graph_width)
+        .attr("height", rectHeight)
+        .classed("svg_spacing_trace", true)
+        .on("click", function(s) {
+            clearChunks();
+            if (d3.select(this).classed("selected")) {
+                d3.selectAll(".select-rect").style("display", "none");
+                d3.select(this).classed("selected", false);
+                trace.html("Select an allocation point under \"Heap Allocation\"");
+                var info = d3.select("#inferences");
+                info.html("");
+                d3.select("#stack-agg-path").remove();
+            } else {
+                colorScale.domain([1, peak]);
+
+                generateTraceHtml(d.trace);
+
+                d3.selectAll(".select-rect").style("display", "none");
+                d3.select(this).selectAll(".select-rect").style("display", "inline");
+                d3.select(this).classed("selected", true);
+                drawChunks(d);
+                var info = d3.select("#inferences");
+                var inef = memoro.inefficiencies(d.trace_index);
+                var html = constructInferences(inef);
+                html += "</br>Usage: " + d.usage_score.toFixed(2) + "</br>Lifetime: " + d.lifetime_score.toFixed(2)
+                    + "</br>Useful Lifetime: " + d.useful_lifetime_score.toFixed(2);
+                info.html(html);
+
+                var fresh_sampled = memoro.aggregate_trace(d.trace_index);
+                var agg_line = d3.line()
+                    .x(function(v) {
+                        return x(v["ts"]);
+                    })
+                    .y(function(v) { return y(v["value"]); })
+                    .curve(d3.curveStepAfter);
+
+                d3.select("#stack-agg-path").remove();
+                var aggregate_graph_g = d3.select("#aggregate-group");
+                aggregate_graph_g.append("path")
+                    .datum(fresh_sampled)
+                    .attr("id", "stack-agg-path")
+                    .attr("fill", "none")
+                    .classed("stack-agg-graph", true)
+                    .attr("stroke-width", 1.0)
+                    .attr("transform", "translate(0, 5)")
+                    .attr("d", agg_line);
+            }
+        })
+        .append("g");
+
+    new_svg_g.append("rect")
+        .attr("transform", "translate(0, 0)")
+        .attr("width", chunk_graph_width - chunk_y_axis_space)
+        .attr("height", rectHeight)
+        .attr("class", function(x) {
+            if (i % 2 == 0) {
+                return "background1";
+            } else {
+                return "background2";
+            }
+        });
+
+    var mean = gmean([d.lifetime_score < 0.01 ? 0.01 : d.lifetime_score, d.usage_score < 0.01 ? 0.01 : d.usage_score,
+        d.useful_lifetime_score < 0.01 ? 0.01 : d.useful_lifetime_score]);
+    var badness_col = Math.round((1.0 - mean) * (badness_colors.length - 1));
+    new_svg_g.append('circle')
+        .attr("transform", "translate(" + (chunk_graph_width - chunk_y_axis_space - 15) + ", 4)")
+        .attr("cx", 5)
+        .attr("cy", 5)
+        .attr("r", 5)
+        .style("fill", badness_colors[badness_col])
+        .on("mouseover", badnessTooltip(badness_col))
+        .on("mouseout", function(d) {
+            var div = d3.select("#tooltip");
+            div.transition()
+                .duration(500)
+                .style("opacity", 0);
+        });
+
+    new_svg_g.append("rect")
+        .attr("transform", "translate(0, 0)")
+        .attr("width", chunk_graph_width - chunk_y_axis_space)
+        .attr("height", rectHeight)
+        .style("fill", "none")
+        .style("stroke-width", "2px")
+        .style("stroke", "steelblue")
+        .style("display", "none")
+        .classed("select-rect", true);
+
+    //sampled = memoro.aggregate_trace(d.trace_index);
+
+    var t = new_svg_g.append("text");
+    t.style("font-size", "small")
+        .classed("stack-text", true)
+        .attr("x", 5)
+        .attr("y", "15")
+        .text("Chunks: " + (d.num_chunks) + ", Peak Bytes: " + bytesToString(peak) + " Type: " + d.type);
+
+
+    var stack_y = d3.scaleLinear()
+        .range([rectHeight-25, 0]);
+
+    stack_y.domain(d3.extent(sampled, function(v) { return v["value"]; }));
+
+    var yAxisRight = d3.axisRight(stack_y)
+        .tickFormat(bytesToStringNoDecimal)
+        .ticks(2);
+
+    var line = d3.line()
+        .x(function(v) {
+            return x(v["ts"]);
+        })
+        .y(function(v) { return stack_y(v["value"]); })
+        .curve(d3.curveStepAfter);
+
+    new_svg_g.append("path")
+        .datum(sampled)
+        .attr("fill", "none")
+        .classed("stack-agg-overlay", true)
+        .attr("stroke-width", 1.0)
+        .attr("transform", "translate(0, 20)")
+        .attr("d", line);
+    new_svg_g.append("g")
+        .attr("class", "y axis")
+        .attr("transform", "translate(" + (chunk_graph_width - chunk_y_axis_space + 1) + ",20)")
+        .style("fill", "white")
+        .call(yAxisRight);
+}
+
 function drawStackTraces() {
 
     var trace = d3.select("#trace");
     var traces_div = d3.select("#traces");
     traces_div.selectAll("svg").remove();
+
+    traces_div.property('scrollTop', 0);
 
     d3.select("#inferences").html("");
 
@@ -387,8 +569,10 @@ function drawStackTraces() {
 
     x.domain([min_x, max_x]);
 
-    var traces = memoro.traces();
-    sortTraces(traces);
+    sortTraces();
+    current_stacktrace_index_low = 0;
+    current_stacktrace_index = stacktraces_count * 3;
+    var traces = memoro.traces(current_stacktrace_index_low, current_stacktrace_index);
     num_traces = traces.length;
     total_chunks = 0;
 
@@ -398,147 +582,14 @@ function drawStackTraces() {
 
     var cur_background_class = 0;
     traces.forEach(function (d, i) {
-
         total_usage += d.usage_score;
         total_lifetime += d.lifetime_score;
         total_useful_lifetime += d.useful_lifetime_score;
 
         var sampled = memoro.aggregate_trace(d.trace_index);
-        var peak = d.max_aggregate
         total_chunks += d.num_chunks;
-        var rectHeight = 55;
 
-        var new_svg_g = traces_div
-            .append("svg")
-            .attr("width", chunk_graph_width)
-            .attr("height", rectHeight)
-            .classed("svg_spacing_trace", true)
-            .on("click", function(s) {
-                if (d3.select(this).classed("selected")) {
-                    d3.selectAll(".select-rect").style("display", "none");
-                    d3.select(this).classed("selected", false);
-                    trace.html("Select an allocation point under \"Heap Allocation\"");
-                    clearChunks();
-                    var info = d3.select("#inferences");
-                    info.html("");
-                    d3.select("#stack-agg-path").remove();
-                } else {
-                    colorScale.domain([1, peak]);
-
-                    generateTraceHtml(d.trace);
-
-                    d3.selectAll(".select-rect").style("display", "none");
-                    d3.select(this).selectAll(".select-rect").style("display", "inline");
-                    d3.select(this).classed("selected", true);
-                    drawChunks(d);
-                    var info = d3.select("#inferences");
-                    var inef = memoro.inefficiencies(d.trace_index);
-                    var html = constructInferences(inef);
-                    html += "</br>Usage: " + d.usage_score.toFixed(2) + "</br>Lifetime: " + d.lifetime_score.toFixed(2)
-                    + "</br>Useful Lifetime: " + d.useful_lifetime_score.toFixed(2);
-                    info.html(html);
-
-                    var fresh_sampled = memoro.aggregate_trace(d.trace_index);
-                    var agg_line = d3.line()
-                        .x(function(v) {
-                            return x(v["ts"]);
-                        })
-                        .y(function(v) { return y(v["value"]); })
-                        .curve(d3.curveStepAfter);
-
-                    d3.select("#stack-agg-path").remove();
-                    var aggregate_graph_g = d3.select("#aggregate-group");
-                    aggregate_graph_g.append("path")
-                        .datum(fresh_sampled)
-                        .attr("id", "stack-agg-path")
-                        .attr("fill", "none")
-                        .classed("stack-agg-graph", true)
-                        .attr("stroke-width", 1.0)
-                        .attr("transform", "translate(0, 5)")
-                        .attr("d", agg_line);
-                }
-            })
-            .append("g");
-
-        new_svg_g.append("rect")
-            .attr("transform", "translate(0, 0)")
-            .attr("width", chunk_graph_width - chunk_y_axis_space)
-            .attr("height", rectHeight)
-            .attr("class", function(x) {
-                if (cur_background_class === 0) {
-                    cur_background_class = 1;
-                    return "background1";
-                } else {
-                    cur_background_class = 0;
-                    return "background2";
-                }
-            });
-
-        var mean = gmean([d.lifetime_score < 0.01 ? 0.01 : d.lifetime_score, d.usage_score < 0.01 ? 0.01 : d.usage_score,
-            d.useful_lifetime_score < 0.01 ? 0.01 : d.useful_lifetime_score]);
-        var badness_col = Math.round((1.0 - mean) * (badness_colors.length - 1));
-        new_svg_g.append('circle')
-            .attr("transform", "translate(" + (chunk_graph_width - chunk_y_axis_space - 15) + ", 4)")
-            .attr("cx", 5)
-            .attr("cy", 5)
-            .attr("r", 5)
-            .style("fill", badness_colors[badness_col])
-            .on("mouseover", badnessTooltip(badness_col))
-            .on("mouseout", function(d) {
-                var div = d3.select("#tooltip");
-                div.transition()
-                    .duration(500)
-                    .style("opacity", 0);
-            });
-
-        new_svg_g.append("rect")
-            .attr("transform", "translate(0, 0)")
-            .attr("width", chunk_graph_width - chunk_y_axis_space)
-            .attr("height", rectHeight)
-            .style("fill", "none")
-            .style("stroke-width", "2px")
-            .style("stroke", "steelblue")
-            .style("display", "none")
-            .classed("select-rect", true);
-
-        //sampled = memoro.aggregate_trace(d.trace_index);
-
-        var t = new_svg_g.append("text");
-            t.style("font-size", "small")
-            .classed("stack-text", true)
-            .attr("x", 5)
-            .attr("y", "15")
-            .text("Chunks: " + (d.num_chunks) + ", Peak Bytes: " + bytesToString(peak) + " Type: " + d.type);
-
-
-        var stack_y = d3.scaleLinear()
-            .range([rectHeight-25, 0]);
-
-        stack_y.domain(d3.extent(sampled, function(v) { return v["value"]; }));
-
-        var yAxisRight = d3.axisRight(stack_y)
-            .tickFormat(bytesToStringNoDecimal)
-            .ticks(2);
-
-        var line = d3.line()
-            .x(function(v) {
-                return x(v["ts"]);
-            })
-            .y(function(v) { return stack_y(v["value"]); })
-            .curve(d3.curveStepAfter);
-
-        new_svg_g.append("path")
-            .datum(sampled)
-            .attr("fill", "none")
-            .classed("stack-agg-overlay", true)
-            .attr("stroke-width", 1.0)
-            .attr("transform", "translate(0, 20)")
-            .attr("d", line);
-        new_svg_g.append("g")
-            .attr("class", "y axis")
-            .attr("transform", "translate(" + (chunk_graph_width - chunk_y_axis_space + 1) + ",20)")
-            .style("fill", "white")
-            .call(yAxisRight);
+        renderStackTraceSvg(d, i, sampled, true);
     });
 
     avg_lifetime = total_lifetime / traces.length;
@@ -664,7 +715,6 @@ function removeChunksBottom(num) {
     }
 }
 
-var load_threshold = 80;
 var current_trace_index = null;
 var current_chunk_index = 0;
 var current_chunk_index_low = 0;
@@ -712,6 +762,8 @@ function clearChunks() {
 
     chunk_div.selectAll("div").remove();
     current_trace_index = null;
+
+    chunk_div.property('scrollTop', 0);
 }
 
 // draw the first X chunks from this trace
@@ -1123,9 +1175,9 @@ var colorMapper = function(d) {
     if ('lifetime_score' in d.data) {
         var mean = gmean([d.data.lifetime_score < 0.01 ? 0.01 : d.data.lifetime_score, d.data.usage_score < 0.01 ? 0.01 : d.data.usage_score,
             d.data.useful_lifetime_score < 0.01 ? 0.01 : d.data.useful_lifetime_score]);
-        console.log(mean);
+        // console.log(mean);
         var badness_col = Math.round((1.0 - mean) * (badness_colors.length - 1));
-        console.log(badness_col);
+        // console.log(badness_col);
         return badness_colors[badness_col];
     }
     return d.highlight ? "#E600E6" : colorHash(name(d));
@@ -1167,17 +1219,19 @@ function filterTree(tree) {
 }
 
 function drawFlameGraph() {
-
-    var tree;
-    if (current_fg_type === "num_allocs")
-        memoro.stacktree_by_numallocs();
-    else if (current_fg_type === "bytes_time")
+    switch (current_fg_type) {
+      case "bytes_time":
         memoro.stacktree_by_bytes(current_fg_time);
-    else
+        break;
+      case "bytes_total":
+        memoro.stacktree_by_bytes_total(current_fg_time);
+        break;
+      case "num_allocs":
+      default:
         memoro.stacktree_by_numallocs();
+    }
 
-
-    tree = memoro.stacktree();
+    var tree = memoro.stacktree();
     filterTree(tree); // it just seems easier to filter this here ...
     console.log(tree);
     d3.select("#flame-graph-div").html("");
@@ -1388,6 +1442,7 @@ function drawEverything() {
     drawGlobalAggregateAxis();
     drawAggregateAxis();
 
+    sortTraces()
     drawStackTraces();
 
     setGlobalInfo();
@@ -1606,17 +1661,29 @@ function globalInfoHelp() {
 }
 
 function setFlameGraphNumAllocs() {
-    current_fg_type = "num_allocs";
-    drawFlameGraph();
+    if (current_fg_type != "num_allocs") {
+        current_fg_type = "num_allocs";
+        drawFlameGraph();
+    }
 }
 
 function setFlameGraphBytesTime() {
-    current_fg_type = "bytes_time";
-    drawFlameGraph();
+    if (current_fg_type != "bytes_time") {
+        current_fg_type = "bytes_time";
+        drawFlameGraph();
+    }
+}
+
+function setFlameGraphBytesTotal() {
+  if (current_fg_type != "bytes_total") {
+      current_fg_type = "bytes_total";
+      drawFlameGraph();
+  }
 }
 
 function traceSort(pred) {
     current_sort_order = pred;
+    sortTraces();
     drawStackTraces();
 }
 
@@ -1630,9 +1697,11 @@ module.exports = {
     filterExecuteClick: filterExecuteClick,
     filterFgExecuteClick: filterExecuteClick,
     chunkScroll: chunkScroll,
+    traceScroll: traceScroll,
     resetTimeClick: resetTimeClick,
     showFilterHelp: showFilterHelp,
     setFlameGraphBytesTime: setFlameGraphBytesTime,
+    setFlameGraphBytesTotal: setFlameGraphBytesTotal,
     setFlameGraphNumAllocs: setFlameGraphNumAllocs,
     flameGraphHelp: flameGraphHelp,
     traceSort: traceSort,

@@ -64,7 +64,7 @@
                 </ul>
               </div>
             </div>
-            <div id="traces" style="width:100%;margin-top:2vh;">
+            <div id="traces" style="width:100%;margin-top:2vh;" onscroll="traceScroll()">
             </div>
             <div id="chunk-axis">
             </div>
@@ -136,6 +136,7 @@
                 <div class="btn-group btn-group-justified" id="fg-btn">
                   <a href="#" class="btn btn-default" onclick="fgAllocationsClick()">Allocations</a>
                   <a href="#" class="btn btn-default" onclick="fgBytesTimeClick()">Bytes in Time</a>
+                  <a href="#" class="btn btn-default" onclick="fgBytesTotalClick()">Bytes Total</a>
                   <a href="#" class="btn btn-default" onclick="fgHelpClick()">Help</a>
                 </div>
                 <div id="flame-graph-div"></div>

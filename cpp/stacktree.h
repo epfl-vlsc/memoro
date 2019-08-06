@@ -21,11 +21,50 @@
 
 namespace memoro {
 
-class StackTreeNode;
+#define MAX_TRACES 1000ul
+
+using NameIDs = std::vector<std::pair<std::string, uint64_t>>;
+
+struct isolatedKeys;
+
+struct TraceAndValue {
+  Trace* trace;
+  double value;
+};
+
+class StackTreeNode {
+ public:
+  StackTreeNode(uint64_t id, std::string name, const Trace* trace)
+      : id_(id), name_(name), trace_(trace) {}
+
+  bool Insert(const TraceAndValue&, NameIDs::const_iterator, const NameIDs&);
+  void Objectify(v8::Isolate*, v8::Local<v8::Object>&, const isolatedKeys&) const;
+
+ protected:
+  friend class StackTree;
+  uint64_t id_;
+  std::string name_;  // string_view would be better
+
+  // if trace is not nullptr, there can be no children
+  const Trace* trace_ = nullptr;
+  std::vector<StackTreeNode> children_;
+  double value_ = 0;
+};
+
+class StackTreeNodeHide : public StackTreeNode {
+  public:
+    StackTreeNodeHide() : StackTreeNode(-1, "Hide", nullptr) {};
+
+    bool Insert(const TraceAndValue&, NameIDs::const_iterator, const NameIDs&);
+    void Objectify(v8::Isolate*, v8::Local<v8::Object>&, const isolatedKeys&) const;
+
+  private:
+    std::unique_ptr<StackTreeNodeHide> next_ = nullptr;
+};
 
 class StackTree {
  public:
-  bool InsertTrace(const Trace* t);
+  void SetTraces(std::vector<Trace>&);
   void Aggregate(const std::function<double(const Trace* t)>& f);
 
   // set args return value to object heirarchy representing tree
@@ -36,11 +75,17 @@ class StackTree {
   // and a recursive helper in StackTreeNode
 
  private:
+  bool InsertTrace(const TraceAndValue& tv);
+  void BuildTree();
+
   // multiple roots are possible because
   // not all traces start in ``main'' for example,
   // some may start in pthread_create() or equivalent
-  std::vector<StackTreeNode*> roots_;
+  std::unique_ptr<StackTreeNodeHide> hide_;
+  std::vector<StackTreeNode> roots_;
+  std::vector<TraceAndValue> traces_;
   double value_ = 0;  // the sum total of all root aggregate values
+  size_t node_count_ = 0;
 };
 
 }  // namespace memoro

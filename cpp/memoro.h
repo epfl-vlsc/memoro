@@ -93,6 +93,7 @@ struct TraceValue {
 // times)
 bool SetDataset(const std::string& file_path, const std::string& trace_file,
                 const std::string& chunk_file, std::string& msg);
+bool SetDataset(const std::string& dir_path, const std::string& stats_file, std::string& msg);
 
 // add a timestamp interval filter
 void SetMinMaxTime(uint64_t max, uint64_t min);

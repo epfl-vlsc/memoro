@@ -219,6 +219,10 @@ class Dataset {
     return true;
   }
 
+  bool Reset(const string& dir_path, const string& stats_file, string& msg) {
+    // TODO: Open stats file
+  }
+
   bool InitTypeData(const string& dir_path, string& msg) {
     string dir(dir_path + "typefiles/");
     vector<string> files;
@@ -646,6 +650,10 @@ static Dataset theDataset;
 bool SetDataset(const std::string& dir_path, const string& trace_file, const string& chunk_file,
                 string& msg) {
   return theDataset.Reset(dir_path, trace_file, chunk_file, msg);
+}
+
+bool SetDataset(const std::string& dir_path, const string& stats_file, string& msg) {
+  return theDataset.Reset(dir_path, stats_file, msg);
 }
 
 void AggregateAll(std::vector<TimeValue>& values) {

@@ -150,23 +150,31 @@ function updateData(datafile) {
     var filename = datafile.replace(/^.*[\\\/]/, '');
     var idx = filename.lastIndexOf('.');
     var name = filename.substring(0, idx);
-    var trace_path = folder + "/" + name + ".trace";
-    var chunk_path = folder + "/" + name + ".chunks";
-    console.log("trace " + trace_path + " chunk path " + chunk_path);
-    // set dataset is async, because it can take some time with large trace files
-    memoro.set_dataset(folder+'/', trace_path, chunk_path, function(result) {
-        hideLoader();
-        //console.log(result);
-        if (!result.result) {
-            showModal("Error", "File parsing failed with error: " + result.message, "fa-exclamation-triangle");
-        } else {
+    if (filename.endsWith(".stats")) {
+        var stats_path = folter + "/" + name + ".stats";
+        console.log("stats " + stats_path);
+        memoro.set_dataset_stats(folder+'/', stats_path, set_dataset_done);
+    } else {
+        var trace_path = folder + "/" + name + ".trace";
+        var chunk_path = folder + "/" + name + ".chunks";
+        console.log("trace " + trace_path + " chunk path " + chunk_path);
+        // set dataset is async, because it can take some time with large trace files
+        memoro.set_dataset(folder+'/', trace_path, chunk_path, set_dataset_done);
+    }
+}
 
-            // add default "main" filter?
-            drawEverything();
-        }
-        var element = document.querySelector("#overlay");
-        element.style.visibility = "hidden";
-    });
+function set_dataset_done(result) {
+    hideLoader();
+    //console.log(result);
+    if (!result.result) {
+        showModal("Error", "File parsing failed with error: " + result.message, "fa-exclamation-triangle");
+    } else {
+
+        // add default "main" filter?
+        drawEverything();
+    }
+    var element = document.querySelector("#overlay");
+    element.style.visibility = "hidden";
 }
 
 function badnessTooltip(idx) {

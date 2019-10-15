@@ -41,11 +41,28 @@ struct LoadDatasetWork {
   bool result;
 };
 
+struct LoadDatasetStatsWork {
+  uv_work_t request;
+  Persistent<Function> callback;
+
+  std::string dir_path;
+  std::string stats_path;
+  std::string msg;
+  bool result;
+};
+
 static void LoadDatasetAsync(uv_work_t* req) {
   LoadDatasetWork* work = static_cast<LoadDatasetWork*>(req->data);
 
   work->result =
       SetDataset(work->dir_path, work->trace_path, work->chunk_path, work->msg);
+}
+
+static void LoadDatasetStatsAsync(uv_work_t* req) {
+  LoadDatasetStatsWork* work = static_cast<LoadDatasetStatsWork*>(req->data);
+
+  work->result =
+      SetDataset(work->dir_path, work->stats_path, work->msg);
 }
 
 static void LoadDatasetAsyncComplete(uv_work_t* req, int status) {
@@ -56,6 +73,33 @@ static void LoadDatasetAsyncComplete(uv_work_t* req, int status) {
   v8::HandleScope handleScope(isolate);
 
   LoadDatasetWork* work = static_cast<LoadDatasetWork*>(req->data);
+
+  Local<Object> result = Object::New(isolate);
+  result->Set(String::NewFromUtf8(isolate, "message"),
+              String::NewFromUtf8(isolate, work->msg.c_str()));
+  result->Set(String::NewFromUtf8(isolate, "result"),
+              Boolean::New(isolate, work->result));
+
+  // set up return arguments
+  Local<Value> argv[1] = {result};
+
+  // execute the callback
+  Local<Function>::New(isolate, work->callback)
+      ->Call(isolate->GetCurrentContext()->Global(), 1, argv);
+
+  // Free up the persistent function callback
+  work->callback.Reset();
+  delete work;
+}
+
+static void LoadDatasetStatsAsyncComplete(uv_work_t* req, int status) {
+  Isolate* isolate = Isolate::GetCurrent();
+
+  // Fix for Node 4.x - thanks to
+  // https://github.com/nwjs/blink/commit/ecda32d117aca108c44f38c8eb2cb2d0810dfdeb
+  v8::HandleScope handleScope(isolate);
+
+  LoadDatasetStatsWork* work = static_cast<LoadDatasetStatsWork*>(req->data);
 
   Local<Object> result = Object::New(isolate);
   result->Set(String::NewFromUtf8(isolate, "message"),
@@ -100,6 +144,31 @@ void Memoro_SetDataset(const v8::FunctionCallbackInfo<v8::Value>& args) {
 
   uv_queue_work(uv_default_loop(), &work->request, LoadDatasetAsync,
                 LoadDatasetAsyncComplete);
+
+  args.GetReturnValue().Set(Undefined(isolate));
+}
+
+void Memoro_SetDatasetStats(const v8::FunctionCallbackInfo<v8::Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+
+  v8::String::Utf8Value s(args[0]);
+  std::string dir_path(*s);
+
+  v8::String::Utf8Value stats_file(args[1]);
+  std::string stats_path(*stats_file);
+
+  // launch in a separate thread with callback to keep the gui responsive
+  // since this can take some time
+  LoadDatasetStatsWork* work = new LoadDatasetStatsWork();
+  work->request.data = work;
+  work->dir_path = dir_path;
+  work->stats_path = stats_path;
+
+  Local<Function> callback = Local<Function>::Cast(args[2]);
+  work->callback.Reset(isolate, callback);
+
+  uv_queue_work(uv_default_loop(), &work->request, LoadDatasetStatsAsync,
+                LoadDatasetStatsAsyncComplete);
 
   args.GetReturnValue().Set(Undefined(isolate));
 }
@@ -418,6 +487,7 @@ void Memoro_StackTreeByNumAllocs(
 
 void init(Handle<Object> exports, Handle<Object> module) {
   NODE_SET_METHOD(exports, "set_dataset", Memoro_SetDataset);
+  NODE_SET_METHOD(exports, "set_dataset_stats", Memoro_SetDatasetStats);
   NODE_SET_METHOD(exports, "aggregate_all", Memoro_AggregateAll);
   NODE_SET_METHOD(exports, "max_time", Memoro_MaxTime);
   NODE_SET_METHOD(exports, "min_time", Memoro_MinTime);

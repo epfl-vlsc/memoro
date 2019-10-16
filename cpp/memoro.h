@@ -92,8 +92,8 @@ struct Trace {
 // API will return a list of these to Node layer
 // changing filters will invalidate the indices
 struct TraceValue {
-  std::string* trace;
-  std::string* type;
+  std::string_view trace;
+  std::string_view type;
   int trace_index;
   int chunk_index;
   int num_chunks;

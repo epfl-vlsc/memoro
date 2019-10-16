@@ -306,8 +306,8 @@ void Memoro_Traces(const v8::FunctionCallbackInfo<v8::Value>& args) {
     const TraceValue& t = traces[i + offset];
 
     Local<Object> result = Object::New(isolate);
-    result->Set(kTrace, String::NewFromUtf8(isolate, t.trace->c_str()));
-    result->Set(kType, String::NewFromUtf8(isolate, t.type->c_str()));
+    result->Set(kTrace, String::NewFromUtf8(isolate, t.trace.data()));
+    result->Set(kType, String::NewFromUtf8(isolate, t.type.data()));
     result->Set(kTraceIndex, Number::New(isolate, t.trace_index));
     result->Set(kNumChunks, Number::New(isolate, t.num_chunks));
     result->Set(kChunkIndex, Number::New(isolate, t.chunk_index));

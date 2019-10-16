@@ -233,7 +233,7 @@ class DatasetFull : public Dataset {
     for (size_t i = 0; i < traces_.size(); i++) {
       if (IsTraceFiltered(traces_[i])) continue;
 
-      tmp.trace = &traces_[i].trace;
+      tmp.trace = traces_[i].trace;
       tmp.trace_index = i;
       tmp.chunk_index = 0;
       bool overlaps = false;
@@ -247,7 +247,7 @@ class DatasetFull : public Dataset {
       if (!overlaps) continue;
 
       tmp.num_chunks = traces_[i].chunks.size();
-      tmp.type = &traces_[i].type;
+      tmp.type = traces_[i].type;
       tmp.alloc_time_total = traces_[i].alloc_time_total;
       tmp.max_aggregate = traces_[i].max_aggregate;
       tmp.usage_score = traces_[i].usage_score;

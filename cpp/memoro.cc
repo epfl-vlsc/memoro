@@ -29,6 +29,7 @@
 #include "stacktree.h"
 #include <string.h>
 #include <string>
+#include <limits>
 
 namespace memoro {
 
@@ -98,32 +99,8 @@ class Dataset {
 
       fread(&trace_buf[0], index[i], 1, trace_fd);
       t.trace = string(&trace_buf[0], index[i]);
+      t.type = Typify(t.trace);
 
-      // now i admit, that this is indeed hacky, and entirely
-      // dependent on stack traces being produced by llvm-symbolizer
-      // or at least ending in dir/filename.cpp:<line>:<col>
-      // if/when we switch to symbolizing here, we will have more options
-      // and more robust code
-      size_t pos = t.trace.find_first_of("|");
-      size_t pos2 = t.trace.find_first_of("|", pos + 1);
-      if (pos != string::npos && pos2 != string::npos) {
-        pos = pos2;
-        while (t.trace[pos] != ' ') pos--;
-        string value = t.trace.substr(pos + 1, pos2 - pos - 1);
-        /* cout << "got value:" << value << endl; */
-        /* cout << "with mapped types: " << endl; */
-        auto range = type_map_.equal_range(value);
-        int position = 1000000000;  // should be max_int?
-        t.type = "";
-        for (auto ty = range.first; ty != range.second; ty++) {
-          cout << "(" << ty->second.first << ", " << ty->second.second << ")\n";
-          if (int p = t.trace.find(ty->second.first) != string::npos)
-            if (p < position) {
-              position = p;
-              t.type = ty->second.second;
-            }
-        }
-      }
 
       /*auto ty = type_map_.find(value);
       t.type = ty == type_map_.end() ? string("") : ty->second.second;*/
@@ -449,6 +426,39 @@ class Dataset {
   vector<string> trace_filters_;
   vector<string> type_filters_;
   priority_queue<TimeValue> queue_;
+
+  string Typify(const string& trace) {
+    // now i admit, that this is indeed hacky, and entirely
+    // dependent on stack traces being produced by llvm-symbolizer
+    // or at least ending in dir/filename.cpp:<line>:<col>
+    // if/when we switch to symbolizing here, we will have more options
+    // and more robust code
+    string type;
+    size_t pos = trace.find_first_of("|");
+    size_t pos2 = trace.find_first_of("|", pos + 1);
+    if (pos == string::npos || pos2 == string::npos)
+      return type;
+
+    pos = pos2;
+    while (trace[pos] != ' ') pos--;
+    string value = trace.substr(pos + 1, pos2 - pos - 1);
+    /* cout << "got value:" << value << endl; */
+    /* cout << "with mapped types: " << endl; */
+
+    auto range = type_map_.equal_range(value);
+    int position = std::numeric_limits<int>::max();
+    for (auto ty = range.first; ty != range.second; ty++) {
+      /* cout << "(" << ty->second.first << ", " << ty->second.second << ")\n"; */
+
+      int p = trace.find(ty->second.first);
+      if (p != string::npos && p < position) {
+        position = p;
+        type = ty->second.second;
+      }
+    }
+
+    return type;
+  }
 
   inline bool IsTraceFiltered(Trace const& t) {
     return t.filtered || t.type_filtered;

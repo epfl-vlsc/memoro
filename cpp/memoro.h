@@ -27,6 +27,10 @@
 
 namespace memoro {
 
+#define MAX_POINTS 700
+#define VERSION_MAJOR 0
+#define VERSION_MINOR 1
+
 enum LoadingState : uint32_t {
   LoadData = 0,
   Parsing,
@@ -34,6 +38,14 @@ enum LoadingState : uint32_t {
   Building,
   Aggregating,
   Done
+};
+
+struct __attribute__((packed)) Header {
+  uint8_t version_major = 0;
+  uint8_t version_minor = 1;
+  uint8_t compression_type = 0;
+  uint16_t segment_start = 0;
+  uint32_t index_size = 0;
 };
 
 struct __attribute__((packed)) Chunk {
@@ -55,6 +67,10 @@ struct __attribute__((packed)) Chunk {
 struct TimeValue {
   uint64_t time;
   int64_t value;
+
+  friend bool operator<(const TimeValue& a, const TimeValue& b) {
+    return a.time > b.time;
+  }
 };
 
 struct Trace {

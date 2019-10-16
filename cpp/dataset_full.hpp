@@ -230,7 +230,7 @@ class DatasetFull : public Dataset {
     // and convert directly to V8 objects
     TraceValue tmp;
     traces.reserve(traces_.size());
-    for (int i = 0; i < traces_.size(); i++) {
+    for (size_t i = 0; i < traces_.size(); i++) {
       if (IsTraceFiltered(traces_[i])) continue;
 
       tmp.trace = &traces_[i].trace;
@@ -270,9 +270,9 @@ class DatasetFull : public Dataset {
       cout << "CHUNK INDEX OVER SIZE\n";
       return;
     }
-    int bound = chunk_index + num_chunks;
+    uint64_t bound = chunk_index + num_chunks;
     if (bound > t.chunks.size()) bound = t.chunks.size();
-    for (int i = chunk_index; i < bound; i++) {
+    for (uint64_t i = chunk_index; i < bound; i++) {
       cout << "interval low:" << t.chunks[i]->access_interval_low << "\n";
       chunks.push_back(t.chunks[i]);
     }
@@ -349,7 +349,7 @@ class DatasetFull : public Dataset {
           string module = f.substr(first_dot, final_dot);
           cout << "module is " << module << endl;
           while (getline(infile, line)) {
-              size_t pos = line.find_first_of("|");
+              auto pos = line.find_first_of("|");
               if (pos == string::npos) {
                   msg = "detected incorrect formatting in line " + line + "\n";
                   return false;
@@ -382,8 +382,8 @@ class DatasetFull : public Dataset {
     // if/when we switch to symbolizing here, we will have more options
     // and more robust code
     string type;
-    size_t pos = trace.find_first_of("|");
-    size_t pos2 = trace.find_first_of("|", pos + 1);
+    auto pos = trace.find_first_of("|");
+    auto pos2 = trace.find_first_of("|", pos + 1);
     if (pos == string::npos || pos2 == string::npos)
       return type;
 
@@ -394,11 +394,11 @@ class DatasetFull : public Dataset {
     /* cout << "with mapped types: " << endl; */
 
     auto range = type_map_.equal_range(value);
-    int position = std::numeric_limits<int>::max();
+    auto position = std::numeric_limits<string::size_type>::max();
     for (auto ty = range.first; ty != range.second; ty++) {
       /* cout << "(" << ty->second.first << ", " << ty->second.second << ")\n"; */
 
-      int p = trace.find(ty->second.first);
+      auto p = trace.find(ty->second.first);
       if (p != string::npos && p < position) {
         position = p;
         type = ty->second.second;
@@ -480,7 +480,7 @@ class DatasetFull : public Dataset {
       int i = 0;
       float index = 0.0f;
       while (i < MAX_POINTS) {
-        int idx = (int)index + min;
+        uint64_t idx = (uint64_t)index + min;
         if (idx >= points.size()) {
           cout << "POSSIBLE BUG points size is " << points.size() << " idx is "
                << idx << " interval is " << interval << endl;
@@ -509,7 +509,7 @@ class DatasetFull : public Dataset {
   }
 
   void Aggregate(vector<TimeValue>& points, uint64_t& max_aggregate,
-                 Chunk* chunks, int num_chunks) {
+                 Chunk* chunks, uint64_t num_chunks) {
     if (!queue_.empty()) {
       cout << "THE QUEUE ISNT EMPTY MAJOR ERROR";
       return;
@@ -519,7 +519,7 @@ class DatasetFull : public Dataset {
     points.clear();
     points.push_back({0, 0});
 
-    int i = 0;
+    uint64_t i = 0;
     while (i < num_chunks) {
       if (IsTraceFiltered(traces_[chunks[i].stack_index])) {
         i++;

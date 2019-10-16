@@ -33,6 +33,7 @@
 
 #include "dataset.hpp"
 #include "dataset_full.hpp"
+#include "dataset_stats.hpp"
 
 namespace memoro {
 
@@ -48,7 +49,8 @@ bool SetDataset(const std::string& dir_path, const string& trace_file, const str
 }
 
 bool SetDataset(const std::string& dir_path, const string& stats_file, string& msg) {
-  /* return theDataset.Reset(dir_path, stats_file, msg); */
+  theDataset = make_unique<DatasetStats>(dir_path, stats_file, msg);
+  return true;
 }
 
 void AggregateAll(std::vector<TimeValue>& values) {

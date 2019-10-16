@@ -151,7 +151,7 @@ function updateData(datafile) {
     var idx = filename.lastIndexOf('.');
     var name = filename.substring(0, idx);
     if (filename.endsWith(".stats")) {
-        var stats_path = folter + "/" + name + ".stats";
+        var stats_path = folder + "/" + name + ".stats";
         console.log("stats " + stats_path);
         memoro.set_dataset_stats(folder+'/', stats_path, set_dataset_done);
     } else {

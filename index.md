@@ -37,7 +37,7 @@ For the main LLVM repo, the Clang repo, and the CompilerRT repo, use the Memoro 
 
 [CompilerRT](https://github.com/epfl-vlsc/compiler-rt)
 
-These repos should default to branch r40\_dev (Memoro is based off of LLVM release\_40).
+These repos should default to branch `memoro_80` (Memoro is based off of LLVM release\_80).
 Optionally compile with libcxx and libcxxabi. 
 
 ## Building the Visusalizer C++ lib

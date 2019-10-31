@@ -21,14 +21,10 @@
     <link rel="stylesheet" href="node_modules/font-awesome/css/font-awesome.css">
     <link rel="stylesheet" type="text/css" href="node_modules/d3-flame-graph/dist/d3.flameGraph.css">
 
-    <script type="text/javascript" src="node_modules/jquery/dist/jquery.min.js" onload="window.$ = window.jQuery = module.exports;">
-
-    </script>
-
-      <script src="index.js">
-    </script>
+    <script type="text/javascript" src="node_modules/jquery/dist/jquery.min.js" onload="window.$ = window.jQuery = module.exports;"></script>
+    <script src="index.js" onload="$(window).on('load', initApp)"></script>
   </head>
-  <body onload="initApp()" >
+  <body>
 
   <div id="overlay">
     <h1>File <i class="fa fa-chevron-right" aria-hidden="true"></i> Open...</h1>

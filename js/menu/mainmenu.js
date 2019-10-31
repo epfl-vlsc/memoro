@@ -16,9 +16,10 @@ const template = [
                         parentWindow = (process.platform == 'darwin') ? null : BrowserWindow.getFocusedWindow();
 
                     var window = BrowserWindow.getFocusedWindow();
-                    dialog.showOpenDialog(properties, function(f) {
+                    dialog.showOpenDialog(properties)
+                      .then(function(f) {
                         if (f)
-                            window.webContents.send('open_file', f);
+                            window.webContents.send('open_file', f.filePaths);
                         else
                             console.log("undefined not sending ipc");
                     });

@@ -59,19 +59,20 @@ bool StackTreeNode::Insert(const TraceAndValue& tv, NameIDs::const_iterator pos,
 }
 
 void StackTreeNode::Objectify(Isolate* isolate, Local<Object>& obj, const isolatedKeys& keys) const {
+  Local<Context> context = isolate->GetCurrentContext();
   // put myself in this object
-  obj->Set(keys.kName,
-      String::NewFromUtf8(isolate, name_.c_str()));
-  obj->Set(keys.kValue,
-      Number::New(isolate, value_));
+  obj->Set(context, keys.kName,
+      String::NewFromUtf8(isolate, name_.c_str()).ToLocalChecked()).ToChecked();
+  obj->Set(context, keys.kValue,
+      Number::New(isolate, value_)).ToChecked();
 
   if (trace_ != nullptr) {
-    obj->Set(keys.kLifetime,
-        Number::New(isolate, trace_->lifetime_score));
-    obj->Set(keys.kUsage,
-        Number::New(isolate, trace_->usage_score));
-    obj->Set(keys.kUsefulLifetime,
-        Number::New(isolate, trace_->useful_lifetime_score));
+    obj->Set(context, keys.kLifetime,
+        Number::New(isolate, trace_->lifetime_score)).ToChecked();
+    obj->Set(context, keys.kUsage,
+        Number::New(isolate, trace_->usage_score)).ToChecked();
+    obj->Set(context, keys.kUsefulLifetime,
+        Number::New(isolate, trace_->useful_lifetime_score)).ToChecked();
     return;
   }
 
@@ -82,10 +83,10 @@ void StackTreeNode::Objectify(Isolate* isolate, Local<Object>& obj, const isolat
     Local<Object> child_obj = Object::New(isolate);
     child.Objectify(isolate, child_obj, keys);
 
-    children->Set(i, child_obj);
+    children->Set(context, i, child_obj).ToChecked();
   }
 
-  obj->Set(keys.kChildren, children);
+  obj->Set(context, keys.kChildren, children).ToChecked();
 }
 
 bool StackTreeNodeHide::Insert(const TraceAndValue& tv, NameIDs::const_iterator pos, const NameIDs& nameIds) {
@@ -103,20 +104,21 @@ bool StackTreeNodeHide::Insert(const TraceAndValue& tv, NameIDs::const_iterator 
 }
 
 void StackTreeNodeHide::Objectify(Isolate* isolate, Local<Object>& obj, const isolatedKeys& keys) const {
+  Local<Context> context = isolate->GetCurrentContext();
   // put myself in this object
-  obj->Set(keys.kName,
-      String::NewFromUtf8(isolate, name_.c_str()));
-  obj->Set(keys.kValue,
-      Number::New(isolate, value_));
+  obj->Set(context, keys.kName,
+      String::NewFromUtf8(isolate, name_.c_str()).ToLocalChecked()).ToChecked();
+  obj->Set(context, keys.kValue,
+      Number::New(isolate, value_)).ToChecked();
 
   if (next_) {
     Local<Array> children = Array::New(isolate);
 
     Local<Object> next_obj = Object::New(isolate);
     next_->Objectify(isolate, next_obj, keys);
-    children->Set(0, next_obj);
+    children->Set(context, 0, next_obj).ToChecked();
 
-    obj->Set(keys.kChildren, children);
+    obj->Set(context, keys.kChildren, children).ToChecked();
   }
 }
 
@@ -202,20 +204,21 @@ void StackTree::SetTraces(std::vector<Trace>& traces) {
 
 void StackTree::V8Objectify(const v8::FunctionCallbackInfo<v8::Value>& args) {
   Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
   const isolatedKeys keys = {
-    String::NewFromUtf8(isolate, "name"),
-    String::NewFromUtf8(isolate, "process"),
-    String::NewFromUtf8(isolate, "value"),
-    String::NewFromUtf8(isolate, "children"),
+    String::NewFromUtf8(isolate, "name").ToLocalChecked(),
+    String::NewFromUtf8(isolate, "process").ToLocalChecked(),
+    String::NewFromUtf8(isolate, "value").ToLocalChecked(),
+    String::NewFromUtf8(isolate, "children").ToLocalChecked(),
 
-    String::NewFromUtf8(isolate, "lifetime_score"),
-    String::NewFromUtf8(isolate, "usage_score"),
-    String::NewFromUtf8(isolate, "useful_lifetime_score"),
+    String::NewFromUtf8(isolate, "lifetime_score").ToLocalChecked(),
+    String::NewFromUtf8(isolate, "usage_score").ToLocalChecked(),
+    String::NewFromUtf8(isolate, "useful_lifetime_score").ToLocalChecked(),
   };
 
   Local<Object> root = Object::New(isolate);
-  root->Set(keys.kName, keys.kProcess);
-  root->Set(keys.kValue, Number::New(isolate, value_));
+  root->Set(context, keys.kName, keys.kProcess).ToChecked();
+  root->Set(context, keys.kValue, Number::New(isolate, value_)).ToChecked();
 
   Local<Array> children = Array::New(isolate);
 
@@ -225,7 +228,7 @@ void StackTree::V8Objectify(const v8::FunctionCallbackInfo<v8::Value>& args) {
 
     root.Objectify(isolate, child_obj, keys);  // recursively
 
-    children->Set(i, child_obj);
+    children->Set(context, i, child_obj).ToChecked();
   }
 
   if (hide_) {
@@ -233,10 +236,10 @@ void StackTree::V8Objectify(const v8::FunctionCallbackInfo<v8::Value>& args) {
 
     hide_->Objectify(isolate, hide_obj, keys);  // recursively
 
-    children->Set(roots_.size(), hide_obj);
+    children->Set(context, roots_.size(), hide_obj).ToChecked();
   }
 
-  root->Set(keys.kChildren, children);
+  root->Set(context, keys.kChildren, children).ToChecked();
 
   args.GetReturnValue().Set(root);
 }

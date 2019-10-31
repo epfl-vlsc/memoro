@@ -1,3 +1,6 @@
+.PHONY: build
+build:
+	node-gyp build
 
-all:
-	node-gyp rebuild --release --target=1.7.9 --arch=x64 --dist-url=https://atom.io/download/electron
+configure:
+	node-gyp configure --release --target=7.0.0 --arch=x64 --dist-url=https://electronjs.org/headers

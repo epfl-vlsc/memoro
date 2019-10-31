@@ -68,6 +68,7 @@ static void LoadDatasetStatsAsync(uv_work_t* req) {
 
 static void LoadDatasetAsyncComplete(uv_work_t* req, int status) {
   Isolate* isolate = Isolate::GetCurrent();
+  Local<Context> context = isolate->GetCurrentContext();
 
   // Fix for Node 4.x - thanks to
   // https://github.com/nwjs/blink/commit/ecda32d117aca108c44f38c8eb2cb2d0810dfdeb
@@ -76,17 +77,17 @@ static void LoadDatasetAsyncComplete(uv_work_t* req, int status) {
   LoadDatasetWork* work = static_cast<LoadDatasetWork*>(req->data);
 
   Local<Object> result = Object::New(isolate);
-  result->Set(String::NewFromUtf8(isolate, "message"),
-              String::NewFromUtf8(isolate, work->msg.c_str()));
-  result->Set(String::NewFromUtf8(isolate, "result"),
-              Boolean::New(isolate, work->result));
+  result->Set(context, String::NewFromUtf8(isolate, "message", NewStringType::kInternalized).ToLocalChecked(),
+              String::NewFromUtf8(isolate, work->msg.c_str(), NewStringType::kInternalized).ToLocalChecked()).Check();
+  result->Set(context, String::NewFromUtf8(isolate, "result", NewStringType::kInternalized).ToLocalChecked(),
+              Boolean::New(isolate, work->result)).Check();
 
   // set up return arguments
   Local<Value> argv[1] = {result};
 
   // execute the callback
   Local<Function>::New(isolate, work->callback)
-      ->Call(isolate->GetCurrentContext()->Global(), 1, argv);
+      ->Call(context, context->Global(), 1, argv).ToLocalChecked();
 
   // Free up the persistent function callback
   work->callback.Reset();
@@ -95,6 +96,7 @@ static void LoadDatasetAsyncComplete(uv_work_t* req, int status) {
 
 static void LoadDatasetStatsAsyncComplete(uv_work_t* req, int status) {
   Isolate* isolate = Isolate::GetCurrent();
+  Local<Context> context = isolate->GetCurrentContext();
 
   // Fix for Node 4.x - thanks to
   // https://github.com/nwjs/blink/commit/ecda32d117aca108c44f38c8eb2cb2d0810dfdeb
@@ -103,17 +105,17 @@ static void LoadDatasetStatsAsyncComplete(uv_work_t* req, int status) {
   LoadDatasetStatsWork* work = static_cast<LoadDatasetStatsWork*>(req->data);
 
   Local<Object> result = Object::New(isolate);
-  result->Set(String::NewFromUtf8(isolate, "message"),
-              String::NewFromUtf8(isolate, work->msg.c_str()));
-  result->Set(String::NewFromUtf8(isolate, "result"),
-              Boolean::New(isolate, work->result));
+  result->Set(context, String::NewFromUtf8(isolate, "message", NewStringType::kInternalized).ToLocalChecked(),
+              String::NewFromUtf8(isolate, work->msg.c_str(), NewStringType::kInternalized).ToLocalChecked()).Check();
+  result->Set(context, String::NewFromUtf8(isolate, "result", NewStringType::kInternalized).ToLocalChecked(),
+              Boolean::New(isolate, work->result)).Check();
 
   // set up return arguments
   Local<Value> argv[1] = {result};
 
   // execute the callback
   Local<Function>::New(isolate, work->callback)
-      ->Call(isolate->GetCurrentContext()->Global(), 1, argv);
+      ->Call(context, context->Global(), 1, argv).ToLocalChecked();
 
   // Free up the persistent function callback
   work->callback.Reset();
@@ -123,13 +125,13 @@ static void LoadDatasetStatsAsyncComplete(uv_work_t* req, int status) {
 void Memoro_SetDataset(const v8::FunctionCallbackInfo<v8::Value>& args) {
   Isolate* isolate = args.GetIsolate();
 
-  v8::String::Utf8Value s(args[0]);
+  v8::String::Utf8Value s(isolate, args[0]);
   std::string dir_path(*s);
 
-  v8::String::Utf8Value trace_file(args[1]);
+  v8::String::Utf8Value trace_file(isolate, args[1]);
   std::string trace_path(*trace_file);
 
-  v8::String::Utf8Value chunk_file(args[2]);
+  v8::String::Utf8Value chunk_file(isolate, args[2]);
   std::string chunk_path(*chunk_file);
 
   // launch in a separate thread with callback to keep the gui responsive
@@ -152,10 +154,10 @@ void Memoro_SetDataset(const v8::FunctionCallbackInfo<v8::Value>& args) {
 void Memoro_SetDatasetStats(const v8::FunctionCallbackInfo<v8::Value>& args) {
   Isolate* isolate = args.GetIsolate();
 
-  v8::String::Utf8Value s(args[0]);
+  v8::String::Utf8Value s(isolate, args[0]);
   std::string dir_path(*s);
 
-  v8::String::Utf8Value stats_file(args[1]);
+  v8::String::Utf8Value stats_file(isolate, args[1]);
   std::string stats_path(*stats_file);
 
   // launch in a separate thread with callback to keep the gui responsive
@@ -176,18 +178,19 @@ void Memoro_SetDatasetStats(const v8::FunctionCallbackInfo<v8::Value>& args) {
 
 void Memoro_AggregateAll(const v8::FunctionCallbackInfo<v8::Value>& args) {
   Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
   std::vector<TimeValue> values;
   AggregateAll(values);
 
-  auto kTs = String::NewFromUtf8(isolate, "ts");
-  auto kValue = String::NewFromUtf8(isolate, "value");
+  auto kTs = String::NewFromUtf8(isolate, "ts", NewStringType::kInternalized).ToLocalChecked();
+  auto kValue = String::NewFromUtf8(isolate, "value", NewStringType::kInternalized).ToLocalChecked();
 
   Local<Array> result_list = Array::New(isolate);
   for (unsigned int i = 0; i < values.size(); i++) {
     Local<Object> result = Object::New(isolate);
-    result->Set(kTs, Number::New(isolate, values[i].time));
-    result->Set(kValue, Number::New(isolate, values[i].value));
-    result_list->Set(i, result);
+    result->Set(context, kTs, Number::New(isolate, values[i].time)).Check();
+    result->Set(context, kValue, Number::New(isolate, values[i].value)).Check();
+    result_list->Set(context, i, result).Check();
   }
 
   args.GetReturnValue().Set(result_list);
@@ -195,22 +198,23 @@ void Memoro_AggregateAll(const v8::FunctionCallbackInfo<v8::Value>& args) {
 
 void Memoro_AggregateTrace(const v8::FunctionCallbackInfo<v8::Value>& args) {
   Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
   static std::vector<TimeValue> values;
   values.clear();
 
-  int trace_index = args[0]->NumberValue();
+  int trace_index = args[0]->NumberValue(context).ToChecked();
 
   AggregateTrace(values, trace_index);
 
-  auto kTs = String::NewFromUtf8(isolate, "ts");
-  auto kValue = String::NewFromUtf8(isolate, "value");
+  auto kTs = String::NewFromUtf8(isolate, "ts", NewStringType::kInternalized).ToLocalChecked();
+  auto kValue = String::NewFromUtf8(isolate, "value", NewStringType::kInternalized).ToLocalChecked();
 
   Local<Array> result_list = Array::New(isolate);
   for (unsigned int i = 0; i < values.size(); i++) {
     Local<Object> result = Object::New(isolate);
-    result->Set(kTs, Number::New(isolate, values[i].time));
-    result->Set(kValue, Number::New(isolate, values[i].value));
-    result_list->Set(i, result);
+    result->Set(context, kTs, Number::New(isolate, values[i].time)).Check();
+    result->Set(context, kValue, Number::New(isolate, values[i].value)).Check();
+    result_list->Set(context, i, result).Check();
   }
 
   args.GetReturnValue().Set(result_list);
@@ -218,42 +222,43 @@ void Memoro_AggregateTrace(const v8::FunctionCallbackInfo<v8::Value>& args) {
 
 void Memoro_TraceChunks(const v8::FunctionCallbackInfo<v8::Value>& args) {
   Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
   static std::vector<Chunk*> chunks;
   chunks.clear();
 
-  int trace_index = args[0]->NumberValue();
-  int chunk_index = args[1]->NumberValue();
-  int num_chunks = args[2]->NumberValue();
+  int trace_index = args[0]->NumberValue(context).ToChecked();
+  int chunk_index = args[1]->NumberValue(context).ToChecked();
+  int num_chunks = args[2]->NumberValue(context).ToChecked();
 
   TraceChunks(chunks, trace_index, chunk_index, num_chunks);
 
-  auto kNumReads      = String::NewFromUtf8(isolate, "num_reads");
-  auto kNumWrites     = String::NewFromUtf8(isolate, "num_writes");
-  auto kSize          = String::NewFromUtf8(isolate, "size");
-  auto kTsStart       = String::NewFromUtf8(isolate, "ts_start");
-  auto kTsEnd         = String::NewFromUtf8(isolate, "ts_end");
-  auto kTsFirst       = String::NewFromUtf8(isolate, "ts_first");
-  auto kTsLast        = String::NewFromUtf8(isolate, "ts_last");
-  auto kAllocCallTime = String::NewFromUtf8(isolate, "alloc_call_time");
-  auto kMultiThread   = String::NewFromUtf8(isolate, "multiThread");
-  auto kAccessLow     = String::NewFromUtf8(isolate, "access_interval_low");
-  auto kAccessHigh    = String::NewFromUtf8(isolate, "access_interval_high");
+  auto kNumReads      = String::NewFromUtf8(isolate, "num_reads", NewStringType::kInternalized).ToLocalChecked();
+  auto kNumWrites     = String::NewFromUtf8(isolate, "num_writes", NewStringType::kInternalized).ToLocalChecked();
+  auto kSize          = String::NewFromUtf8(isolate, "size", NewStringType::kInternalized).ToLocalChecked();
+  auto kTsStart       = String::NewFromUtf8(isolate, "ts_start", NewStringType::kInternalized).ToLocalChecked();
+  auto kTsEnd         = String::NewFromUtf8(isolate, "ts_end", NewStringType::kInternalized).ToLocalChecked();
+  auto kTsFirst       = String::NewFromUtf8(isolate, "ts_first", NewStringType::kInternalized).ToLocalChecked();
+  auto kTsLast        = String::NewFromUtf8(isolate, "ts_last", NewStringType::kInternalized).ToLocalChecked();
+  auto kAllocCallTime = String::NewFromUtf8(isolate, "alloc_call_time", NewStringType::kInternalized).ToLocalChecked();
+  auto kMultiThread   = String::NewFromUtf8(isolate, "multiThread", NewStringType::kInternalized).ToLocalChecked();
+  auto kAccessLow     = String::NewFromUtf8(isolate, "access_interval_low", NewStringType::kInternalized).ToLocalChecked();
+  auto kAccessHigh    = String::NewFromUtf8(isolate, "access_interval_high", NewStringType::kInternalized).ToLocalChecked();
 
   Local<Array> result_list = Array::New(isolate);
   for (unsigned int i = 0; i < chunks.size(); i++) {
     Local<Object> result = Object::New(isolate);
-    result->Set(kNumReads, Number::New(isolate, chunks[i]->num_reads));
-    result->Set(kNumWrites, Number::New(isolate, chunks[i]->num_writes));
-    result->Set(kSize, Number::New(isolate, chunks[i]->size));
-    result->Set(kTsStart, Number::New(isolate, chunks[i]->timestamp_start));
-    result->Set(kTsEnd, Number::New(isolate, chunks[i]->timestamp_end));
-    result->Set(kTsFirst, Number::New(isolate, chunks[i]->timestamp_first_access));
-    result->Set(kTsLast, Number::New(isolate, chunks[i]->timestamp_last_access));
-    result->Set(kAllocCallTime, Number::New(isolate, chunks[i]->alloc_call_time));
-    result->Set(kMultiThread, Boolean::New(isolate, chunks[i]->multi_thread));
-    result->Set(kAccessLow, Number::New(isolate, chunks[i]->access_interval_low));
-    result->Set(kAccessHigh, Number::New(isolate, chunks[i]->access_interval_high));
-    result_list->Set(i, result);
+    result->Set(context, kNumReads, Number::New(isolate, chunks[i]->num_reads)).Check();
+    result->Set(context, kNumWrites, Number::New(isolate, chunks[i]->num_writes)).Check();
+    result->Set(context, kSize, Number::New(isolate, chunks[i]->size)).Check();
+    result->Set(context, kTsStart, Number::New(isolate, chunks[i]->timestamp_start)).Check();
+    result->Set(context, kTsEnd, Number::New(isolate, chunks[i]->timestamp_end)).Check();
+    result->Set(context, kTsFirst, Number::New(isolate, chunks[i]->timestamp_first_access)).Check();
+    result->Set(context, kTsLast, Number::New(isolate, chunks[i]->timestamp_last_access)).Check();
+    result->Set(context, kAllocCallTime, Number::New(isolate, chunks[i]->alloc_call_time)).Check();
+    result->Set(context, kMultiThread, Boolean::New(isolate, chunks[i]->multi_thread)).Check();
+    result->Set(context, kAccessLow, Number::New(isolate, chunks[i]->access_interval_low)).Check();
+    result->Set(context, kAccessHigh, Number::New(isolate, chunks[i]->access_interval_high)).Check();
+    result_list->Set(context, i, result).Check();
   }
 
   args.GetReturnValue().Set(result_list);
@@ -261,10 +266,12 @@ void Memoro_TraceChunks(const v8::FunctionCallbackInfo<v8::Value>& args) {
 
 static std::vector<TraceValue> traces;  // just reuse this
 void Memoro_SortTraces(const v8::FunctionCallbackInfo<v8::Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  printf("Collecting traces\n");
   traces.clear();
   Traces(traces);
 
-  v8::String::Utf8Value sortByV8(args[0]);
+  v8::String::Utf8Value sortByV8(isolate, args[0]);
   std::string sortBy(*sortByV8, sortByV8.length());
 
   if (sortBy == "bytes") {
@@ -287,38 +294,41 @@ void Memoro_SortTraces(const v8::FunctionCallbackInfo<v8::Value>& args) {
 
 void Memoro_Traces(const v8::FunctionCallbackInfo<v8::Value>& args) {
   Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
 
-  size_t offset = args[0]->IntegerValue();
-  size_t count = std::min((size_t)args[1]->IntegerValue(), traces.size() - offset);
+  size_t offset = args[0]->IntegerValue(context).ToChecked();
+  size_t limit = args[1]->IntegerValue(context).ToChecked();
+  size_t count = std::min(limit, traces.size() - offset);
+  if (offset == 0 && limit == 0) count = traces.size();
 
-  auto kTrace          = String::NewFromUtf8(isolate, "trace");
-  auto kType           = String::NewFromUtf8(isolate, "type");
-  auto kTraceIndex     = String::NewFromUtf8(isolate, "trace_index");
-  auto kNumChunks      = String::NewFromUtf8(isolate, "num_chunks");
-  auto kChunkIndex     = String::NewFromUtf8(isolate, "chunk_index");
-  auto kMaxAggregate   = String::NewFromUtf8(isolate, "max_aggregate");
-  auto kAllocTimeTotal = String::NewFromUtf8(isolate, "alloc_time_total");
-  auto kUsage          = String::NewFromUtf8(isolate, "usage_score");
-  auto kLifetime       = String::NewFromUtf8(isolate, "lifetime_score");
-  auto kUsefulLifetime = String::NewFromUtf8(isolate, "useful_lifetime_score");
+  auto kTrace          = String::NewFromUtf8(isolate, "trace", NewStringType::kInternalized).ToLocalChecked();
+  auto kType           = String::NewFromUtf8(isolate, "type", NewStringType::kInternalized).ToLocalChecked();
+  auto kTraceIndex     = String::NewFromUtf8(isolate, "trace_index", NewStringType::kInternalized).ToLocalChecked();
+  auto kNumChunks      = String::NewFromUtf8(isolate, "num_chunks", NewStringType::kInternalized).ToLocalChecked();
+  auto kChunkIndex     = String::NewFromUtf8(isolate, "chunk_index", NewStringType::kInternalized).ToLocalChecked();
+  auto kMaxAggregate   = String::NewFromUtf8(isolate, "max_aggregate", NewStringType::kInternalized).ToLocalChecked();
+  auto kAllocTimeTotal = String::NewFromUtf8(isolate, "alloc_time_total", NewStringType::kInternalized).ToLocalChecked();
+  auto kUsage          = String::NewFromUtf8(isolate, "usage_score", NewStringType::kInternalized).ToLocalChecked();
+  auto kLifetime       = String::NewFromUtf8(isolate, "lifetime_score", NewStringType::kInternalized).ToLocalChecked();
+  auto kUsefulLifetime = String::NewFromUtf8(isolate, "useful_lifetime_score", NewStringType::kInternalized).ToLocalChecked();
 
   Local<Array> result_list = Array::New(isolate);
   for (size_t i = 0; i < count; i++) {
     const TraceValue& t = traces[i + offset];
 
     Local<Object> result = Object::New(isolate);
-    result->Set(kTrace, String::NewFromUtf8(isolate, t.trace.data()));
-    result->Set(kType, String::NewFromUtf8(isolate, t.type.data()));
-    result->Set(kTraceIndex, Number::New(isolate, t.trace_index));
-    result->Set(kNumChunks, Number::New(isolate, t.num_chunks));
-    result->Set(kChunkIndex, Number::New(isolate, t.chunk_index));
-    result->Set(kMaxAggregate, Number::New(isolate, t.max_aggregate));
-    result->Set(kAllocTimeTotal, Number::New(isolate, t.alloc_time_total));
-    result->Set(kUsage, Number::New(isolate, t.usage_score));
-    result->Set(kLifetime, Number::New(isolate, t.lifetime_score));
-    result->Set(kUsefulLifetime, Number::New(isolate, t.useful_lifetime_score));
+    result->Set(context, kTrace, String::NewFromUtf8(isolate, t.trace.data(), NewStringType::kInternalized).ToLocalChecked()).Check();
+    result->Set(context, kType, String::NewFromUtf8(isolate, t.type.data(), NewStringType::kInternalized).ToLocalChecked()).Check();
+    result->Set(context, kTraceIndex, Number::New(isolate, t.trace_index)).Check();
+    result->Set(context, kNumChunks, Number::New(isolate, t.num_chunks)).Check();
+    result->Set(context, kChunkIndex, Number::New(isolate, t.chunk_index)).Check();
+    result->Set(context, kMaxAggregate, Number::New(isolate, t.max_aggregate)).Check();
+    result->Set(context, kAllocTimeTotal, Number::New(isolate, t.alloc_time_total)).Check();
+    result->Set(context, kUsage, Number::New(isolate, t.usage_score)).Check();
+    result->Set(context, kLifetime, Number::New(isolate, t.lifetime_score)).Check();
+    result->Set(context, kUsefulLifetime, Number::New(isolate, t.useful_lifetime_score)).Check();
 
-    result_list->Set(i, result);
+    result_list->Set(context, i, result).Check();
   }
 
   args.GetReturnValue().Set(result_list);
@@ -326,33 +336,34 @@ void Memoro_Traces(const v8::FunctionCallbackInfo<v8::Value>& args) {
 
 void Memoro_GlobalInfo(const v8::FunctionCallbackInfo<v8::Value>& args) {
   Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
   GlobalInfo info;
   GlobalInformation(info);
 
-  auto kNumTraces         = String::NewFromUtf8(isolate, "num_traces");
-  auto kNumChunks         = String::NewFromUtf8(isolate, "num_chunks");
-  auto kAggMax            = String::NewFromUtf8(isolate, "aggregate_max");
-  auto kTotalTime         = String::NewFromUtf8(isolate, "total_time");
-  auto kAllocTime         = String::NewFromUtf8(isolate, "alloc_time");
-  auto kUsageAvg          = String::NewFromUtf8(isolate, "usage_avg");
-  auto kUsageVar          = String::NewFromUtf8(isolate, "usage_var");
-  auto kLifetimeAvg       = String::NewFromUtf8(isolate, "lifetime_avg");
-  auto kLifetimeVar       = String::NewFromUtf8(isolate, "lifetime_var");
-  auto kUsefulLifetimeAvg = String::NewFromUtf8(isolate, "useful_lifetime_avg");
-  auto kUsefulLifetimeVar = String::NewFromUtf8(isolate, "useful_lifetime_var");
+  auto kNumTraces         = String::NewFromUtf8(isolate, "num_traces", NewStringType::kInternalized).ToLocalChecked();
+  auto kNumChunks         = String::NewFromUtf8(isolate, "num_chunks", NewStringType::kInternalized).ToLocalChecked();
+  auto kAggMax            = String::NewFromUtf8(isolate, "aggregate_max", NewStringType::kInternalized).ToLocalChecked();
+  auto kTotalTime         = String::NewFromUtf8(isolate, "total_time", NewStringType::kInternalized).ToLocalChecked();
+  auto kAllocTime         = String::NewFromUtf8(isolate, "alloc_time", NewStringType::kInternalized).ToLocalChecked();
+  auto kUsageAvg          = String::NewFromUtf8(isolate, "usage_avg", NewStringType::kInternalized).ToLocalChecked();
+  auto kUsageVar          = String::NewFromUtf8(isolate, "usage_var", NewStringType::kInternalized).ToLocalChecked();
+  auto kLifetimeAvg       = String::NewFromUtf8(isolate, "lifetime_avg", NewStringType::kInternalized).ToLocalChecked();
+  auto kLifetimeVar       = String::NewFromUtf8(isolate, "lifetime_var", NewStringType::kInternalized).ToLocalChecked();
+  auto kUsefulLifetimeAvg = String::NewFromUtf8(isolate, "useful_lifetime_avg", NewStringType::kInternalized).ToLocalChecked();
+  auto kUsefulLifetimeVar = String::NewFromUtf8(isolate, "useful_lifetime_var", NewStringType::kInternalized).ToLocalChecked();
 
   Local<Object> result = Object::New(isolate);
-  result->Set(kNumTraces, Number::New(isolate, info.num_traces));
-  result->Set(kNumChunks, Number::New(isolate, info.num_chunks));
-  result->Set(kAggMax, Number::New(isolate, info.aggregate_max));
-  result->Set(kTotalTime, Number::New(isolate, info.total_time));
-  result->Set(kAllocTime, Number::New(isolate, info.alloc_time));
-  result->Set(kUsageAvg, Number::New(isolate, info.usage_avg));
-  result->Set(kUsageVar, Number::New(isolate, info.usage_var));
-  result->Set(kLifetimeAvg, Number::New(isolate, info.lifetime_avg));
-  result->Set(kLifetimeVar, Number::New(isolate, info.lifetime_var));
-  result->Set(kUsefulLifetimeAvg, Number::New(isolate, info.useful_lifetime_avg));
-  result->Set(kUsefulLifetimeVar, Number::New(isolate, info.useful_lifetime_var));
+  result->Set(context, kNumTraces, Number::New(isolate, info.num_traces)).Check();
+  result->Set(context, kNumChunks, Number::New(isolate, info.num_chunks)).Check();
+  result->Set(context, kAggMax, Number::New(isolate, info.aggregate_max)).Check();
+  result->Set(context, kTotalTime, Number::New(isolate, info.total_time)).Check();
+  result->Set(context, kAllocTime, Number::New(isolate, info.alloc_time)).Check();
+  result->Set(context, kUsageAvg, Number::New(isolate, info.usage_avg)).Check();
+  result->Set(context, kUsageVar, Number::New(isolate, info.usage_var)).Check();
+  result->Set(context, kLifetimeAvg, Number::New(isolate, info.lifetime_avg)).Check();
+  result->Set(context, kLifetimeVar, Number::New(isolate, info.lifetime_var)).Check();
+  result->Set(context, kUsefulLifetimeAvg, Number::New(isolate, info.useful_lifetime_avg)).Check();
+  result->Set(context, kUsefulLifetimeVar, Number::New(isolate, info.useful_lifetime_var)).Check();
 
   args.GetReturnValue().Set(result);
 }
@@ -406,22 +417,26 @@ void Memoro_GlobalAllocTime(const v8::FunctionCallbackInfo<v8::Value>& args) {
 }
 
 void Memoro_SetTraceKeyword(const v8::FunctionCallbackInfo<v8::Value>& args) {
-  v8::String::Utf8Value s(args[0]);
+  Isolate* isolate = args.GetIsolate();
+  v8::String::Utf8Value s(isolate, args[0]);
   std::string keyword(*s);
 
   SetTraceKeyword(keyword);
 }
 
 void Memoro_SetTypeKeyword(const v8::FunctionCallbackInfo<v8::Value>& args) {
-  v8::String::Utf8Value s(args[0]);
+  Isolate* isolate = args.GetIsolate();
+  v8::String::Utf8Value s(isolate, args[0]);
   std::string keyword(*s);
 
   SetTypeKeyword(keyword);
 }
 
 void Memoro_SetFilterMinMax(const v8::FunctionCallbackInfo<v8::Value>& args) {
-  uint64_t t1 = args[0]->NumberValue();
-  uint64_t t2 = args[1]->NumberValue();
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint64_t t1 = args[0]->NumberValue(context).ToChecked();
+  uint64_t t2 = args[1]->NumberValue(context).ToChecked();
   SetFilterMinMax(t1, t2);
 }
 
@@ -439,44 +454,45 @@ void Memoro_FilterMinMaxReset(const v8::FunctionCallbackInfo<v8::Value>& args) {
 
 void Memoro_Inefficiencies(const v8::FunctionCallbackInfo<v8::Value>& args) {
   Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
 
-  int trace_index = args[0]->NumberValue();
+  int trace_index = args[0]->NumberValue(context).ToChecked();
   uint64_t i = Inefficiencies(trace_index);
 
   // there will be more here eventually, probably
   Local<Object> result = Object::New(isolate);
-  result->Set(String::NewFromUtf8(isolate, "unused"),
-              Boolean::New(isolate, HasInefficiency(i, Inefficiency::Unused)));
-  result->Set(
-      String::NewFromUtf8(isolate, "write_only"),
-      Boolean::New(isolate, HasInefficiency(i, Inefficiency::WriteOnly)));
-  result->Set(
-      String::NewFromUtf8(isolate, "read_only"),
-      Boolean::New(isolate, HasInefficiency(i, Inefficiency::ReadOnly)));
-  result->Set(
-      String::NewFromUtf8(isolate, "short_lifetime"),
-      Boolean::New(isolate, HasInefficiency(i, Inefficiency::ShortLifetime)));
-  result->Set(
-      String::NewFromUtf8(isolate, "late_free"),
-      Boolean::New(isolate, HasInefficiency(i, Inefficiency::LateFree)));
-  result->Set(
-      String::NewFromUtf8(isolate, "early_alloc"),
-      Boolean::New(isolate, HasInefficiency(i, Inefficiency::EarlyAlloc)));
-  result->Set(String::NewFromUtf8(isolate, "increasing_allocs"),
+  result->Set(context, String::NewFromUtf8(isolate, "unused", NewStringType::kInternalized).ToLocalChecked(),
+              Boolean::New(isolate, HasInefficiency(i, Inefficiency::Unused))).Check();
+  result->Set(context,
+      String::NewFromUtf8(isolate, "write_only", NewStringType::kInternalized).ToLocalChecked(),
+      Boolean::New(isolate, HasInefficiency(i, Inefficiency::WriteOnly))).Check();
+  result->Set(context,
+      String::NewFromUtf8(isolate, "read_only", NewStringType::kInternalized).ToLocalChecked(),
+      Boolean::New(isolate, HasInefficiency(i, Inefficiency::ReadOnly))).Check();
+  result->Set(context,
+      String::NewFromUtf8(isolate, "short_lifetime", NewStringType::kInternalized).ToLocalChecked(),
+      Boolean::New(isolate, HasInefficiency(i, Inefficiency::ShortLifetime))).Check();
+  result->Set(context,
+      String::NewFromUtf8(isolate, "late_free", NewStringType::kInternalized).ToLocalChecked(),
+      Boolean::New(isolate, HasInefficiency(i, Inefficiency::LateFree))).Check();
+  result->Set(context,
+      String::NewFromUtf8(isolate, "early_alloc", NewStringType::kInternalized).ToLocalChecked(),
+      Boolean::New(isolate, HasInefficiency(i, Inefficiency::EarlyAlloc))).Check();
+  result->Set(context, String::NewFromUtf8(isolate, "increasing_allocs", NewStringType::kInternalized).ToLocalChecked(),
               Boolean::New(isolate, HasInefficiency(
-                                        i, Inefficiency::IncreasingReallocs)));
-  result->Set(String::NewFromUtf8(isolate, "top_percentile_size"),
+                                        i, Inefficiency::IncreasingReallocs))).Check();
+  result->Set(context, String::NewFromUtf8(isolate, "top_percentile_size", NewStringType::kInternalized).ToLocalChecked(),
               Boolean::New(isolate, HasInefficiency(
-                                        i, Inefficiency::TopPercentileSize)));
-  result->Set(String::NewFromUtf8(isolate, "top_percentile_chunks"),
+                                        i, Inefficiency::TopPercentileSize))).Check();
+  result->Set(context, String::NewFromUtf8(isolate, "top_percentile_chunks", NewStringType::kInternalized).ToLocalChecked(),
               Boolean::New(isolate, HasInefficiency(
-                                        i, Inefficiency::TopPercentileChunks)));
-  result->Set(
-      String::NewFromUtf8(isolate, "multi_thread"),
-      Boolean::New(isolate, HasInefficiency(i, Inefficiency::MultiThread)));
-  result->Set(String::NewFromUtf8(isolate, "low_access_coverage"),
+                                        i, Inefficiency::TopPercentileChunks))).Check();
+  result->Set(context,
+      String::NewFromUtf8(isolate, "multi_thread", NewStringType::kInternalized).ToLocalChecked(),
+      Boolean::New(isolate, HasInefficiency(i, Inefficiency::MultiThread))).Check();
+  result->Set(context, String::NewFromUtf8(isolate, "low_access_coverage", NewStringType::kInternalized).ToLocalChecked(),
               Boolean::New(isolate, HasInefficiency(
-                                        i, Inefficiency::LowAccessCoverage)));
+                                        i, Inefficiency::LowAccessCoverage))).Check();
 
   args.GetReturnValue().Set(result);
 }
@@ -487,7 +503,9 @@ void Memoro_StackTree(const v8::FunctionCallbackInfo<v8::Value>& args) {
 }
 
 void Memoro_StackTreeByBytes(const v8::FunctionCallbackInfo<v8::Value>& args) {
-  uint64_t time = args[0]->NumberValue();
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint64_t time = args[0]->NumberValue(context).ToChecked();
 
   StackTreeAggregate([time](const Trace* t) -> double {
     auto it = find_if(t->aggregate.begin(), t->aggregate.end(),
@@ -552,7 +570,7 @@ void Memoro_StackTreeByPeakWaste(
       "ByPeakWaste");
 }
 
-void init(Handle<Object> exports, Handle<Object> module) {
+void init(Local<Object> exports) {
   NODE_SET_METHOD(exports, "set_dataset", Memoro_SetDataset);
   NODE_SET_METHOD(exports, "set_dataset_stats", Memoro_SetDatasetStats);
   NODE_SET_METHOD(exports, "aggregate_all", Memoro_AggregateAll);

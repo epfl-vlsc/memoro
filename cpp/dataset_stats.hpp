@@ -161,7 +161,18 @@ class DatasetStats : public Dataset {
     }
 
     virtual void StackTreeAggregate(function<double(const memoro::Trace* t)> f) {
-      stack_tree_.Aggregate(f);
+      // NOP: Not supported by DatasetStats
+    }
+
+    virtual void StackTreeAggregate(const string& key) {
+      if (key == "ByBytesInTime")
+        return; // NOP: Not supported by DatasetStats
+      else if (key == "ByBytesTotal")
+        stack_tree_.Aggregate([](const memoro::Trace* t) -> double { return t->max_aggregate; });
+      else if (key == "ByNumAllocs")
+        stack_tree_.Aggregate([](const memoro::Trace* t) -> double { return t->alloc_time_total; });
+      /* else if (key == "ByPeakWaste") */
+      /*   stack_tree_.Aggregate([](const memoro::Trace* t) -> double { return t->peak_wasted_memory; }); */
     }
 };
 

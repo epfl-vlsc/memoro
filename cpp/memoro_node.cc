@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <numeric>
 #include <iostream>
+#include <queue>
 #include "memoro.h"
 #include "pattern.h"
 
@@ -468,7 +469,7 @@ void Memoro_StackTreeByBytes(const v8::FunctionCallbackInfo<v8::Value>& args) {
     // std::cout << "value is " << it->value << " at time " << it->time << " for
     // trace " << t->trace << std::endl;
     return (double)it->value;
-  });
+  }, "ByBytesInTime");
 }
 
 void Memoro_StackTreeByBytesTotal(const v8::FunctionCallbackInfo<v8::Value>& args) {
@@ -476,13 +477,46 @@ void Memoro_StackTreeByBytesTotal(const v8::FunctionCallbackInfo<v8::Value>& arg
       [](const Trace* t) -> double {
         return accumulate(t->chunks.begin(), t->chunks.end(), 0.0,
           [](double sum, const Chunk* c) { return sum + c->size; });
-      });
+      }, "ByBytesTotal");
 }
 
 void Memoro_StackTreeByNumAllocs(
     const v8::FunctionCallbackInfo<v8::Value>& args) {
   StackTreeAggregate(
-      [](const Trace* t) -> double { return (double)t->chunks.size(); });
+      [](const Trace* t) -> double { return (double)t->chunks.size(); },
+      "ByNumAllocs");
+}
+
+void Memoro_StackTreeByPeakWaste(
+    const v8::FunctionCallbackInfo<v8::Value>& args) {
+  StackTreeAggregate(
+      [](const Trace* t) -> double {
+        int64_t peak_waste = 0, acc = 0;
+        std::priority_queue<TimeValue> Q;
+
+        uint64_t i = 0;
+        while (i < t->chunks.size()) {
+          const auto* C = t->chunks[i];
+
+          if (!Q.empty() && Q.top().time < C->timestamp_start) {
+            acc -= Q.top().value;
+            Q.pop();
+          } else {
+            int64_t total_bytes = C->size;
+            int64_t used_bytes = C->access_interval_high - C->access_interval_low;
+            int64_t wasted_bytes = total_bytes - used_bytes;
+
+            acc += wasted_bytes;
+            peak_waste = std::max(acc, peak_waste);
+
+            Q.push({ C->timestamp_end, wasted_bytes });
+            ++i;
+          }
+        }
+
+        return peak_waste;
+      },
+      "ByPeakWaste");
 }
 
 void init(Handle<Object> exports, Handle<Object> module) {
@@ -509,6 +543,7 @@ void init(Handle<Object> exports, Handle<Object> module) {
   NODE_SET_METHOD(exports, "stacktree", Memoro_StackTree);
   NODE_SET_METHOD(exports, "stacktree_by_bytes", Memoro_StackTreeByBytes);
   NODE_SET_METHOD(exports, "stacktree_by_bytes_total", Memoro_StackTreeByBytesTotal);
+  NODE_SET_METHOD(exports, "stacktree_by_peak_waste", Memoro_StackTreeByPeakWaste);
   NODE_SET_METHOD(exports, "stacktree_by_numallocs",
                   Memoro_StackTreeByNumAllocs);
 }

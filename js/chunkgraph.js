@@ -1234,9 +1234,13 @@ function drawFlameGraph() {
       case "bytes_total":
         memoro.stacktree_by_bytes_total(current_fg_time);
         break;
+      case "peak_waste":
+        memoro.stacktree_by_peak_waste();
+        break;
       case "num_allocs":
-      default:
         memoro.stacktree_by_numallocs();
+        break;
+      default:
     }
 
     var tree = memoro.stacktree();
@@ -1689,6 +1693,13 @@ function setFlameGraphBytesTotal() {
   }
 }
 
+function setFlameGraphPeakWaste() {
+  if (current_fg_type != "peak_waste") {
+      current_fg_type = "peak_waste";
+      drawFlameGraph();
+  }
+}
+
 function traceSort(pred) {
     current_sort_order = pred;
     sortTraces();
@@ -1711,6 +1722,7 @@ module.exports = {
     setFlameGraphBytesTime: setFlameGraphBytesTime,
     setFlameGraphBytesTotal: setFlameGraphBytesTotal,
     setFlameGraphNumAllocs: setFlameGraphNumAllocs,
+    setFlameGraphPeakWaste: setFlameGraphPeakWaste,
     flameGraphHelp: flameGraphHelp,
     traceSort: traceSort,
     globalInfoHelp: globalInfoHelp,

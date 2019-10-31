@@ -153,6 +153,6 @@ uint64_t Inefficiencies(int trace_index);
 uint64_t MaxAggregate();
 
 void StackTreeObject(const v8::FunctionCallbackInfo<v8::Value>& args);
-void StackTreeAggregate(std::function<double(const Trace* t)> f);
+void StackTreeAggregate(std::function<double(const Trace* t)> f, const std::string& key);
 
 }  // namespace memoro

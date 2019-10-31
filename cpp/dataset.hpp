@@ -35,6 +35,7 @@ class Dataset {
 
         virtual void StackTreeObject(const v8::FunctionCallbackInfo<v8::Value>& args) = 0;
         virtual void StackTreeAggregate(std::function<double(const Trace* t)> f) = 0;
+        virtual void StackTreeAggregate(const std::string &key) = 0;
 
         virtual ~Dataset() = 0;
 };

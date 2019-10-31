@@ -109,8 +109,9 @@ void StackTreeObject(const v8::FunctionCallbackInfo<v8::Value>& args) {
   theDataset->StackTreeObject(args);
 }
 
-void StackTreeAggregate(std::function<double(const Trace* t)> f) {
+void StackTreeAggregate(std::function<double(const Trace* t)> f, const string& key) {
   theDataset->StackTreeAggregate(f);
+  theDataset->StackTreeAggregate(key);
 }
 
 }  // namespace memoro

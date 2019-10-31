@@ -303,6 +303,10 @@ class DatasetFull : public Dataset {
     stack_tree_.Aggregate(f);
   }
 
+  virtual void StackTreeAggregate(const string& key) {
+    // NOP: Already handled by the function overload
+  }
+
  private:
   Chunk* chunks_ = nullptr;
   vector<TimeValue> aggregates_;

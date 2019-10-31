@@ -89,14 +89,14 @@ void StackTreeNode::Objectify(Isolate* isolate, Local<Object>& obj, const isolat
 }
 
 bool StackTreeNodeHide::Insert(const TraceAndValue& tv, NameIDs::const_iterator pos, const NameIDs& nameIds) {
+  value_ += tv.value;
+  return true;
+
   if (children_.size() < MAX_TRACES) {
     return StackTreeNode::Insert(tv, pos, nameIds);
   } else {
     if (next_ == nullptr)
       next_ = std::make_unique<StackTreeNodeHide>();
-
-    // Already taken care of by StackTreeNode::Insert() for if (true) { … }
-    value_ += tv.value;
 
     return next_->Insert(tv, pos, nameIds);
   }

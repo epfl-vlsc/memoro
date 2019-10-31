@@ -105,6 +105,15 @@ struct TraceValue {
   float useful_lifetime_score;
 };
 
+struct GlobalInfo {
+    uint64_t num_traces, num_chunks;
+    uint64_t aggregate_max;
+    uint64_t total_time, alloc_time;
+    float usage_avg, usage_var;
+    float lifetime_avg, lifetime_var;
+    float useful_lifetime_avg, useful_lifetime_var;
+};
+
 // set the current dataset file, returns dataset stats (num traces, min/max
 // times)
 bool SetDataset(const std::string& file_path, const std::string& trace_file,

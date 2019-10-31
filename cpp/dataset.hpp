@@ -31,6 +31,7 @@ class Dataset {
         virtual void SetFilterMinMax(uint64_t min, uint64_t max) = 0;
         virtual void FilterMinMaxReset() = 0;
 
+        virtual void GlobalInfo(GlobalInfo& gi);
         virtual uint64_t Inefficiences(uint32_t trace_index) = 0;
 
         virtual void StackTreeObject(const v8::FunctionCallbackInfo<v8::Value>& args) = 0;

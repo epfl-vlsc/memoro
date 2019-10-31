@@ -291,6 +291,53 @@ class DatasetFull : public Dataset {
     filter_max_time_ = max_time_;
   }
 
+  virtual void GlobalInfo(struct GlobalInfo& info) {
+    uint64_t num_chunks = 0, num_traces = traces_.size();
+
+    // Sum metrics for avg and var
+    // avg = \sum x / n
+    // var = - avg^2 + \sum x^2 / n
+    uint64_t total_usage = 0, total_usage_sq = 0;
+    uint64_t total_lifetime = 0, total_lifetime_sq = 0;
+    uint64_t total_useful_lifetime = 0, total_useful_lifetime_sq = 0;
+
+    for (size_t i = 0; i < num_traces; ++i) {
+      const Trace& t = traces_[i];
+
+      total_usage += t.usage_score;
+      total_usage_sq += t.usage_score * t.usage_score;
+
+      total_lifetime += t.lifetime_score;
+      total_lifetime_sq += t.lifetime_score * t.lifetime_score;
+
+      total_useful_lifetime += t.useful_lifetime_score;
+      total_useful_lifetime_sq += t.useful_lifetime_score * t.useful_lifetime_score;
+
+      num_chunks += t.chunks.size();
+    }
+
+    // Compute avg
+    float usage_avg = total_usage / (float)num_traces;
+    float lifetime_avg = total_lifetime / (float)num_traces;
+    float useful_lifetime_avg = total_useful_lifetime / (float)num_traces;
+
+    // Comput var
+    float usage_var = total_usage_sq / (float)num_traces - usage_avg * usage_avg;
+    float lifetime_var = total_lifetime_sq / (float)num_traces - lifetime_avg * lifetime_avg;
+    float useful_lifetime_var = total_useful_lifetime_sq / (float)num_traces - useful_lifetime_avg * useful_lifetime_avg;
+
+    uint64_t total_time = max_time_ - min_time_;
+
+    info = {
+      num_traces, num_chunks,
+      max_aggregate_,
+      total_time, global_alloc_time_,
+      usage_avg, usage_var,
+      lifetime_avg, lifetime_var,
+      useful_lifetime_avg, useful_lifetime_var,
+    };
+  }
+
   virtual uint64_t Inefficiences(uint32_t trace_index) {
     return traces_[trace_index].inefficiencies;
   }

@@ -29,10 +29,18 @@ class DatasetStats : public Dataset {
       return reader_->GetStats()[trace_index];
     }
 
+    inline std::string FixEnding(const string_view& strv) {
+      string fixed_str = string(strv);
+      fixed_str[fixed_str.size()] = '\0';
+      return fixed_str;
+    }
+
     memoro::Trace ConvertTraceCompat(const TraceStat& trace) {
       return {
-        .trace = string(trace.trace),
-        .type = string(trace.type),
+        .trace = FixEnding(trace.trace),
+        .type = FixEnding(trace.type),
+        .max_aggregate = trace.peak_wasted_memory,
+        .alloc_time_total = trace.allocations,
         .usage_score = trace.usage_score,
         .lifetime_score = trace.lifetime_score,
         .useful_lifetime_score = trace.useful_lifetime_score
@@ -51,6 +59,8 @@ class DatasetStats : public Dataset {
       reader_ = make_unique<TraceStatReader>(stats_fd);
 
       fclose(stats_fd);
+
+      compat_traces_.reserve(reader_->GetStatsSize());
 
       // Collect some metric values
       min_time_ = 0; // TODO: Use the actual min
@@ -80,10 +90,13 @@ class DatasetStats : public Dataset {
     virtual void AggregateAll(vector<TimeValue>& values) {
       size_t aggs_size = reader_->GetAggregatesSize();
 
+      float index = 0;
+      float interval = (float)max(1.0, (double)aggs_size / (double)MAX_POINTS);
+
       values.clear();
       values.reserve(aggs_size);
-      for (size_t i{0}; i < aggs_size; ++i) {
-        const auto& agg = aggregates_[i];
+      for (float i{0}; i < aggs_size; i += interval) {
+        const auto& agg = aggregates_[(uint64_t)i];
         values.push_back({agg.time, (int64_t)agg.value});
       }
     }
@@ -108,8 +121,8 @@ class DatasetStats : public Dataset {
         const TraceStat& trace = Trace(i);
 
         TraceValue tv;
-        tv.trace = trace.trace;
-        tv.type = trace.type;
+        tv.trace = FixEnding(trace.trace);
+        tv.type = FixEnding(trace.type);
         tv.trace_index = i;
         tv.chunk_index = 0;
         tv.num_chunks = trace.allocations;

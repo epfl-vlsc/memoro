@@ -324,6 +324,39 @@ void Memoro_Traces(const v8::FunctionCallbackInfo<v8::Value>& args) {
   args.GetReturnValue().Set(result_list);
 }
 
+void Memoro_GlobalInfo(const v8::FunctionCallbackInfo<v8::Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  GlobalInfo info;
+  GlobalInformation(info);
+
+  auto kNumTraces         = String::NewFromUtf8(isolate, "num_traces");
+  auto kNumChunks         = String::NewFromUtf8(isolate, "num_chunks");
+  auto kAggMax            = String::NewFromUtf8(isolate, "aggregate_max");
+  auto kTotalTime         = String::NewFromUtf8(isolate, "total_time");
+  auto kAllocTime         = String::NewFromUtf8(isolate, "alloc_time");
+  auto kUsageAvg          = String::NewFromUtf8(isolate, "usage_avg");
+  auto kUsageVar          = String::NewFromUtf8(isolate, "usage_var");
+  auto kLifetimeAvg       = String::NewFromUtf8(isolate, "lifetime_avg");
+  auto kLifetimeVar       = String::NewFromUtf8(isolate, "lifetime_var");
+  auto kUsefulLifetimeAvg = String::NewFromUtf8(isolate, "useful_lifetime_avg");
+  auto kUsefulLifetimeVar = String::NewFromUtf8(isolate, "useful_lifetime_var");
+
+  Local<Object> result = Object::New(isolate);
+  result->Set(kNumTraces, Number::New(isolate, info.num_traces));
+  result->Set(kNumChunks, Number::New(isolate, info.num_chunks));
+  result->Set(kAggMax, Number::New(isolate, info.aggregate_max));
+  result->Set(kTotalTime, Number::New(isolate, info.total_time));
+  result->Set(kAllocTime, Number::New(isolate, info.alloc_time));
+  result->Set(kUsageAvg, Number::New(isolate, info.usage_avg));
+  result->Set(kUsageVar, Number::New(isolate, info.usage_var));
+  result->Set(kLifetimeAvg, Number::New(isolate, info.lifetime_avg));
+  result->Set(kLifetimeVar, Number::New(isolate, info.lifetime_var));
+  result->Set(kUsefulLifetimeAvg, Number::New(isolate, info.useful_lifetime_avg));
+  result->Set(kUsefulLifetimeVar, Number::New(isolate, info.useful_lifetime_var));
+
+  args.GetReturnValue().Set(result);
+}
+
 void Memoro_MaxTime(const v8::FunctionCallbackInfo<v8::Value>& args) {
   Isolate* isolate = args.GetIsolate();
 
@@ -523,6 +556,7 @@ void init(Handle<Object> exports, Handle<Object> module) {
   NODE_SET_METHOD(exports, "set_dataset", Memoro_SetDataset);
   NODE_SET_METHOD(exports, "set_dataset_stats", Memoro_SetDatasetStats);
   NODE_SET_METHOD(exports, "aggregate_all", Memoro_AggregateAll);
+  NODE_SET_METHOD(exports, "global_info", Memoro_GlobalInfo);
   NODE_SET_METHOD(exports, "max_time", Memoro_MaxTime);
   NODE_SET_METHOD(exports, "min_time", Memoro_MinTime);
   NODE_SET_METHOD(exports, "filter_max_time", Memoro_FilterMaxTime);

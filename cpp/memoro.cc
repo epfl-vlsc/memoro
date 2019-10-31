@@ -57,6 +57,8 @@ void AggregateAll(std::vector<TimeValue>& values) {
   theDataset->AggregateAll(values);
 }
 
+void GlobalInformation(struct GlobalInfo& info) { theDataset->GlobalInfo(info); }
+
 uint64_t MaxAggregate() { return theDataset->MaxAggregate(); }
 
 // TODO maybe these should just default to the filtered numbers?

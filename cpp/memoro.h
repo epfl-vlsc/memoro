@@ -151,6 +151,8 @@ void Traces(std::vector<TraceValue>& traces);
 void SetFilterMinMax(uint64_t min, uint64_t max);
 void FilterMinMaxReset();
 
+void GlobalInformation(GlobalInfo& info);
+
 uint64_t MaxTime();
 uint64_t MinTime();
 uint64_t FilterMaxTime();

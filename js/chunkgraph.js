@@ -33,6 +33,10 @@ var gmean = require('compute-gmean');
 
 const settings = require('electron').remote.require('electron-settings');
 
+function formatBignum(num) {
+    return num.toString().replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1,');
+}
+
 function bytesToString(bytes,decimals) {
     if(bytes == 0) return '0 B';
     var k = 1024,
@@ -1461,59 +1465,26 @@ function drawEverything() {
 }
 
 function setGlobalInfo() {
-    var traces = memoro.traces();
-    num_traces = traces.length;
-    total_chunks = 0;
+    var info = memoro.global_info();
+    num_traces = info.num_traces;
+    total_chunks = info.num_chunks;
 
-    var total_usage = 0;
-    var total_lifetime = 0;
-    var total_useful_lifetime = 0;
-
-    traces.forEach(function (d) {
-
-        total_usage += d.usage_score;
-        total_lifetime += d.lifetime_score;
-        total_useful_lifetime += d.useful_lifetime_score;
-
-        total_chunks += d.num_chunks;
-    });
-
-    avg_lifetime = total_lifetime / traces.length;
-    avg_usage = total_usage / traces.length;
-    avg_useful_life = total_useful_lifetime / traces.length;
-
-    var lifetime_var_total = 0;
-    var usage_var_total = 0;
-    var useful_lifetime_var_total = 0;
-
-    traces.forEach(function(t) {
-        lifetime_var_total += Math.pow(t.lifetime_score - avg_lifetime, 2);
-        usage_var_total += Math.pow(t.usage_score - avg_usage, 2);
-        useful_lifetime_var_total += Math.pow(t.useful_lifetime_score - avg_useful_life, 2);
-    });
-
-    lifetime_var = lifetime_var_total / traces.length;
-    usage_var = usage_var_total / traces.length;
-    useful_life_var = useful_lifetime_var_total / traces.length;
-
-    var alloc_time = memoro.global_alloc_time();
-    var time_total = memoro.max_time() - memoro.min_time();
+    var alloc_time = info.alloc_time;
+    var time_total = info.total_time;
     var percent_alloc_time = 100.0 * alloc_time / time_total;
-    var info = d3.select("#global-info");
 
     // the \u03C3 is a sigma (variance)
-    var html = "Total alloc points: " + num_traces +
-        "</br>Total Allocations: " + total_chunks +
-        "</br>Max Heap: " + bytesToString(aggregate_max) +
+    var html = "Total alloc points: " + formatBignum(num_traces) +
+        "</br>Total Allocations: " + formatBignum(total_chunks) +
+        "</br>Max Heap: " + bytesToString(info.aggregate_max) +
         "</br>Global alloc time: " + alloc_time +
         "</br>which is " + percent_alloc_time.toFixed(2) + "% of program time." +
-        "</br>Avg Lifetime: " + avg_lifetime.toFixed(2) + " \u03C3 " + lifetime_var.toFixed(2) +
-        "</br>Avg Usage: " + avg_usage.toFixed(2) + " \u03C3 " + usage_var.toFixed(2) +
-        "</br>Avg Useful Life: " + avg_useful_life.toFixed(2) + " \u03C3 " + useful_life_var.toFixed(2);
-    info.html(html);
-    var fg_info = d3.select("#global-info-fg");
-    fg_info.html(html);
+        "</br>Avg Lifetime: " + info.lifetime_avg.toFixed(2) + " \u03C3 " + info.lifetime_var.toFixed(2) +
+        "</br>Avg Usage: " + info.usage_avg.toFixed(2) + " \u03C3 " + info.usage_var.toFixed(2) +
+        "</br>Avg Useful Life: " + info.useful_lifetime_avg.toFixed(2) + " \u03C3 " + info.useful_lifetime_var.toFixed(2);
 
+    d3.select("#global-info").html(html);
+    d3.select("#global-info-fg").html(html);
 }
 var current_filter = "trace";
 function typeFilterClick() {

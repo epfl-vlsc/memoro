@@ -99,6 +99,11 @@ function fgBytesTotalClick() {
     chunk_graph.setFlameGraphBytesTotal();
 }
 
+function fgPeakWasteClick() {
+    console.log("peak waste click")
+    chunk_graph.setFlameGraphPeakWaste();
+}
+
 function fgMostActiveClick() {
     console.log("most active click")
 }

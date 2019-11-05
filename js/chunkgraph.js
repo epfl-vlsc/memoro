@@ -179,6 +179,7 @@ function set_dataset_done(result) {
     }
     var element = document.querySelector("#overlay");
     element.style.visibility = "hidden";
+    updateActiveFGType();
 }
 
 function badnessTooltip(idx) {
@@ -1643,9 +1644,23 @@ function globalInfoHelp() {
     <b> Avg Useful Life</b>: The average useful life score and variance of all allocation points. </br>", "fa-info-circle")
 }
 
+function updateActiveFGType() {
+  let typeFunctions = {
+    "num_allocs": "fgAllocationsClick()",
+    "bytes_time": "fgBytesTimeClick()",
+    "bytes_total": "fgBytesTotalClick()",
+    "peak_waste": "fgPeakWasteClick()",
+  };
+
+  d3.selectAll("#fg-btn a.btn")
+    .classed("active", (_, i, ns) =>
+      ns[i].getAttribute("onclick") === typeFunctions[current_fg_type]);
+}
+
 function setFlameGraphNumAllocs() {
     if (current_fg_type != "num_allocs") {
         current_fg_type = "num_allocs";
+        updateActiveFGType();
         drawFlameGraph();
     }
 }
@@ -1653,6 +1668,7 @@ function setFlameGraphNumAllocs() {
 function setFlameGraphBytesTime() {
     if (current_fg_type != "bytes_time") {
         current_fg_type = "bytes_time";
+        updateActiveFGType();
         drawFlameGraph();
     }
 }
@@ -1660,6 +1676,7 @@ function setFlameGraphBytesTime() {
 function setFlameGraphBytesTotal() {
   if (current_fg_type != "bytes_total") {
       current_fg_type = "bytes_total";
+      updateActiveFGType();
       drawFlameGraph();
   }
 }
@@ -1667,6 +1684,7 @@ function setFlameGraphBytesTotal() {
 function setFlameGraphPeakWaste() {
   if (current_fg_type != "peak_waste") {
       current_fg_type = "peak_waste";
+      updateActiveFGType();
       drawFlameGraph();
   }
 }

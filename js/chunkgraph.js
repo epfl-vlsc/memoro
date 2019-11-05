@@ -1188,17 +1188,26 @@ function name(d) {
     return d.data.n || d.data.name;
 }
 
-var colorMapper = function(d) {
-    if ('lifetime_score' in d.data) {
-        var mean = gmean([d.data.lifetime_score < 0.01 ? 0.01 : d.data.lifetime_score, d.data.usage_score < 0.01 ? 0.01 : d.data.usage_score,
-            d.data.useful_lifetime_score < 0.01 ? 0.01 : d.data.useful_lifetime_score]);
-        // console.log(mean);
-        var badness_col = Math.round((1.0 - mean) * (badness_colors.length - 1));
-        // console.log(badness_col);
-        return badness_colors[badness_col];
+function colorMapper(maxValue) {
+    return (d) => {
+        // Return highlight/random color for trunk nodes
+        if ("children" in d)
+            return d.highlight ? "#E600E6" : colorHash(name(d));
+
+        switch (current_fg_type) {
+          case "peak_waste":
+            var score = d.data.value / maxValue;
+            var badness_col = Math.round(score * (badness_colors.length - 1));
+            return badness_colors[badness_col];
+
+          default:
+            var mean = gmean([d.data.lifetime_score < 0.01 ? 0.01 : d.data.lifetime_score, d.data.usage_score < 0.01 ? 0.01 : d.data.usage_score,
+                d.data.useful_lifetime_score < 0.01 ? 0.01 : d.data.useful_lifetime_score]);
+            var badness_col = Math.round((1.0 - mean) * (badness_colors.length - 1));
+            return badness_colors[badness_col];
+        };
     }
-    return d.highlight ? "#E600E6" : colorHash(name(d));
-};
+}
 
 function filterTree(tree) {
 
@@ -1231,7 +1240,14 @@ function filterTree(tree) {
     } else if (!('children' in tree))
         return true;
     else return false;
+}
 
+function leafAgg(node, acc, agg) {
+  let isLeaf = !("children" in node);
+  if (isLeaf)
+    return agg(acc, node);
+  else
+    return node.children.reduce((_acc, _child) => leafAgg(_child, _acc, agg), acc);
 }
 
 function updateHideNode() {
@@ -1326,8 +1342,9 @@ function drawFlameGraph() {
 
         });
 
+    let maxLeaf = leafAgg(tree, 0, (acc, leaf) => Math.max(acc, leaf.value));
     fgg.tooltip(tip);
-    fgg.color(colorMapper);
+    fgg.color(colorMapper(maxLeaf));
 
     var details = document.getElementById("flame-graph-details");
 

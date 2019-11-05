@@ -1300,7 +1300,7 @@ function drawFlameGraph() {console.trace();
         .minFrameSize(0)
         .sort(true)
         //Example to sort in reverse order
-        //.sort(function(a,b){ return d3.descending(a.name, b.name);})
+        .sort(function(a,b){ return d3.descending(a.value, b.value);})
         .title("");
 
 /*    fgg.onClick(function (d) {

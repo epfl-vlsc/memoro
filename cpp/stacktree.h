@@ -21,7 +21,7 @@
 
 namespace memoro {
 
-#define MAX_TRACES 1000ul
+#define MAX_TRACES 300ul
 
 using NameIDs = std::vector<std::pair<std::string, uint64_t>>;
 

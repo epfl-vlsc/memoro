@@ -39,8 +39,9 @@ class DatasetStats : public Dataset {
       return {
         .trace = FixEnding(trace.trace),
         .type = FixEnding(trace.type),
-        .max_aggregate = trace.peak_wasted_memory,
+        .max_aggregate = trace.total_memory,
         .alloc_time_total = trace.allocations,
+        .inefficiencies = trace.peak_wasted_memory,
         .usage_score = trace.usage_score,
         .lifetime_score = trace.lifetime_score,
         .useful_lifetime_score = trace.useful_lifetime_score
@@ -231,8 +232,8 @@ class DatasetStats : public Dataset {
         stack_tree_.Aggregate([](const memoro::Trace* t) -> double { return t->max_aggregate; });
       else if (key == "ByNumAllocs")
         stack_tree_.Aggregate([](const memoro::Trace* t) -> double { return t->alloc_time_total; });
-      /* else if (key == "ByPeakWaste") */
-      /*   stack_tree_.Aggregate([](const memoro::Trace* t) -> double { return t->peak_wasted_memory; }); */
+      else if (key == "ByPeakWaste")
+        stack_tree_.Aggregate([](const memoro::Trace* t) -> double { return t->inefficiencies; });
     }
 };
 

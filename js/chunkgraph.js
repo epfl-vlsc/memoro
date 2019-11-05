@@ -88,7 +88,7 @@ var filter_words = [];
 
 var tree;
 var hideNode;
-var showHideNode = true;
+var showHideNode = false;
 
 var colors = [
 "#b0c4de",
@@ -1244,7 +1244,7 @@ function updateHideNode() {
     } else {
         if (hideIndex === -1) return;
 
-        tree.value -= hideNode;
+        tree.value -= hideNode.value;
         tree.children.splice(hideIndex, 1);
     }
 }
@@ -1277,7 +1277,7 @@ function loadFlameGraph() {
     // Remove trunks with no children
     for (var i = tree.children.length - 1; i >= 0; i--) {
         var child = tree.children[i];
-        if (!"children" in child) {
+        if (!("children" in child)) {
             tree.value -= child.value;
             tree.children.splice(i, 1);
         }
@@ -1286,7 +1286,7 @@ function loadFlameGraph() {
     console.log(tree);
 }
 
-function drawFlameGraph() {console.trace();
+function drawFlameGraph() {
     filterTree(tree); // it just seems easier to filter this here ...
     d3.select("#flame-graph-div").html("");
 

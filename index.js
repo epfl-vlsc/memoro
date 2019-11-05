@@ -128,6 +128,10 @@ function traceSort(pred) {
     chunk_graph.traceSort(pred);
 }
 
+function toggleHideNodeVisibility() {
+    chunk_graph.toggleHideNodeVisibility();
+}
+
 function addAppEventListeners() {
 
     ipcRenderer.on('open_file', function(emitter, file_path) {

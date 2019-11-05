@@ -165,9 +165,14 @@
                 <button class="btn btn-default" type="button" onclick="filterExecuteClick()"><i class="fa fa-filter" aria-hidden="true"></i></button>
               </span>
             </div>
-            <a href="#" class="btn btn-default" onclick="stackFilterResetClick()">Reset Trace</a>
-            <a href="#" class="btn btn-default" onclick="typeFilterResetClick()">Reset Type</a>
-            <a href="#" class="btn btn-default" onclick="filterHelpClick()"><i class="fa fa-info-circle" aria-hidden="true"></i></a>
+            <div style="margin-bottom: 1%;">
+              <a href="#" class="btn btn-default" onclick="stackFilterResetClick()">Reset Trace</a>
+              <a href="#" class="btn btn-default" onclick="typeFilterResetClick()">Reset Type</a>
+              <a href="#" class="btn btn-default" onclick="filterHelpClick()"><i class="fa fa-info-circle" aria-hidden="true"></i></a>
+            </div>
+            <div style="margin-bottom: 1%;">
+              <a href="#" id="toggle-hide-btn" class="btn btn-default active" onclick="toggleHideNodeVisibility()">"Hide" Visibility</a>
+            </div>
           </div>
         </div>
       </div>

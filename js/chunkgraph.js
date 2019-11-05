@@ -86,6 +86,10 @@ var useful_life_var;
 var aggregate_max = 0;
 var filter_words = [];
 
+var tree;
+var hideNode;
+var showHideNode = true;
+
 var colors = [
 "#b0c4de",
 "#b0c4de",
@@ -1228,10 +1232,24 @@ function filterTree(tree) {
         return true;
     else return false;
 
-
 }
 
-function drawFlameGraph() {
+function updateHideNode() {
+    let hideIndex = tree.children.findIndex(n => n.name === "Hide");
+    if (showHideNode) {
+        if (hideIndex !== -1) return;
+
+        tree.value += hideNode.value;
+        tree.children.push(hideNode);
+    } else {
+        if (hideIndex === -1) return;
+
+        tree.value -= hideNode;
+        tree.children.splice(hideIndex, 1);
+    }
+}
+
+function loadFlameGraph() {
     switch (current_fg_type) {
       case "bytes_time":
         memoro.stacktree_by_bytes(current_fg_time);
@@ -1248,9 +1266,28 @@ function drawFlameGraph() {
       default:
     }
 
-    var tree = memoro.stacktree();
-    filterTree(tree); // it just seems easier to filter this here ...
+    tree = memoro.stacktree();
+
+    // Keep track of the "Hide" node to toggle its visibility
+    let hideIndex = tree.children.findIndex(n => n.name === "Hide");
+    hideNode = (hideIndex !== -1) ? tree.children[hideIndex] : { name: "Hide", value: 0 };
+
+    updateHideNode();
+
+    // Remove trunks with no children
+    for (var i = tree.children.length - 1; i >= 0; i--) {
+        var child = tree.children[i];
+        if (!"children" in child) {
+            tree.value -= child.value;
+            tree.children.splice(i, 1);
+        }
+    }
+
     console.log(tree);
+}
+
+function drawFlameGraph() {console.trace();
+    filterTree(tree); // it just seems easier to filter this here ...
     d3.select("#flame-graph-div").html("");
 
     var fg_width = window.innerWidth *0.70; // getboundingclientrect isnt working i dont understand this crap
@@ -1424,6 +1461,7 @@ function drawEverything() {
     var trace = d3.select("#trace");
     trace.html("Select an allocation point under \"Heap Allocations\"");
 
+    loadFlameGraph()
     drawFlameGraph();
 
     var fg_width = window.innerWidth *0.75; // getboundingclientrect isnt working i dont understand this crap
@@ -1451,6 +1489,7 @@ function drawEverything() {
         focus_g.append("line")
             .attr("y1", 0).attr("y2", aggregate_graph_height*0.8-5)
             .attr("x1", xval).attr("x2", xval);
+        loadFlameGraph()
         drawFlameGraph();
     });
 
@@ -1661,6 +1700,7 @@ function setFlameGraphNumAllocs() {
     if (current_fg_type != "num_allocs") {
         current_fg_type = "num_allocs";
         updateActiveFGType();
+        loadFlameGraph()
         drawFlameGraph();
     }
 }
@@ -1669,6 +1709,7 @@ function setFlameGraphBytesTime() {
     if (current_fg_type != "bytes_time") {
         current_fg_type = "bytes_time";
         updateActiveFGType();
+        loadFlameGraph()
         drawFlameGraph();
     }
 }
@@ -1677,6 +1718,7 @@ function setFlameGraphBytesTotal() {
   if (current_fg_type != "bytes_total") {
       current_fg_type = "bytes_total";
       updateActiveFGType();
+      loadFlameGraph()
       drawFlameGraph();
   }
 }
@@ -1685,6 +1727,7 @@ function setFlameGraphPeakWaste() {
   if (current_fg_type != "peak_waste") {
       current_fg_type = "peak_waste";
       updateActiveFGType();
+      loadFlameGraph()
       drawFlameGraph();
   }
 }
@@ -1693,6 +1736,15 @@ function traceSort(pred) {
     current_sort_order = pred;
     sortTraces();
     drawStackTraces();
+}
+
+function toggleHideNodeVisibility() {
+    showHideNode = !showHideNode;
+    d3.select("#toggle-hide-btn")
+      .classed("active", showHideNode);
+    updateHideNode();
+
+    drawFlameGraph();
 }
 
 // TODO separate out functionality, modularize
@@ -1715,5 +1767,6 @@ module.exports = {
     flameGraphHelp: flameGraphHelp,
     traceSort: traceSort,
     globalInfoHelp: globalInfoHelp,
-    tabSwitchClick: tabSwitchClick
+    tabSwitchClick: tabSwitchClick,
+    toggleHideNodeVisibility,
 };

@@ -570,6 +570,13 @@ void Memoro_StackTreeByPeakWaste(
       "ByPeakWaste");
 }
 
+void Memoro_TraceLimit(const v8::FunctionCallbackInfo<v8::Value>& args) {
+  Isolate* isolate = args.GetIsolate();
+  Local<Context> context = isolate->GetCurrentContext();
+  uint64_t limit = args[0]->NumberValue(context).ToChecked();
+  TraceLimit(limit);
+}
+
 void init(Local<Object> exports) {
   NODE_SET_METHOD(exports, "set_dataset", Memoro_SetDataset);
   NODE_SET_METHOD(exports, "set_dataset_stats", Memoro_SetDatasetStats);
@@ -598,6 +605,7 @@ void init(Local<Object> exports) {
   NODE_SET_METHOD(exports, "stacktree_by_peak_waste", Memoro_StackTreeByPeakWaste);
   NODE_SET_METHOD(exports, "stacktree_by_numallocs",
                   Memoro_StackTreeByNumAllocs);
+  NODE_SET_METHOD(exports, "trace_limit", Memoro_TraceLimit);
 }
 
 NODE_MODULE(memoro, init)

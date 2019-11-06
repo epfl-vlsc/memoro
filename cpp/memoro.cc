@@ -116,4 +116,8 @@ void StackTreeAggregate(std::function<double(const Trace* t)> f, const string& k
   theDataset->StackTreeAggregate(key);
 }
 
+void TraceLimit(uint64_t limit) {
+  theDataset->TraceLimit(limit);
+}
+
 }  // namespace memoro

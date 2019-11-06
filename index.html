@@ -172,6 +172,15 @@
             </div>
             <div style="margin-bottom: 1%;">
               <a href="#" id="toggle-hide-btn" class="btn btn-default" onclick="toggleHideNodeVisibility()">"Hide" Visibility</a>
+              <div class="btn-group">
+                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" id="trace-limits-fg">Trace Limits: <span id="trace-limits-value">300</span> <span class="caret"></span></button>
+                <ul class="dropdown-menu">
+                  <li><a href="#" onclick="traceLimitSet(100)">100</a></li>
+                  <li><a href="#" onclick="traceLimitSet(300)">300</a></li>
+                  <li><a href="#" onclick="traceLimitSet(1000)">1000</a></li>
+                  <li><a href="#" onclick="traceLimitSet(3000)">3000</a></li>
+                </ul>
+              </div><!-- /btn-group -->
             </div>
           </div>
         </div>

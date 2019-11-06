@@ -354,6 +354,10 @@ class DatasetFull : public Dataset {
     // NOP: Already handled by the function overload
   }
 
+  virtual void TraceLimit(uint64_t limit) {
+    stack_tree_.SetLimit(limit);
+  }
+
  private:
   Chunk* chunks_ = nullptr;
   vector<TimeValue> aggregates_;

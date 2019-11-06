@@ -166,4 +166,6 @@ uint64_t MaxAggregate();
 void StackTreeObject(const v8::FunctionCallbackInfo<v8::Value>& args);
 void StackTreeAggregate(std::function<double(const Trace* t)> f, const std::string& key);
 
+void TraceLimit(uint64_t limit);
+
 }  // namespace memoro

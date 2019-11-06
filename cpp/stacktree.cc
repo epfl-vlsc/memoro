@@ -93,11 +93,11 @@ bool StackTreeNodeHide::Insert(const TraceAndValue& tv, NameIDs::const_iterator 
   value_ += tv.value;
   return true;
 
-  if (children_.size() < MAX_TRACES) {
+  if (children_.size() < limit_) {
     return StackTreeNode::Insert(tv, pos, nameIds);
   } else {
     if (next_ == nullptr)
-      next_ = std::make_unique<StackTreeNodeHide>();
+      next_ = std::make_unique<StackTreeNodeHide>(limit_);
 
     return next_->Insert(tv, pos, nameIds);
   }
@@ -134,10 +134,10 @@ bool StackTree::InsertTrace(const TraceAndValue& tv) {
 
   value_ += tv.value;
 
-  // Cap the number of node at MAX_TRACES and hide the rest
-  if (node_count_++ >= MAX_TRACES) {
+  // Cap the number of node at limit_ and hide the rest
+  if (node_count_++ >= limit_) {
     if (hide_ == nullptr)
-      hide_ = std::make_unique<StackTreeNodeHide>();
+      hide_ = std::make_unique<StackTreeNodeHide>(limit_);
 
     return hide_->Insert(tv, {}/* name_ids.begin() + 1 */, {}/* name_ids */);
   }
@@ -254,7 +254,7 @@ void StackTree::Aggregate(const std::function<double(const Trace* t)>& f) {
   for (auto& tv: traces_)
     tv.value = f(tv.trace);
 
-  nth_element(traces_.begin(), traces_.begin() + MAX_TRACES, traces_.end(),
+  nth_element(traces_.begin(), traces_.begin() + limit_, traces_.end(),
       [](const TraceAndValue& a, const TraceAndValue& b) {
         return a.value > b.value; });
 

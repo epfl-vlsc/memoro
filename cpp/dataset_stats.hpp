@@ -235,6 +235,10 @@ class DatasetStats : public Dataset {
       else if (key == "ByPeakWaste")
         stack_tree_.Aggregate([](const memoro::Trace* t) -> double { return t->inefficiencies; });
     }
+
+    virtual void TraceLimit(uint64_t limit) {
+      stack_tree_.SetLimit(limit);
+    }
 };
 
 } // namespace memoro

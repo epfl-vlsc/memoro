@@ -132,6 +132,10 @@ function toggleHideNodeVisibility() {
     chunk_graph.toggleHideNodeVisibility();
 }
 
+function traceLimitSet(limit) {
+    chunk_graph.traceLimitSet(limit);
+}
+
 function addAppEventListeners() {
 
     ipcRenderer.on('open_file', function(emitter, file_path) {

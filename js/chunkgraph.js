@@ -1764,6 +1764,13 @@ function toggleHideNodeVisibility() {
     drawFlameGraph();
 }
 
+function traceLimitSet(limit) {
+    d3.select("#trace-limits-value").text(limit);
+    memoro.trace_limit(limit);
+    loadFlameGraph();
+    drawFlameGraph();
+}
+
 // TODO separate out functionality, modularize
 module.exports = {
     updateData: updateData,
@@ -1786,4 +1793,5 @@ module.exports = {
     globalInfoHelp: globalInfoHelp,
     tabSwitchClick: tabSwitchClick,
     toggleHideNodeVisibility,
+    traceLimitSet,
 };

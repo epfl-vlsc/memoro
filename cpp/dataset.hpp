@@ -38,6 +38,8 @@ class Dataset {
         virtual void StackTreeAggregate(std::function<double(const Trace* t)> f) = 0;
         virtual void StackTreeAggregate(const std::string &key) = 0;
 
+        virtual void TraceLimit(uint64_t limit);
+
         virtual ~Dataset() = 0;
 };
 

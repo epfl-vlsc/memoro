@@ -21,8 +21,6 @@
 
 namespace memoro {
 
-#define MAX_TRACES 300ul
-
 using NameIDs = std::vector<std::pair<std::string, uint64_t>>;
 
 struct isolatedKeys;
@@ -53,13 +51,14 @@ class StackTreeNode {
 
 class StackTreeNodeHide : public StackTreeNode {
   public:
-    StackTreeNodeHide() : StackTreeNode(-1, "Hide", nullptr) {};
+    StackTreeNodeHide(uint64_t limit) : StackTreeNode(-1, "Hide", nullptr), limit_(limit) {};
 
     bool Insert(const TraceAndValue&, NameIDs::const_iterator, const NameIDs&);
     void Objectify(v8::Isolate*, v8::Local<v8::Object>&, const isolatedKeys&) const;
 
   private:
     std::unique_ptr<StackTreeNodeHide> next_ = nullptr;
+    uint64_t limit_ = 300ul;
 };
 
 class StackTree {
@@ -73,6 +72,7 @@ class StackTree {
 
   // For other datatype conversions, add an objectify function here
   // and a recursive helper in StackTreeNode
+  void SetLimit(uint64_t limit) { limit_ = limit; }
 
  private:
   bool InsertTrace(const TraceAndValue& tv);
@@ -86,6 +86,7 @@ class StackTree {
   std::vector<TraceAndValue> traces_;
   double value_ = 0;  // the sum total of all root aggregate values
   size_t node_count_ = 0;
+  uint64_t limit_ = 300ul;
 };
 
 }  // namespace memoro

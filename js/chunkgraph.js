@@ -1288,8 +1288,6 @@ function loadFlameGraph() {
     let hideIndex = tree.children.findIndex(n => n.name === "Hide");
     hideNode = (hideIndex !== -1) ? tree.children[hideIndex] : { name: "Hide", value: 0 };
 
-    updateHideNode();
-
     // Remove trunks with no children
     for (var i = tree.children.length - 1; i >= 0; i--) {
         var child = tree.children[i];
@@ -1298,6 +1296,8 @@ function loadFlameGraph() {
             tree.children.splice(i, 1);
         }
     }
+
+    updateHideNode();
 
     console.log(tree);
 }

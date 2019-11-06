@@ -110,6 +110,12 @@ void StackTreeNodeHide::Objectify(Isolate* isolate, Local<Object>& obj, const is
       String::NewFromUtf8(isolate, name_.c_str()).ToLocalChecked()).ToChecked();
   obj->Set(context, keys.kValue,
       Number::New(isolate, value_)).ToChecked();
+  obj->Set(context, keys.kUsage,
+      Number::New(isolate, 0)).ToChecked();
+  obj->Set(context, keys.kLifetime,
+      Number::New(isolate, 0)).ToChecked();
+  obj->Set(context, keys.kUsefulLifetime,
+      Number::New(isolate, 0)).ToChecked();
 
   if (next_) {
     Local<Array> children = Array::New(isolate);
@@ -125,6 +131,16 @@ void StackTreeNodeHide::Objectify(Isolate* isolate, Local<Object>& obj, const is
 bool StackTree::InsertTrace(const TraceAndValue& tv) {
   // assuming stacktrace of form
   // #1 0x10be26858 in main test.cpp:57
+
+  value_ += tv.value;
+
+  // Cap the number of node at MAX_TRACES and hide the rest
+  if (node_count_++ >= MAX_TRACES) {
+    if (hide_ == nullptr)
+      hide_ = std::make_unique<StackTreeNodeHide>();
+
+    return hide_->Insert(tv, {}/* name_ids.begin() + 1 */, {}/* name_ids */);
+  }
 
   const string& trace = tv.trace->trace;
   NameIDs name_ids;
@@ -155,16 +171,6 @@ bool StackTree::InsertTrace(const TraceAndValue& tv) {
     name_ids.push_back(make_pair(name, addr));
 
     position = find(position + 1, trace.rend(), '#');
-  }
-
-  value_ += tv.value;
-
-  // Cap the number of node at MAX_TRACES and hide the rest
-  if (node_count_++ >= MAX_TRACES) {
-    if (hide_ == nullptr)
-      hide_ = std::make_unique<StackTreeNodeHide>();
-
-    return hide_->Insert(tv, name_ids.begin() + 1, name_ids);
   }
 
   // now we have a list of function name, ID (address) pairs from
@@ -248,7 +254,7 @@ void StackTree::Aggregate(const std::function<double(const Trace* t)>& f) {
   for (auto& tv: traces_)
     tv.value = f(tv.trace);
 
-  sort(traces_.begin(), traces_.end(),
+  nth_element(traces_.begin(), traces_.begin() + MAX_TRACES, traces_.end(),
       [](const TraceAndValue& a, const TraceAndValue& b) {
         return a.value > b.value; });
 

@@ -27,6 +27,8 @@ var fs = require('fs');
 // be closed automatically when the JavaScript object is garbage collected.
 var mainWindow;
 
+app.commandLine.appendSwitch('js-flags', '--max-old-space-size=32768');
+
 function getDefaultEditorForPlatform() {
     if (process.platform === "darwin") {
         if (commandExists('xed')) {

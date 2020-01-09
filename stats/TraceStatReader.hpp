@@ -33,7 +33,7 @@ class TraceStatReader {
       char *data = new char[total_size];
       fread(data, total_size, 1, tracestatfile);
 
-      // Compute pointers of ecah parts
+      // Compute pointers of each parts
       stats_base_ = (TraceStat*)data;
       char *traces_base = data + stats_size;
       char *types_base = traces_base + header_.traces_size;

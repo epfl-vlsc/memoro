@@ -2,7 +2,7 @@
 
 #include "dataset.hpp"
 
-#include "memoro-stats/TraceStatReader.hpp"
+#include "../stats/TraceStatReader.hpp"
 
 using namespace std;
 
@@ -29,16 +29,10 @@ class DatasetStats : public Dataset {
       return reader_->GetStats()[trace_index];
     }
 
-    inline std::string FixEnding(const string_view& strv) {
-      string fixed_str = string(strv);
-      fixed_str[fixed_str.size()] = '\0';
-      return fixed_str;
-    }
-
     memoro::Trace ConvertTraceCompat(const TraceStat& trace) {
       return {
-        .trace = FixEnding(trace.trace),
-        .type = FixEnding(trace.type),
+        .trace = string(trace.trace), // Need to copy trace/type
+        .type = string(trace.type),   // Keeping string view would be nicer
         .max_aggregate = trace.total_memory,
         .alloc_time_total = trace.allocations,
         .inefficiencies = trace.peak_wasted_memory,
@@ -91,7 +85,6 @@ class DatasetStats : public Dataset {
     virtual void AggregateAll(vector<TimeValue>& values) {
       size_t aggs_size = reader_->GetAggregatesSize();
 
-      float index = 0;
       float interval = (float)max(1.0, (double)aggs_size / (double)MAX_POINTS);
 
       values.clear();
@@ -119,21 +112,20 @@ class DatasetStats : public Dataset {
 
       traces.reserve(stats_size);
       for (uint32_t i{0}; i < stats_size; ++i) {
-        const TraceStat& trace = Trace(i);
+        const auto& trace = Trace(i);
 
-        TraceValue tv;
-        tv.trace = FixEnding(trace.trace);
-        tv.type = FixEnding(trace.type);
-        tv.trace_index = i;
-        tv.chunk_index = 0;
-        tv.num_chunks = trace.allocations;
-        tv.alloc_time_total = trace.wasted_time;
-        tv.max_aggregate = trace.peak_wasted_memory; // TODO: should be peak_memory
-        tv.usage_score = trace.usage_score;
-        tv.lifetime_score = trace.lifetime_score;
-        tv.useful_lifetime_score = trace.useful_lifetime_score;
-
-        traces.emplace_back(std::move(tv));
+        traces.push_back({
+          .trace = trace.trace,
+          .type = trace.type,
+          .trace_index = (int)i,
+          .chunk_index = 0,
+          .num_chunks = (int)trace.allocations,
+          .alloc_time_total = trace.wasted_time,
+          .max_aggregate = trace.peak_wasted_memory,
+          .usage_score = trace.usage_score,
+          .lifetime_score = trace.lifetime_score,
+          .useful_lifetime_score = trace.useful_lifetime_score,
+        });
       }
     }
 

@@ -458,6 +458,7 @@ function renderStackTraceSvg(d, i, sampled, bottom) {
 
                 generateTraceHtml(d.trace);
 
+                d3.selectAll('.svg_spacing_trace').classed('selected', false);
                 d3.selectAll(".select-rect").style("display", "none");
                 d3.select(this).selectAll(".select-rect").style("display", "inline");
                 d3.select(this).classed("selected", true);

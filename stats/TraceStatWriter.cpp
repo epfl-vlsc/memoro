@@ -46,11 +46,13 @@ TraceStatWriter::~TraceStatWriter() {
 
   
 bool TraceStatWriter::WriteLargeBufferToFile(const char *buffer, const uint64_t buffer_size, FILE *outfile) {
-  uint64_t total_written = 0;
+  size_t total_written = 0;
 
   while (total_written < buffer_size) {
-    // TODO: check IO error
-    total_written += fwrite(buffer + total_written, sizeof(char), buffer_size - total_written, outfile);
+    size_t written = fwrite(buffer + total_written, sizeof(char), buffer_size - total_written, outfile);
+    if (written == 0 && ferror(outfile))
+      return false;
+    total_written += written;
   }
 
   return true;

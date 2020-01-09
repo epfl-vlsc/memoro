@@ -94,10 +94,27 @@ struct __attribute__((packed)) TraceStat {
   uint16_t aggregate_size;
   TimeValue *aggregate;
 
+  inline std::string_view DeserializeStringView(char *base, const std::string_view& s) {
+    // No room to set '\0', return view to static empty string
+    if (s.size() == 0)
+      return "";
+
+    // s.data() contains string offset in 'base' array
+    // s.size() contains the size of the string, as expected
+
+    // We must ensure the string_view are properly null terminated
+    // The last character of a trace is '|' and gets replaced by '\0'
+    // TODO: We lose the last character of the type. Copy the string? Change .stats format?
+    size_t eos = (size_t)s.data() + s.size() - 1;
+    base[eos] = '\0';
+
+    return { base + (size_t)s.data(), s.size() };
+  }
+
   // Init TraceStat after deserialization
-  void Init(const char *trace_base, const char *type_base, TimeValue* aggregate_base) {
-    trace = {trace_base + (uint64_t)trace.data(), trace.size()};
-    type  = {type_base  + (uint64_t)type.data(),  type.size()};
+  void Init(char *trace_base, char *type_base, TimeValue* aggregate_base) {
+    trace = DeserializeStringView(trace_base, trace);
+    type  = DeserializeStringView(type_base, type);
     aggregate = aggregate_base + (uint64_t)aggregate;
   }
 

@@ -1,4 +1,5 @@
 #include <string>
+#include <fstream>
 
 #include "Memoro.hpp"
 #include "TraceReader.hpp"
@@ -67,8 +68,8 @@ void action_stats(char *tracepath, char *chunkpath) {
   else
     strncpy(outext, STATS_EXT, sizeof(STATS_EXT));
 
-  TraceStatWriter tsw(traces);
-  tsw.Write(outpath);
+  std::ofstream outfile{ outpath, std::ios::binary };
+  TraceStatWriter(traces).Write(outfile);
 }
 
 int main(int argc, char *argv[]) {

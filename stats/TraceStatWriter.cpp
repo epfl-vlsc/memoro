@@ -1,4 +1,5 @@
 #include <cstdio>
+#include <ostream>
 
 #include "TraceStatWriter.hpp"
 
@@ -44,37 +45,16 @@ TraceStatWriter::~TraceStatWriter() {
   delete[] agg_buf;
 }
 
-  
-bool TraceStatWriter::WriteLargeBufferToFile(const char *buffer, const uint64_t buffer_size, FILE *outfile) {
-  size_t total_written = 0;
-
-  while (total_written < buffer_size) {
-    size_t written = fwrite(buffer + total_written, sizeof(char), buffer_size - total_written, outfile);
-    if (written == 0 && ferror(outfile))
-      return false;
-    total_written += written;
-  }
-
-  return true;
-}
-
-void TraceStatWriter::Write(const char *outpath) {
-  FILE *outfile = fopen(outpath, "w");
-  if (outfile == nullptr)
-    throw "failed to open out file";
-
+void TraceStatWriter::Write(std::ostream &outfile) {
   printf("Writing %llu stats, %llu trace bytes, %llu type bytes, %llu samples\n",
       stats_size, traces_size, types_size, aggs_size);
 
-  TraceStatHeader header{
-    stats_size, traces_size, types_size, aggs_size
-  };
+  TraceStatHeader header{ stats_size, traces_size, types_size, aggs_size };
 
-  WriteLargeBufferToFile((char*)&header, sizeof(TraceStatHeader), outfile);
-  WriteLargeBufferToFile((char*)tracestat_buf, sizeof(TraceStat) * stats_size, outfile);
-  WriteLargeBufferToFile((char*)trace_buf, sizeof(char) * traces_size, outfile);
-  WriteLargeBufferToFile((char*)type_buf, sizeof(char) * types_size, outfile);
-  WriteLargeBufferToFile((char*)agg_buf, sizeof(TimeValue) * aggs_size, outfile);
-
-  fclose(outfile);
+  outfile.write((char*)&header, sizeof(TraceStatHeader));
+  outfile.write((char*)tracestat_buf, stats_size * sizeof(TraceStat));
+  outfile.write((char*)trace_buf, traces_size * sizeof(char));
+  outfile.write((char*)type_buf, types_size * sizeof(char));
+  outfile.write((char*)agg_buf, aggs_size * sizeof(TimeValue));
+  outfile.flush();
 }

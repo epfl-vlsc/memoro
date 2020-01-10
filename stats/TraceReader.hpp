@@ -1,13 +1,13 @@
 #pragma once
 
-#include <stdio.h>
-#include <stdint.h>
+#include <cstdint>
+#include <istream>
 
 #include "Memoro.hpp"
 
 class TraceReader {
   private:
-    FILE *tracefile_;
+    std::istream &tracefile_;
     Header header_;
 
     std::vector<uint16_t> index_;
@@ -15,9 +15,9 @@ class TraceReader {
     uint32_t trace_index_{0};
 
   public:
-    TraceReader(FILE *tracefile) : tracefile_(tracefile), header_(tracefile), index_(header_.index_size) {
+    TraceReader(std::istream &tracefile) : tracefile_(tracefile), header_(tracefile), index_(header_.index_size) {
       index_.reserve(header_.index_size);
-      fread(index_.data(), sizeof(uint16_t), header_.index_size, tracefile_);
+      tracefile_.read((char*)index_.data(), header_.index_size * sizeof(uint16_t));
     }
 
     const Header& Header() const { return header_; }

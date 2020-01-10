@@ -11,12 +11,12 @@ using namespace std;
 #define STATS_EXT ".stats"
 
 void action_header(char *tracepath, char *chunkpath) {
-  FILE *tracefile = fopen(tracepath, "r");
-  if (tracefile == nullptr)
+  ifstream tracefile{ tracepath, ios::binary };
+  if (!tracefile)
     throw "failed to open trace file: "s + tracepath;
 
-  FILE *chunkfile = fopen(chunkpath, "r");
-  if (chunkfile == nullptr)
+  ifstream chunkfile{ chunkpath, ios::binary };
+  if (!chunkfile)
     throw "failed to open chunk file: "s + chunkpath;
 
   printf("\nHeader for %s\n", tracepath);
@@ -26,18 +26,15 @@ void action_header(char *tracepath, char *chunkpath) {
   printf("\nHeader for %s\n", chunkpath);
   ChunkReader cr(chunkfile);
   cr.Header().Print();
-
-  fclose(chunkfile);
-  fclose(tracefile);
 }
 
 void action_stats(char *tracepath, char *chunkpath) {
-  FILE *tracefile = fopen(tracepath, "r");
-  if (tracefile == nullptr)
+  ifstream tracefile{ tracepath, ios::binary };
+  if (!tracefile)
     throw "failed to open trace file: "s + tracepath;
 
-  FILE *chunkfile = fopen(chunkpath, "r");
-  if (chunkfile == nullptr)
+  ifstream chunkfile{ chunkpath, ios::binary };
+  if (!chunkfile)
     throw "failed to open chunk file: "s + chunkpath;
 
   TraceReader tr(tracefile);
@@ -47,7 +44,6 @@ void action_stats(char *tracepath, char *chunkpath) {
   traces.reserve(tr.Size());
 
   for (uint32_t i = 0; i < tr.Size(); ++i) {
-  /* for (uint32_t i = 0; i < 1; ++i) { */
     Trace trace = tr.Next();
     trace.chunks = cr.NextTrace();
 
@@ -57,9 +53,6 @@ void action_stats(char *tracepath, char *chunkpath) {
   }
 
   printf("Chunk size: %lu\n", sizeof(Chunk));
-
-  fclose(chunkfile);
-  fclose(tracefile);
 
   char *outpath = tracepath; // Will overwrite tracepath
   char *outext = strrchr(outpath, '.');

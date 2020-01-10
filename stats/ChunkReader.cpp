@@ -1,5 +1,4 @@
-#include "stdio.h"
-
+#include <cstdio>
 #include <vector>
 
 #include "ChunkReader.hpp"
@@ -7,7 +6,8 @@
 using namespace std;
 
 size_t ChunkReader::ReadChunks() {
-  chunk_count_ = fread(chunk_buf_, sizeof(Chunk), chunk_buf_count_, chunkfile_);
+  chunkfile_.read((char*)chunk_buf_.get(), chunk_buf_count_ * sizeof(Chunk));
+  chunk_count_ = chunkfile_.gcount() / sizeof(Chunk);
   chunk_index_ = 0;
 
   /* printf("Asked for %lux%lu, got %lu chunks\n", chunk_buf_count_, sizeof(Chunk), chunk_count_); */

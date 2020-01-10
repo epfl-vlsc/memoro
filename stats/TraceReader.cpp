@@ -9,7 +9,7 @@ Trace TraceReader::Next() {
   uint16_t trace_size = index_[trace_index_++];
   char trace_buf[trace_size];
 
-  fread(trace_buf, trace_size, 1, tracefile_);
+  tracefile_.read((char*)trace_buf, trace_size);
 
   return Trace{string{trace_buf, trace_size}};
 }

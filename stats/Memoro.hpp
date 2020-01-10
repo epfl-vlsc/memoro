@@ -1,7 +1,8 @@
 #pragma once
 
-#include <stdio.h>
-#include <stdint.h>
+#include <cstdio>
+#include <cstdint>
+#include <istream>
 
 #include <string>
 #include <vector>
@@ -17,6 +18,11 @@ struct __attribute__((packed)) Header {
   uint8_t compression_type = 0;
   uint16_t segment_start = 0;
   uint32_t index_size = 0;
+
+  Header(std::istream &f) {
+    f.seekg(0);
+    f.read((char*)this, sizeof(Header));
+  }
 
   Header(FILE *f) {
     // TODO: check retvals

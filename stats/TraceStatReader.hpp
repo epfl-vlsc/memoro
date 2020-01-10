@@ -1,10 +1,10 @@
 #pragma once
 
-#include <stdio.h>
-#include <stdint.h>
+#include <cstdio>
+#include <cstdint>
 #include <cstddef>
 #include <iostream>
-
+#include <istream>
 
 #include "Memoro.hpp"
 
@@ -16,8 +16,8 @@ class TraceStatReader {
     TimeValue *aggregates_base_;
 
   public:
-    TraceStatReader(FILE *tracestatfile) {
-      fread(&header_, sizeof(TraceStatHeader), 1, tracestatfile);
+    TraceStatReader(std::istream &tracestatfile) {
+      tracestatfile.read((char*)&header_, sizeof(TraceStatHeader));
 
       printf("Reading %llu stats, %llu trace bytes, %llu type bytes, %llu samples\n",
           header_.stats_count, header_.traces_size, header_.types_size, header_.aggregates_count);
@@ -31,7 +31,7 @@ class TraceStatReader {
       // TODO: Check return value
       // TODO: Read in multiple chunks if too large
       char *data = new char[total_size];
-      fread(data, total_size, 1, tracestatfile);
+      tracestatfile.read(data, total_size);
 
       // Compute pointers of each parts
       stats_base_ = (TraceStat*)data;

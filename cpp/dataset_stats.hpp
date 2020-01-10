@@ -43,17 +43,9 @@ class DatasetStats : public Dataset {
     }
 
   public:
-    DatasetStats(const string& dir_path, const string& stats_file, string& msg) {
-      cout << "opening " << stats_file << endl;
-      FILE *stats_fd = fopen(stats_file.c_str(), "r");
-      if (stats_fd == nullptr) {
-        msg = "failed to open file " + stats_file;
-        return;
-      }
-
-      reader_ = make_unique<TraceStatReader>(stats_fd);
-
-      fclose(stats_fd);
+    DatasetStats(const string& dir_path, const string& stats_path, string& msg) {
+      std::ifstream stats_file{ stats_path, std::ios::binary };
+      reader_ = make_unique<TraceStatReader>(stats_file);
 
       compat_traces_.reserve(reader_->GetStatsSize());
 

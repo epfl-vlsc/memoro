@@ -5,6 +5,7 @@
 #include <istream>
 
 #include <string>
+#include <string_view>
 #include <vector>
 #include <array>
 
@@ -18,6 +19,11 @@ struct __attribute__((packed)) Header {
   uint8_t compression_type = 0;
   uint16_t segment_start = 0;
   uint32_t index_size = 0;
+
+  Header(size_t index_count) {
+    index_size = index_count;
+    segment_start = sizeof(Header);
+  }
 
   Header(std::istream &f) {
     f.seekg(0);

@@ -75,8 +75,7 @@ uint64_t Trace::PeakWastedMemory() {
     const Chunk &chunk = chunks[chunk_index];
 
     // A chunk gets freed
-    // Out of chunks || queue event happens before current chunk
-    if (chunk_index >= chunks.size() || (!queue.empty() && queue.top().time < chunk.timestamp_start)) {
+    if (!queue.empty() && queue.top().time < chunk.timestamp_start) {
       acc_waste -= queue.top().value;
       /* printf("Released: %llu, Acc: %llu\n", queue.top().value, acc_waste); */
       queue.pop();
@@ -86,7 +85,7 @@ uint64_t Trace::PeakWastedMemory() {
       int64_t wasted_bytes= total_bytes - used_bytes;
 
       if (wasted_bytes < 0) {
-        printf("Chunk=[\n  Index=%u,\n  Allocated=%lld,\n  Accessed=[%d;%d],\n  AccessedRange=%lld,\n  Wasted=%lld,\n]\n",
+        printf("Chunk=[\n  Index=%u,\n  Allocated=%ld,\n  Accessed=[%d;%d],\n  AccessedRange=%ld,\n  Wasted=%ld,\n]\n",
             chunk_index, total_bytes, chunk.access_interval_high, chunk.access_interval_low, used_bytes, wasted_bytes);
         ++chunk_index;
         continue;
@@ -135,8 +134,7 @@ void Trace::Aggregate() {
   for (uint32_t i = 0; i < (2 * chunks_count); ++i) {
     const Chunk &chunk = chunks[chunk_index];
 
-    // Out of chunks || queue event happens before current chunk
-    if (chunk_index >= chunks_count || (!queue.empty() && queue.top().time < chunk.timestamp_start)) {
+    if (!queue.empty() && (chunk_index >= chunks.size() || queue.top().time < chunk.timestamp_start)) {
       const TimeValue& top = queue.top();
       queue.pop();
 

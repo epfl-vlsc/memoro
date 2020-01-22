@@ -11,8 +11,9 @@
 class TraceStatReader {
   private:
     TraceStatHeader header_;
-    TraceStat *stats_base_;
+    std::unique_ptr<char[]> data_;
 
+    TraceStat *stats_base_;
     TimeValue *aggregates_base_;
 
   public:
@@ -30,12 +31,12 @@ class TraceStatReader {
       // Read everything
       // TODO: Check return value
       // TODO: Read in multiple chunks if too large
-      char *data = new char[total_size];
-      tracestatfile.read(data, total_size);
+      data_ = std::make_unique<char[]>(total_size);
+      tracestatfile.read(data_.get(), total_size);
 
       // Compute pointers of each parts
-      stats_base_ = (TraceStat*)data;
-      char *traces_base = data + stats_size;
+      stats_base_ = (TraceStat*)data_.get();
+      char *traces_base = data_.get() + stats_size;
       char *types_base = traces_base + header_.traces_size;
       aggregates_base_ = (TimeValue*)(types_base + header_.types_size);
 
@@ -43,8 +44,6 @@ class TraceStatReader {
       for (uint64_t i = 0; i < header_.stats_count; ++i)
         stats_base_[i].Init(traces_base, types_base, aggregates_base_);
     }
-
-    ~TraceStatReader() { delete stats_base_; }
 
     TraceStat* GetStats() { return stats_base_; }
     uint64_t GetStatsSize() { return header_.stats_count; }

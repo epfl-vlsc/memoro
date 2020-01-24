@@ -62,6 +62,7 @@ class DatasetFull : public Dataset {
     fclose(trace_fd);
 
     // for some reason I can't mmap the file so we open and copy ...
+    cout << "opening " << chunk_file << endl;
     FILE* chunk_fd = fopen(chunk_file.c_str(), "r");
     // file size produced by sanitizer is buggy and adds a bunch 0 data to
     // end of file. not sure why yet ...
@@ -84,12 +85,12 @@ class DatasetFull : public Dataset {
       return;
     }
 
-    cout << "reading " << header.index_size << " chunks" << endl;
-
-    index.resize(header.index_size);
-    fread(&index[0], 2, header.index_size, chunk_fd);
-
     num_chunks_ = header.index_size;
+    cout << "reading " << num_chunks_ << " chunks" << endl;
+
+    // Skip index
+    fseek(chunk_fd, num_chunks_ * sizeof(uint16_t), SEEK_CUR);
+
     // file_size = file_size - sizeof(Header) - header.index_size*2;
     // cout << " file size now " << file_size << endl;
     chunk_ptr_ = new char[num_chunks_ * sizeof(Chunk)];

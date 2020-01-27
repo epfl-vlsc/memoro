@@ -14,6 +14,8 @@ For more detailed information about how Memoro works, see [here](https://github.
 
 # Build & Install
 
+The below steps outline a quick-start guide to using Memoro. For detailed set-up instructions refer to [here](docs/set_up.md). For a guide on using Memoro, refer [here](docs/use_case.md).
+
 ## Building the Instrumented compiler
 
 First, you will need to build a local version of LLVM/Clang so you can compile your code with Memoro instrumentation. 
@@ -32,7 +34,7 @@ For the main LLVM repo, the Clang repo, and the CompilerRT repo, use the Memoro 
 [CompilerRT](https://github.com/epfl-vlsc/compiler-rt)
 
 These repos should default to branch r40\_dev (Memoro is based off of LLVM release\_40).
-Optionally compile with libcxx and libcxxabi. 
+Optionally compile with libcxx and libcxxabi. If this does not work, use branch memoro_80.
 
 ## Building the Visusalizer C++ lib
 

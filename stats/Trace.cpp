@@ -85,7 +85,7 @@ uint64_t Trace::PeakWastedMemory() {
       int64_t wasted_bytes= total_bytes - used_bytes;
 
       if (wasted_bytes < 0) {
-        printf("Chunk=[\n  Index=%u,\n  Allocated=%ld,\n  Accessed=[%d;%d],\n  AccessedRange=%ld,\n  Wasted=%ld,\n]\n",
+        printf("Chunk=[\n  Index=%u,\n  Allocated=%lld,\n  Accessed=[%d;%d],\n  AccessedRange=%lld,\n  Wasted=%lld,\n]\n",
             chunk_index, total_bytes, chunk.access_interval_high, chunk.access_interval_low, used_bytes, wasted_bytes);
         ++chunk_index;
         continue;

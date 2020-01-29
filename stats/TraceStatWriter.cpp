@@ -39,7 +39,7 @@ TraceStatWriter::TraceStatWriter(const std::vector<Trace> &traces) {
 }
 
 void TraceStatWriter::Write(std::ostream &outfile) {
-  printf("Writing %lu stats, %lu trace bytes, %lu type bytes, %lu samples\n",
+  printf("Writing %llu stats, %llu trace bytes, %llu type bytes, %llu samples\n",
       stats_size_, traces_size_, types_size_, aggs_size_);
 
   outfile << TraceStatHeader{ stats_size_, traces_size_, types_size_, aggs_size_ };

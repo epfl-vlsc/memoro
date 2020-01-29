@@ -42,9 +42,8 @@ void TraceStatWriter::Write(std::ostream &outfile) {
   printf("Writing %lu stats, %lu trace bytes, %lu type bytes, %lu samples\n",
       stats_size_, traces_size_, types_size_, aggs_size_);
 
-  TraceStatHeader header{ stats_size_, traces_size_, types_size_, aggs_size_ };
+  outfile << TraceStatHeader{ stats_size_, traces_size_, types_size_, aggs_size_ };
 
-  outfile.write((char*)&header, sizeof(TraceStatHeader));
   outfile.write((char*)tracestat_buf_.get(), stats_size_ * sizeof(TraceStat));
   outfile.write((char*)trace_buf_.get(), traces_size_ * sizeof(char));
   outfile.write((char*)type_buf_.get(), types_size_ * sizeof(char));

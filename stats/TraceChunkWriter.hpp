@@ -14,8 +14,7 @@ class TraceChunkWriter {
   std::ostream &chunkfile_;
 
   void WriteTraces(const std::vector<Trace> &traces) {
-    Header header(traces.size());
-    tracefile_.write((char*)&header, sizeof(Header));
+    tracefile_ << Header{ traces.size() };
 
     for (const auto& t: traces) {
       uint16_t trace_size = (uint16_t)t.trace.size();
@@ -31,8 +30,7 @@ class TraceChunkWriter {
     for (const auto& t: traces)
       index_size += t.chunks.size();
 
-    Header header(index_size);
-    chunkfile_.write((char*)&header, sizeof(header));
+    chunkfile_ << Header{ index_size };
 
     uint16_t chunk_size = sizeof(Chunk);
     for (const auto& t: traces)

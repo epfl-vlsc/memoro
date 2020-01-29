@@ -3,6 +3,7 @@
 #include <cstdio>
 #include <cstdint>
 #include <istream>
+#include <ostream>
 
 #include <string>
 #include <string_view>
@@ -26,8 +27,7 @@ struct __attribute__((packed)) Header {
   }
 
   Header(std::istream &f) {
-    f.seekg(0);
-    f.read((char*)this, sizeof(Header));
+    f >> *this;
   }
 
   Header(FILE *f) {
@@ -39,6 +39,16 @@ struct __attribute__((packed)) Header {
     /* if (version_major != VERSION_MAJOR || */
     /*     version_minor != VERSION_MINOR) */
     /*   throw "Header version mismatch"; */
+  }
+
+  friend std::ostream& operator<<(std::ostream &out, const Header &self) {
+    out.write((char*)&self, sizeof(Header));
+    return out;
+  }
+
+  friend std::istream& operator>>(std::istream &in, Header &self) {
+    in.read((char*)&self, sizeof(Header));
+    return in;
   }
 
   void Print() const {
@@ -95,6 +105,16 @@ struct Trace {
 
 struct __attribute__((packed)) TraceStatHeader {
   uint64_t stats_count, traces_size, types_size, aggregates_count;
+
+  friend std::ostream& operator<<(std::ostream &out, const TraceStatHeader &self) {
+    out.write((char*)&self, sizeof(TraceStatHeader));
+    return out;
+  }
+
+  friend std::istream& operator>>(std::istream &in, TraceStatHeader &self) {
+    in.read((char*)&self, sizeof(TraceStatHeader));
+    return in;
+  }
 };
 
 struct __attribute__((packed)) TraceStat {

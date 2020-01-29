@@ -18,7 +18,7 @@ class TraceStatReader {
 
   public:
     TraceStatReader(std::istream &tracestatfile) {
-      tracestatfile.read((char*)&header_, sizeof(TraceStatHeader));
+      tracestatfile >> header_;
 
       printf("Reading %llu stats, %llu trace bytes, %llu type bytes, %llu samples\n",
           header_.stats_count, header_.traces_size, header_.types_size, header_.aggregates_count);

@@ -43,12 +43,10 @@ void action_header(int argc, char *argv[]) {
     throw "failed to open chunk file: "s + chunkpath;
 
   printf("\nHeader for %s\n", tracepath.c_str());
-  TraceReader tr(tracefile);
-  tr.Header().Print();
+  Header{ tracefile }.Print();
 
   printf("\nHeader for %s\n", chunkpath.c_str());
-  ChunkReader cr(chunkfile);
-  cr.Header().Print();
+  Header{ chunkfile }.Print();
 }
 
 void action_stats(int argc, char *argv[]) {

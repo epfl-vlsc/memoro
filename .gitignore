@@ -1,0 +1,7 @@
+# build files
+node_modules
+cpp/build
+
+# MAC file
+.DS_Store
+

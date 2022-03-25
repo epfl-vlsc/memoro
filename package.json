@@ -13,7 +13,7 @@
     "heap profiling"
   ],
   "devDependencies": {
-    "electron": "^1.8.7"
+    "electron": "^13.6.6"
   },
   "license": "MIT",
   "dependencies": {

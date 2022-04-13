@@ -17,7 +17,7 @@
   },
   "license": "MIT",
   "dependencies": {
-    "async": "^2.6.0",
+    "async": "^3.2.2",
     "bootstrap": "^3.3.7",
     "command-exists": "^1.2.2",
     "compute-gmean": "^1.1.0",
